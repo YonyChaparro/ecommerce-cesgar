@@ -1,0 +1,1836 @@
+<style>
+    /* =========================================
+       RESET Y VARIABLES - CESGAR 3D
+       ========================================= */
+    #cotizador-3d-app {
+        --primary-color: #61c5d9;       /* Cian Marca */
+        --primary-dark: #4db6cc;        /* Cian Oscuro hover */
+        --accent-color: #1a2b4b;        /* Azul Oscuro */
+        --text-color: #333333;
+        --text-light: #666666;
+        --bg-color: #f9fafb;
+        --card-bg: #ffffff;
+        --border-radius: 12px;
+        --shadow-soft: 0 10px 30px -10px rgba(0, 0, 0, 0.08);
+        --shadow-hover: 0 20px 40px -12px rgba(97, 197, 217, 0.25);
+        --transition: all 0.3s cubic-bezier(0.25, 0.8, 0.25, 1);
+        
+        font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+        background-color: var(--bg-color);
+        padding: 60px 20px;
+        color: var(--text-color);
+        width: 100%;
+        box-sizing: border-box;
+        line-height: 1.6;
+    }
+
+    #cotizador-3d-app * { box-sizing: border-box; }
+
+    /* =========================================
+       CONTENEDOR PRINCIPAL (TARJETA)
+       ========================================= */
+    #cotizador-3d-app .cotizador-container {
+        width: 100%;
+        max-width: 1200px; /* Un poco más estrecho para mejor lectura */
+        background: var(--card-bg);
+        border-radius: 20px; /* Más redondeado */
+        padding: 50px;
+        box-shadow: var(--shadow-soft);
+        margin: 0 auto;
+        border: 1px solid rgba(0,0,0,0.05);
+    }
+
+    #cotizador-3d-app header {
+        text-align: center;
+        margin-bottom: 50px;
+        position: relative;
+    }
+
+    #cotizador-3d-app h1 {
+        font-size: 2.8rem;
+        margin-bottom: 10px;
+        color: var(--accent-color);
+        font-weight: 800;
+        letter-spacing: -0.5px;
+    }
+
+    #cotizador-3d-app .subtitle {
+        color: var(--text-light);
+        font-size: 1.15rem;
+        max-width: 600px;
+        margin: 0 auto;
+    }
+
+    /* =========================================
+       ZONA DE CARGA (DRAG & DROP)
+       ========================================= */
+    #cotizador-3d-app .upload-section {
+        background: #f0f9fb;
+        padding: 60px 40px;
+        border-radius: var(--border-radius);
+        text-align: center;
+        margin-bottom: 40px;
+        border: 2px dashed #bfeaf2;
+        transition: var(--transition);
+        cursor: pointer;
+        position: relative;
+        overflow: hidden;
+    }
+
+    #cotizador-3d-app .upload-section:hover,
+    #cotizador-3d-app .upload-section.highlight {
+        background: #e6f6f9;
+        border-color: var(--primary-color);
+        transform: translateY(-2px);
+    }
+
+    #cotizador-3d-app .upload-title {
+        font-size: 1.4rem;
+        margin-bottom: 25px;
+        color: var(--accent-color);
+        font-weight: 600;
+    }
+
+    #cotizador-3d-app .file-input { display: none; }
+
+
+    #cotizador-3d-app .file-label { 
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 16px 45px; 
+        background: var(--primary-color);
+        color: white; 
+        border-radius: 50px;
+        cursor: pointer; 
+        transition: var(--transition); 
+        font-weight: 700; 
+        font-size: 1.1rem;
+        box-shadow: 0 4px 15px rgba(97, 197, 217, 0.4);
+        border: 2px solid transparent;
+    }
+
+    #cotizador-3d-app .file-label:hover { 
+        background: var(--primary-dark); 
+        transform: translateY(-2px);
+        box-shadow: 0 8px 20px rgba(97, 197, 217, 0.5);
+    }
+
+    /* =========================================
+       LISTA DE MODELOS
+       ========================================= */
+    #cotizador-3d-app .models-container {
+        display: flex;
+        flex-direction: column;
+        gap: 40px;
+    }
+
+    #cotizador-3d-app .model-item {
+        background: #ffffff;
+        border-radius: 16px;
+        overflow: hidden;
+        border: 1px solid #edf2f7;
+        box-shadow: 0 4px 20px rgba(0,0,0,0.03);
+        transition: var(--transition);
+    }
+
+    #cotizador-3d-app .model-item:hover {
+        box-shadow: 0 10px 30px rgba(0,0,0,0.06);
+    }
+
+    #cotizador-3d-app .model-header {
+        background: #ffffff;
+        padding: 20px 30px;
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        border-bottom: 1px solid #f0f0f0;
+    }
+
+    #cotizador-3d-app .model-title {
+        font-size: 1.25rem;
+        font-weight: 700;
+        color: var(--accent-color);
+        display: flex;
+        align-items: center;
+        gap: 15px;
+    }
+
+    #cotizador-3d-app .model-number {
+        background: var(--accent-color);
+        color: white;
+        width: 32px;
+        height: 32px;
+        border-radius: 8px; /* Cuadrado redondeado es más moderno */
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 700;
+        font-size: 0.9rem;
+    }
+
+    #cotizador-3d-app .model-btn.delete {
+        background: transparent;
+        color: #ff6b6b;
+        border: 1px solid #ffe3e3;
+        padding: 8px 16px;
+        border-radius: 8px;
+        font-weight: 600;
+        font-size: 0.9rem;
+        transition: var(--transition);
+    }
+
+    #cotizador-3d-app .model-btn.delete:hover {
+        background: #fff5f5;
+        border-color: #ff6b6b;
+    }
+
+    /* =========================================
+       VISUALIZADOR Y CONFIGURACIÓN
+       ========================================= */
+    #cotizador-3d-app .model-content {
+        padding: 30px;
+    }
+
+    #cotizador-3d-app .model-viewer {
+        width: 100%;
+        max-width: 100%;
+        height: 300px; /* Altura reducida fija */
+        background: #f1f3f5; 
+        border-radius: 12px;
+        overflow: hidden;
+        margin-bottom: 30px;
+        position: relative;
+        /* Sombra interna para profundidad */
+        box-shadow: inset 0 0 20px rgba(0,0,0,0.05); 
+        border: 1px solid #e9ecef;
+    }
+
+    #cotizador-3d-app .viewer-canvas {
+        width: 100%;
+        height: 100%;
+        display: block;
+    }
+    
+    /* Grid de Inputs */
+    #cotizador-3d-app .config-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+        gap: 20px;
+        margin-bottom: 25px;
+    }
+
+    #cotizador-3d-app .config-item {
+        background: transparent;
+        padding: 0;
+        border: none;
+    }
+
+    #cotizador-3d-app .config-label {
+        display: block;
+        margin-bottom: 8px;
+        font-size: 0.9rem;
+        font-weight: 600;
+        color: var(--accent-color);
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+
+    /* Inputs Modernos */
+    #cotizador-3d-app .config-select, 
+    #cotizador-3d-app .config-input {
+        width: 100%;
+        padding: 14px 55px 14px 18px;
+        border-radius: 10px;
+        border: 2px solid #e0e7ef;
+        background-color: #f8fafc;
+        color: var(--text-color);
+        font-size: 1rem;
+        font-weight: 600;
+        transition: var(--transition);
+        /* Eliminar estilos por defecto del navegador */
+        appearance: none; 
+        -webkit-appearance: none;
+        background-repeat: no-repeat;
+        background-position: right 10px center;
+        background-size: 24px 24px;
+        box-shadow: 0 2px 6px rgba(0,0,0,0.04);
+        cursor: pointer;
+    }
+
+    /* Contenedor con posición relativa para el botón */
+    #cotizador-3d-app .config-item {
+        position: relative;
+    }
+
+    /* Botón desplegable visual - Ícono de chevron doble */
+    #cotizador-3d-app .config-select {
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M7 8l5 5 5-5'/%3E%3Cpath d='M7 13l5 5 5-5'/%3E%3C/svg%3E"),
+                          linear-gradient(135deg, %2361c5d9 0%25, %234db6cc 100%25);
+        background-position: right 10px center, right center;
+        background-size: 24px 24px, 44px 100%;
+        background-repeat: no-repeat, no-repeat;
+        border-top-right-radius: 8px;
+        border-bottom-right-radius: 8px;
+    }
+
+    #cotizador-3d-app .config-input {
+        background-image: none; /* Input normal no lleva flecha */
+        padding: 14px 18px; /* Mismo padding que los selectores */
+    }
+
+    #cotizador-3d-app .config-select:hover, 
+    #cotizador-3d-app .config-input:hover {
+        border-color: var(--primary-color);
+        background-color: #ffffff;
+        box-shadow: 0 4px 12px rgba(97, 197, 217, 0.15);
+    }
+
+    #cotizador-3d-app .config-select:hover {
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M7 8l5 5 5-5'/%3E%3Cpath d='M7 13l5 5 5-5'/%3E%3C/svg%3E"),
+                          linear-gradient(135deg, %234db6cc 0%25, %2361c5d9 100%25);
+        background-position: right 10px center, right center;
+        background-size: 24px 24px, 44px 100%;
+    }
+
+    #cotizador-3d-app .config-select:focus, 
+    #cotizador-3d-app .config-input:focus {
+        border-color: var(--primary-color);
+        background-color: #ffffff;
+        box-shadow: 0 0 0 4px rgba(97, 197, 217, 0.2);
+        outline: none;
+    }
+
+    /* Estilos específicos para cada tipo de select */
+    #cotizador-3d-app .printing-tech {
+        background-color: #e8f8fb;
+        border-color: #b8e6ef;
+    }
+    
+    #cotizador-3d-app .material-type {
+        background-color: #fff8e6;
+        border-color: #f5d99a;
+    }
+    
+    #cotizador-3d-app .layer-height {
+        background-color: #f0e8fb;
+        border-color: #d4b8ef;
+    }
+    
+    #cotizador-3d-app .infill-density {
+        background-color: #e8fbe8;
+        border-color: #b8efb8;
+    }
+    
+    #cotizador-3d-app .print-color {
+        background-color: #fbe8f0;
+        border-color: #efb8d4;
+    }
+    
+    #cotizador-3d-app .quantity {
+        background-color: #e8f0fb;
+        border-color: #b8d4ef;
+    }
+
+    /* Mensajes de Información */
+    #cotizador-3d-app .material-info {
+        background: #e3f2fd;
+        padding: 15px;
+        border-radius: 8px;
+        margin-top: 15px;
+        font-size: 0.95rem;
+        border-left: 4px solid #2196f3;
+        color: #0d47a1;
+        animation: fadeIn 0.3s ease;
+    }
+
+    #cotizador-3d-app .tech-info {
+        background: linear-gradient(135deg, #e8f8fb 0%, #d4f1f7 100%);
+        padding: 15px;
+        border-radius: 8px;
+        margin-top: 15px;
+        font-size: 0.95rem;
+        border-left: 4px solid #61c5d9;
+        color: #1a5a6a;
+        animation: fadeIn 0.3s ease;
+        font-weight: 500;
+    }
+
+    #cotizador-3d-app .tech-info.active {
+        display: block;
+    }
+
+    /* =========================================
+       DIMENSIONES (Estilo "Chips")
+       ========================================= */
+    #cotizador-3d-app .dimensions-display {
+        background: #f8f9fa;
+        padding: 20px;
+        border-radius: 12px;
+        margin-top: 20px;
+        border: 1px solid #e9ecef;
+    }
+    
+    #cotizador-3d-app .dimensions-grid {
+        display: flex;
+        gap: 15px;
+        justify-content: flex-start;
+        flex-wrap: wrap;
+    }
+
+    #cotizador-3d-app .dimension-item {
+        background: white;
+        padding: 10px 20px;
+        border-radius: 50px;
+        border: 1px solid #e9ecef;
+        box-shadow: 0 2px 5px rgba(0,0,0,0.03);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        min-width: 100px;
+    }
+
+    #cotizador-3d-app .dimension-label {
+        font-size: 0.75rem;
+        color: var(--text-light);
+        text-transform: uppercase;
+        letter-spacing: 1px;
+    }
+
+    #cotizador-3d-app .dimension-value {
+        font-weight: 700;
+        font-size: 1.1rem;
+        color: var(--accent-color);
+    }
+
+    /* =========================================
+       BOTÓN "AÑADIR OTRO"
+       ========================================= */
+    #cotizador-3d-app .add-more-section {
+        margin-top: 40px;
+        text-align: center;
+        border: 2px dashed transparent;
+        border-radius: var(--border-radius);
+        padding: 20px;
+        transition: var(--transition);
+    }
+
+    #cotizador-3d-app .add-more-section.highlight {
+        background: #e6f6f9;
+        border-color: var(--primary-color);
+        transform: scale(1.02);
+    }
+
+    #cotizador-3d-app .add-more-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        padding: 12px 30px;
+        background: white;
+        color: var(--text-light);
+        border: 1px solid #ddd;
+        border-radius: 50px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: var(--transition);
+    }
+    
+    #cotizador-3d-app .add-more-btn:before {
+        content: '+';
+        font-size: 1.2rem;
+        font-weight: bold;
+    }
+
+    #cotizador-3d-app .add-more-btn:hover {
+        border-color: var(--primary-color);
+        color: var(--primary-color);
+        background: #f9feff;
+    }
+
+    /* =========================================
+       RESUMEN DE ORDEN
+       ========================================= */
+    #cotizador-3d-app .order-summary {
+        background: #1a2b4b; /* Fondo oscuro para contraste */
+        color: white;
+        padding: 40px;
+        border-radius: 16px;
+        margin-top: 60px;
+        position: relative;
+        overflow: hidden;
+    }
+
+    /* Decoración de fondo sutil */
+    #cotizador-3d-app .order-summary::before {
+        content: '';
+        position: absolute;
+        top: 0; right: 0;
+        width: 200px; height: 200px;
+        background: radial-gradient(circle, rgba(97,197,217,0.1) 0%, rgba(255,255,255,0) 70%);
+    }
+
+    #cotizador-3d-app .summary-header {
+        text-align: left;
+        font-size: 1.5rem;
+        margin-bottom: 30px;
+        color: white;
+        border-bottom: 1px solid rgba(255,255,255,0.1);
+        padding-bottom: 15px;
+    }
+
+    #cotizador-3d-app .summary-grid {
+        display: flex;
+        gap: 40px;
+        margin-bottom: 40px;
+        flex-wrap: wrap;
+    }
+
+    #cotizador-3d-app .summary-item {
+        background: rgba(255,255,255,0.05);
+        padding: 20px;
+        border-radius: 12px;
+        flex: 1;
+        min-width: 150px;
+        border: 1px solid rgba(255,255,255,0.1);
+    }
+
+    #cotizador-3d-app .summary-label {
+        color: rgba(255,255,255,0.6);
+        font-size: 0.9rem;
+        margin-bottom: 5px;
+    }
+
+    #cotizador-3d-app .summary-value {
+        font-size: 2rem;
+        font-weight: 700;
+        color: var(--primary-color); /* Precio en Cian brillante */
+    }
+
+    #cotizador-3d-app .order-actions {
+        display: flex;
+        gap: 20px;
+        justify-content: flex-end;
+    }
+
+    #cotizador-3d-app .order-btn {
+        padding: 16px 40px;
+        border: none;
+        border-radius: 50px;
+        font-weight: 700;
+        cursor: pointer;
+        transition: var(--transition);
+        font-size: 1.1rem;
+    }
+
+    #cotizador-3d-app .order-btn.primary {
+        background: var(--primary-color);
+        color: white;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+    }
+
+    #cotizador-3d-app .order-btn.primary:hover {
+        background: white;
+        color: var(--primary-color);
+        transform: translateY(-2px);
+    }
+
+    #cotizador-3d-app .order-btn.secondary {
+        background: transparent;
+        color: white;
+        border: 1px solid rgba(255,255,255,0.3);
+    }
+
+    #cotizador-3d-app .order-btn.secondary:hover {
+        background: rgba(255,255,255,0.1);
+        border-color: white;
+    }
+
+    /* RESPONSIVE */
+    @media (max-width: 768px) {
+        #cotizador-3d-app .cotizador-container { padding: 25px; }
+        #cotizador-3d-app h1 { font-size: 2rem; }
+        #cotizador-3d-app .model-header { flex-direction: column; gap: 15px; align-items: flex-start; }
+        #cotizador-3d-app .model-btn.delete { width: 100%; text-align: center; }
+        #cotizador-3d-app .summary-grid { flex-direction: column; gap: 15px; }
+        #cotizador-3d-app .order-actions { flex-direction: column; }
+        #cotizador-3d-app .order-btn { width: 100%; }
+    }
+
+    @keyframes fadeIn {
+        from { opacity: 0; transform: translateY(10px); }
+        to { opacity: 1; transform: translateY(0); }
+    }
+
+    /* =========================================
+       MODAL VIEW
+       ========================================= */
+    #cotizador-3d-app .modal-overlay {
+        position: fixed;
+        top: 0; left: 0;
+        width: 100%; height: 100%;
+        background: rgba(0,0,0,0.85);
+        z-index: 9999;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        padding: 20px;
+    }
+
+    #cotizador-3d-app .modal-content {
+        background: white;
+        width: 90%;
+        max-width: 1000px;
+        height: 80vh;
+        border-radius: 12px;
+        overflow: hidden;
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5);
+    }
+
+    #cotizador-3d-app .modal-close {
+        position: absolute;
+        top: 15px;
+        right: 15px;
+        background: #ff6b6b;
+        color: white;
+        border: none;
+        font-size: 1.5rem;
+        cursor: pointer;
+        z-index: 10;
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 4px 10px rgba(0,0,0,0.2);
+        transition: var(--transition);
+        line-height: 1;
+        padding: 0;
+    }
+
+    #cotizador-3d-app .modal-close:hover {
+        background: #ff5252;
+        transform: scale(1.1);
+    }
+
+    #cotizador-3d-app .modal-body {
+        display: flex;
+        flex: 1;
+        height: 100%;
+        position: relative;
+    }
+
+    #cotizador-3d-app .modal-canvas-container {
+        flex: 1;
+        background: #f0f0f0;
+        width: 100%;
+        height: 100%;
+    }
+
+    #cotizador-3d-app .modal-info-panel {
+        position: absolute;
+        bottom: 20px;
+        left: 20px;
+        background: rgba(255,255,255,0.95);
+        padding: 15px 20px;
+        border-radius: 8px;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+        backdrop-filter: blur(5px);
+        max-width: 300px;
+        border: 1px solid rgba(0,0,0,0.1);
+    }
+
+    #cotizador-3d-app .modal-info-panel h3 {
+        margin: 0 0 10px 0;
+        font-size: 1.1rem;
+        color: var(--accent-color);
+    }
+
+    #cotizador-3d-app .modal-dims {
+        display: flex;
+        gap: 15px;
+        margin-bottom: 10px;
+    }
+
+    #cotizador-3d-app .modal-dims div {
+        font-size: 0.9rem;
+        font-weight: 600;
+    }
+
+    #cotizador-3d-app .dim-label {
+        color: var(--text-light);
+        font-weight: 400;
+        margin-right: 5px;
+    }
+
+    #cotizador-3d-app .modal-instructions {
+        margin: 0;
+        font-size: 0.8rem;
+        color: var(--text-light);
+        border-top: 1px solid #eee;
+        padding-top: 8px;
+    }
+
+    @media (max-width: 768px) {
+        #cotizador-3d-app .modal-info-panel {
+            width: calc(100% - 40px);
+            bottom: 20px;
+            left: 20px;
+        }
+    }
+</style>
+
+<div id="cotizador-3d-app" translate="no">
+    <div class="cotizador-container">
+        <header>
+            <h1>Cotizador automático de Impresión 3D</h1>
+            <p class="subtitle">Agrega modelos uno por uno - Cada uno con su configuración individual</p>
+        </header>
+        
+        <div class="upload-section" id="initial-upload">
+            <div class="upload-title">Comienza subiendo tu primer modelo 3D</div>
+            <input type="file" id="stl-file" class="file-input" accept=".stl" multiple>
+            <label for="stl-file" class="file-label">
+                📁 Seleccionar archivo STL
+            </label>
+            <p style="color: #aaa; margin-top: 10px;">Formatos soportados: .stl (Máx. 500 MB)</p>
+        </div>
+        
+        <div class="models-container" id="models-container">
+            </div>
+        
+        <div class="add-more-section" id="add-more-section" style="display: none;">
+            <div style="margin-bottom: 15px; color: #4a4af0; font-size: 1.2rem;">
+                ➕ ¿Deseas agregar otro modelo a la orden?
+            </div>
+            <input type="file" id="add-more-file" class="file-input" accept=".stl" multiple>
+            <label for="add-more-file" class="add-more-btn">
+                📁 Agregar otro modelo STL
+            </label>
+        </div>
+        
+        <div class="order-summary" id="order-summary" style="display: none;">
+            <div class="summary-header">📋 Resumen de la Orden</div>
+            
+            <div class="summary-grid">
+                <div class="summary-item">
+                    <div class="summary-label">Total de Modelos</div>
+                    <div class="summary-value" id="total-models">0</div>
+                </div>
+                <div class="summary-item">
+                    <div class="summary-label">Peso Total Estimado</div>
+                    <div class="summary-value" id="total-weight">0 g</div>
+                </div>
+                <div class="summary-item">
+                    <div class="summary-label">Tiempo Total Estimado</div>
+                    <div class="summary-value" id="total-time">0 h</div>
+                </div>
+                <div class="summary-item">
+                    <div class="summary-label">Subtotal</div>
+                    <div class="summary-value" id="subtotal">$0</div>
+                </div>
+            </div>
+            
+            <div class="summary-total" id="order-total">
+                TOTAL DE LA ORDEN: $0 COP
+            </div>
+            
+            <div class="order-actions">
+                <button id="clear-order" class="order-btn secondary">
+                    🗑️ Limpiar Orden
+                </button>
+                <button id="request-quote" class="order-btn primary">
+                    📄 Añadir al Carrito y Cotizar
+                </button>
+            </div>
+        </div>
+        
+        <!-- MODAL VISOR DETALLADO -->
+        <div id="modal-visor" class="modal-overlay" style="display: none;">
+            <div class="modal-content">
+                <button class="modal-close" id="modal-close-btn">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                </button>
+                <div class="modal-body">
+                    <div id="modal-canvas-container" class="modal-canvas-container"></div>
+                    <div class="modal-info-panel">
+                        <h3>Detalles del Modelo</h3>
+                        <div class="modal-dims">
+                            <div><span class="dim-label">X:</span> <span id="modal-dim-x">0</span> mm</div>
+                            <div><span class="dim-label">Y:</span> <span id="modal-dim-y">0</span> mm</div>
+                            <div><span class="dim-label">Z:</span> <span id="modal-dim-z">0</span> mm</div>
+                        </div>
+                        <p class="modal-instructions">🖱️ Click izquierdo: Rotar | Click derecho: Pan | Rueda: Zoom</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+
+<script src="https://cdn.jsdelivr.net/npm/three@0.132.2/build/three.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.132.2/examples/js/loaders/STLLoader.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/three@0.132.2/examples/js/controls/OrbitControls.js"></script>
+
+<script>
+    // Se ejecuta al cargar, pero dentro de un scope para no contaminar
+    (function() {
+        // ============================================
+        // CONFIGURACIÓN DE MATERIALES
+        // ============================================
+        const MATERIALES = {
+            fdm: [
+                { id: 'pla', nombre: 'PLA', precioGramo: 420, densidad: 1.00, desc: 'Ideal para prototipos, biodegradable' },
+                { id: 'abs', nombre: 'ABS', precioGramo: 490, densidad: 1.04, desc: 'Resistente al calor (100 °C), durable, estanqueidad' },
+                { id: 'petg', nombre: 'PETG', precioGramo: 430, densidad: 1.27, desc: 'Resistente, ligeramente flexible,' },
+                { id: 'nylon', nombre: 'Nylon', precioGramo: 800, densidad: 1.27, desc: 'Resistente, flexible, alta temperatura (180 °C)' },
+                { id: 'tpu', nombre: 'TPU', precioGramo: 900, densidad: 1.27, desc: 'Resistente, flexible Y elastico' },
+                { id: 'pp', nombre: 'Polipropileno', precioGramo: 900, densidad: 1.27, desc: 'Resistente, flexible' }
+            ],
+            resina: [
+                { id: 'standard', nombre: 'Standard', precioGramo: 700, densidad: 1.12, desc: 'Resina estándar para impresión SLA' },
+                { id: 'abs_like', nombre: 'ABS-Like', precioGramo: 800, densidad: 1.15, desc: 'Resina con propiedades similares al ABS' },
+                { id: 'ultra_transparente', nombre: 'Ultra Transparente', precioGramo: 900, densidad: 1.12, desc: 'Resina ultra transparente para piezas cristalinas' },
+                { id: 'tough', nombre: 'Tough', precioGramo: 1200, densidad: 1.15, desc: 'Resina resistente para piezas mecánicas' },
+                { id: 'nylon', nombre: 'Nylon Anti-impact', precioGramo: 2400, densidad: 1.15, desc: 'Resina tipo nylon anti impactos' },
+                { id: 'f80', nombre: 'F-80', precioGramo: 2400, densidad: 1.15, desc: 'Resina flexible y elástica' }
+            ]
+        };
+
+        // ============================================
+        // COLORES DISPONIBLES POR TECNOLOGÍA/MATERIAL
+        // ============================================
+        const COLORES_FDM = {
+            pla: [
+                { id: 'white', nombre: 'Blanco' },
+                { id: 'black', nombre: 'Negro' },
+                { id: 'grey', nombre: 'Gris' },
+                { id: 'silver', nombre: 'Plata' },
+                { id: 'gold', nombre: 'Dorado' },
+                { id: 'red', nombre: 'Rojo' },
+                { id: 'blue', nombre: 'Azul' },
+                { id: 'green', nombre: 'Verde' },
+                { id: 'yellow', nombre: 'Amarillo' },
+                { id: 'orange', nombre: 'Naranja' },
+                { id: 'multicolor_red', nombre: 'Multicolor Tono Rojo' },
+                { id: 'multicolor_pink', nombre: 'Multicolor Rosado' },
+                { id: 'brown', nombre: 'Café' }
+            ],
+            abs: [
+                { id: 'white', nombre: 'Blanco' },
+                { id: 'black', nombre: 'Negro' },
+                { id: 'grey', nombre: 'Gris' },
+                { id: 'silver', nombre: 'Plata' }
+            ],
+            petg: [
+                { id: 'white', nombre: 'Blanco' },
+                { id: 'black', nombre: 'Negro' },
+                { id: 'translucent', nombre: 'Translúcido' },
+                { id: 'silver', nombre: 'Plata' }
+            ],
+            nylon: [
+                { id: 'black', nombre: 'Negro' },
+                { id: 'white', nombre: 'Blanco' },
+                { id: 'silver', nombre: 'Plata' }
+            ],
+            tpu: [
+                { id: 'black', nombre: 'Negro' },
+                { id: 'yellow', nombre: 'Amarillo' },
+                { id: 'orange', nombre: 'Naranja' },
+                { id: 'white', nombre: 'Blanco' }
+            ],
+            pp: [
+                { id: 'black', nombre: 'Negro' },
+                { id: 'white', nombre: 'Blanco' },
+                { id: 'grey', nombre: 'Gris' }
+            ]
+        };
+
+        const COLORES_RESINA = {
+            standard: [
+                { id: 'white', nombre: 'Blanco' },
+                { id: 'black', nombre: 'Negro' },
+                { id: 'translucent', nombre: 'Translúcido' },
+                { id: 'grey', nombre: 'Gris' },
+                { id: 'blue', nombre: 'Azul' }
+            ],
+            abs_like: [
+                { id: 'white', nombre: 'Blanco' },
+                { id: 'black', nombre: 'Negro' },
+                { id: 'beige', nombre: 'Beige' },
+                { id: 'grey', nombre: 'Gris' },
+                { id: 'blue', nombre: 'Azul' }
+            ],
+            ultra_transparente: [
+                { id: 'ultra_transparent', nombre: 'Ultra Transparente' }
+            ],
+            tough: [
+                { id: 'black', nombre: 'Negro' },
+                { id: 'grey', nombre: 'Gris' }
+            ],
+            nylon: [
+                { id: 'white', nombre: 'Blanco' }
+            ],
+            f80: [
+                { id: 'black', nombre: 'Negro' }
+            ]
+        };
+
+        // ============================================
+        // TARIFAS Y PRECIOS
+        // ============================================
+        const TARIFAS = {
+            costoSetup: 1000,
+            precioHora: 300,
+            //colorPersonalizado: 10000,
+            postProcesado: 2000,
+            
+            multiplicadorCalidad: {
+                // FDM
+                0.3: 0.9, 0.2: 1.0, 0.15: 1.2, 0.1: 1.5, 0.05: 2.0,
+                // SLA
+                0.02: 1.8, 0.05: 1.4, 0.1: 1.0
+            },
+            
+            multiplicadorRelleno: {
+                15: 0.8, 20: 0.9, 40: 1.0, 60: 1.3, 80: 1.7, 100: 2.0
+            },
+            
+            multiplicadorCantidad: {
+                1: 1.0, 2: 0.95, 3: 0.9, 5: 0.85, 10: 0.8, 20: 0.75, 50: 0.7
+            }
+        };
+
+        // ============================================
+        // VARIABLES GLOBALES
+        // ============================================
+        let orden = [];
+        let renderers = new Map();
+
+        // ============================================
+        // FUNCIONES LÓGICAS (HUECOS Y VOLUMEN)
+        // ============================================
+        function esObjetoHueco(geometry, dimensions) {
+            const volumenReal = calcularVolumenSTL(geometry);
+            const volumenBoundingBox = (dimensions.x * dimensions.y * dimensions.z) / 1000;
+            const relacion = volumenReal / Math.max(volumenBoundingBox, 0.1);
+            return relacion < 0.2;
+        }
+
+        function calcularVolumenSTL(geometry) {
+            let volume = 0;
+            const position = geometry.getAttribute('position');
+            if (!position || position.count < 3) return 0.1;
+            
+            for (let i = 0; i < position.count; i += 3) {
+                const v1 = new THREE.Vector3(position.getX(i), position.getY(i), position.getZ(i));
+                const v2 = new THREE.Vector3(position.getX(i + 1), position.getY(i + 1), position.getZ(i + 1));
+                const v3 = new THREE.Vector3(position.getX(i + 2), position.getY(i + 2), position.getZ(i + 2));
+                const cross = new THREE.Vector3().crossVectors(v2, v3);
+                volume += v1.dot(cross) / 6;
+            }
+            return Math.max(0.1, Math.abs(volume) / 1000);
+        }
+
+        function calcularDimensiones(geometry) {
+            geometry.computeBoundingBox();
+            const box = geometry.boundingBox;
+            return {
+                x: Math.abs(box.max.x - box.min.x),
+                y: Math.abs(box.max.y - box.min.y),
+                z: Math.abs(box.max.z - box.min.z)
+            };
+        }
+
+        function estimarVolumenParaHueco(geometry, dimensions) {
+            const areaSuperficial = calcularAreaSuperficial(geometry);
+            const grosorPared = 1.4; // mm
+            const volumen = (areaSuperficial * grosorPared) / 1000; // cm³
+            return Math.max(volumen, 0.1);
+        }
+
+        function calcularAreaSuperficial(geometry) {
+            let area = 0;
+            const position = geometry.getAttribute('position');
+            if (!position) return 0;
+            
+            for (let i = 0; i < position.count; i += 3) {
+                const v1 = new THREE.Vector3(position.getX(i), position.getY(i), position.getZ(i));
+                const v2 = new THREE.Vector3(position.getX(i + 1), position.getY(i + 1), position.getZ(i + 1));
+                const v3 = new THREE.Vector3(position.getX(i + 2), position.getY(i + 2), position.getZ(i + 2));
+                const lado1 = new THREE.Vector3().subVectors(v2, v1);
+                const lado2 = new THREE.Vector3().subVectors(v3, v1);
+                const cross = new THREE.Vector3().crossVectors(lado1, lado2);
+                area += cross.length() * 0.5;
+            }
+            return area;
+        }
+
+        // ============================================
+        // CÁLCULO DE COSTOS
+        // ============================================
+        function calcularCostosItem(item) {
+            const tech = item.config?.printingTech || 'fdm';
+            const materialId = item.config?.materialType || 'pla';
+            const layerHeight = parseFloat(item.config?.layerHeight || 0.2);
+            const infill = parseInt(item.config?.infillDensity || 40);
+            const color = item.config?.printColor || 'blue';
+            const quantity = parseInt(item.config?.quantity || 1);
+            const postProcessing = item.config?.postProcessing || false;
+            
+            const materiales = MATERIALES[tech];
+            const material = materiales.find(m => m.id === materialId) || materiales[0];
+            
+            let pesoGramos;
+            if (item.esHueco) {
+                pesoGramos = item.volume * material.densidad; // Paredes sólidas
+            } else {
+                pesoGramos = item.volume * material.densidad * (infill / 100);
+            }
+            
+            if (tech === 'resina') {
+                pesoGramos = item.volume * material.densidad;
+            }
+            
+            let costoMaterial = pesoGramos * material.precioGramo;
+            const multiplicadorCalidad = TARIFAS.multiplicadorCalidad[layerHeight] || 1.0;
+            costoMaterial *= multiplicadorCalidad;
+            
+            if (!item.esHueco && tech !== 'resina') {
+                const multiplicadorRelleno = TARIFAS.multiplicadorRelleno[infill] || 1.0;
+                costoMaterial *= multiplicadorRelleno;
+            }
+            
+            const baseTimePerCm3 = tech === 'fdm' ? 0.15 : 0.08;
+            let tiempoHoras = item.volume * baseTimePerCm3;
+            if (layerHeight < 0.1) tiempoHoras *= 1.5;
+            if (layerHeight < 0.05) tiempoHoras *= 2.0;
+            
+            const costoTiempo = tiempoHoras * TARIFAS.precioHora;
+            const costoColor = (color === 'custom') ? TARIFAS.colorPersonalizado : 0;
+            const costoPost = postProcessing ? TARIFAS.postProcesado : 0;
+            
+            let descuentoCantidad = 1.0;
+            for (const [cant, mult] of Object.entries(TARIFAS.multiplicadorCantidad)) {
+                if (quantity >= parseInt(cant)) descuentoCantidad = mult;
+            }
+            
+            const subtotalUnitario = TARIFAS.costoSetup + costoMaterial + costoTiempo + costoColor + costoPost;
+            const total = subtotalUnitario * quantity * descuentoCantidad;
+            
+            return {
+                costoMaterial: costoMaterial * quantity * descuentoCantidad,
+                costoTiempo: costoTiempo * quantity * descuentoCantidad,
+                costoColor: costoColor * quantity,
+                costoPost: costoPost * quantity,
+                costoSetup: TARIFAS.costoSetup,
+                subtotal: subtotalUnitario,
+                total: Math.round(total),
+                pesoGramos: pesoGramos * quantity,
+                tiempoHoras: tiempoHoras * quantity
+            };
+        }
+
+        // ============================================
+        // INTERFAZ Y RENDERIZADO
+        // ============================================
+        function crearElementoModelo(file, geometry, index) {
+            const modelId = `model-${Date.now()}-${index}`;
+            const viewerId = `viewer-${modelId}`;
+            const dimensions = calcularDimensiones(geometry);
+            const esHueco = esObjetoHueco(geometry, dimensions);
+            
+            let volume;
+            if (esHueco) {
+                volume = estimarVolumenParaHueco(geometry, dimensions);
+            } else {
+                volume = calcularVolumenSTL(geometry);
+            }
+            
+            const config = {
+                printingTech: 'fdm',
+                materialType: 'pla',
+                layerHeight: '0.2',
+                infillDensity: '40',
+                printColor: 'blue',
+                quantity: 1,
+                postProcessing: false
+            };
+            
+            const item = {
+                id: modelId,
+                nombre: file.name,
+                size: file.size,
+                file: file, // IMPORTANTE: Guardamos el archivo físico
+                geometry: geometry,
+                dimensions: dimensions,
+                volume: volume,
+                esHueco: esHueco,
+                config: config,
+                viewerId: viewerId
+            };
+            
+            item.costos = calcularCostosItem(item);
+            orden.push(item);
+            
+            
+            const modelElement = document.createElement('div');
+            modelElement.className = 'model-item fade-in';
+            modelElement.id = modelId;
+            
+            const formatoCOP = (num) => Math.round(num).toLocaleString('es-CO');
+            
+            modelElement.innerHTML = `
+                <div class="model-header">
+                    <div class="model-title">
+                        <span class="model-number">${orden.length}</span>
+                        <span>${file.name}</span>
+                        <span style="font-size: 0.9rem; color: ${esHueco ? '#ff9900' : '#4a86e8'}; margin-left: 10px;">
+                            ${esHueco ? '🫧 Hueco' : '⬤ Sólido'}
+                        </span>
+                    </div>
+                    <div class="model-actions">
+                        <button class="model-btn delete" data-id="${modelId}">
+                            🗑️ Eliminar
+                        </button>
+                    </div>
+                </div>
+                <div class="model-content">
+                    <div class="model-viewer" style="cursor: pointer;" title="Click para ampliar y ver en detalle 3D">
+                        <div id="${viewerId}" class="viewer-canvas"></div>
+                        <div style="position: absolute; bottom: 10px; right: 10px; background: rgba(0,0,0,0.5); color: white; padding: 4px 8px; border-radius: 4px; font-size: 0.8rem; pointer-events: none;">🔍 Click para ampliar</div>
+                    </div>
+                    <div class="model-config">
+                        <div class="config-grid">
+                            <div class="config-item">
+                                <label class="config-label">🖨️ Tecnología</label>
+                                <select class="config-select printing-tech" data-id="${modelId}">
+                                    <option value="fdm">FDM (Filamento) 30X30X45 Cm Max</option>
+                                    <option value="resina">Resina (SLA) 25x12x21 cm Max</option>
+                                </select>
+                                <div class="tech-info" id="tech-info-${modelId}"></div>
+                            </div>
+                            <div class="config-item">
+                                <label class="config-label">🧱 Material</label>
+                                <select class="config-select material-type" data-id="${modelId}">
+                                    </select>
+                                <div class="material-info" id="info-${modelId}"></div>
+                            </div>
+                            <div class="config-item">
+                                <label class="config-label">📏 Altura de Capa (Calidad)</label>
+                                <select class="config-select layer-height" data-id="${modelId}">
+                                    </select>
+                            </div>
+                            <div class="config-item">
+                                <label class="config-label">🏗️ Relleno</label>
+                                <select class="config-select infill-density" data-id="${modelId}">
+                                    <option value="15">15% (Ligero)</option>
+                                    <option value="20">20% (Estándar)</option>
+                                    <option value="40" selected>40% (Resistente)</option>
+                                    <option value="60">60% (Fuerte)</option>
+                                    <option value="80">80% (Muy fuerte)</option>
+                                    <option value="100">100% (Sólido)</option>
+                                </select>
+                            </div>
+                            <div class="config-item">
+                                <label class="config-label">🎨 Color</label>
+                                <select class="config-select print-color" data-id="${modelId}">
+                                    <!-- Colores se cargan dinámicamente -->
+                                </select>
+                            </div>
+                            <div class="config-item">
+                                <label class="config-label">🔢 Cantidad</label>
+                                <input type="number" class="config-input quantity" value="1" min="1" data-id="${modelId}">
+                            </div>
+                        </div>
+                        
+                        <div class="dimensions-display">
+                            <div>📐 Dimensiones:</div>
+                            <div class="dimensions-grid">
+                                <div class="dimension-item">
+                                    <div class="dimension-label">Largo (X)</div>
+                                    <div class="dimension-value">${dimensions.x.toFixed(1)} mm</div>
+                                </div>
+                                <div class="dimension-item">
+                                    <div class="dimension-label">Ancho (Y)</div>
+                                    <div class="dimension-value">${dimensions.y.toFixed(1)} mm</div>
+                                </div>
+                                <div class="dimension-item">
+                                    <div class="dimension-label">Alto (Z)</div>
+                                    <div class="dimension-value">${dimensions.z.toFixed(1)} mm</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div style="margin-top: 15px; text-align: right; font-size: 1.2rem; font-weight: bold; color: #4aaf50;">
+                            Costo estimado: <span id="price-${modelId}">$${formatoCOP(item.costos.total)}</span>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            document.getElementById('models-container').appendChild(modelElement);
+            
+            // Asignar eventos manualmente (mejor practica que inline onclick en WP)
+            const el = modelElement;
+            el.querySelector('.delete').addEventListener('click', () => eliminarModelo(modelId));
+            el.querySelectorAll('select, input').forEach(input => {
+                input.addEventListener('change', () => actualizarConfiguracion(modelId));
+            });
+
+            // Evento para abrir el modal
+            el.querySelector('.model-viewer').addEventListener('click', () => abrirModalVisor(item));
+
+            cargarMaterialesSelect(modelId);
+            actualizarCalidades(modelId);
+            actualizarColoresSelect(modelId);
+            actualizarInfoTech(modelId);
+            iniciarVisor(viewerId, geometry);
+            
+            document.getElementById('initial-upload').style.display = 'none';
+            document.getElementById('add-more-section').style.display = 'block';
+            document.getElementById('order-summary').style.display = 'block';
+            
+            actualizarResumenOrden();
+        }
+
+        function cargarMaterialesSelect(modelId) {
+            const item = orden.find(m => m.id === modelId);
+            if (!item) return;
+            
+            const tech = document.querySelector(`#${modelId} .printing-tech`).value;
+            const select = document.querySelector(`#${modelId} .material-type`);
+            select.innerHTML = '';
+            
+            MATERIALES[tech].forEach(mat => {
+                const option = document.createElement('option');
+                option.value = mat.id;
+                option.textContent = mat.nombre;
+                select.appendChild(option);
+            });
+            
+            actualizarInfoMaterial(modelId);
+        }
+
+        function actualizarCalidades(modelId) {
+            const item = orden.find(m => m.id === modelId);
+            const tech = document.querySelector(`#${modelId} .printing-tech`).value;
+            const select = document.querySelector(`#${modelId} .layer-height`);
+            select.innerHTML = '';
+            
+            let opciones = [];
+            if (tech === 'fdm') {
+                opciones = [
+                    { val: '0.3', text: '0.3mm (Borrador - Rápido)' },
+                    { val: '0.2', text: '0.2mm (Estándar - Equilibrado)' },
+                    { val: '0.15', text: '0.15mm (Detallado)' },
+                    { val: '0.1', text: '0.1mm (Alta Calidad)' }
+                ];
+            } else {
+                opciones = [
+                    { val: '0.1', text: '100 micras (Rápido)' },
+                    { val: '0.05', text: '50 micras (Estándar)' },
+                    { val: '0.02', text: '20 micras (Ultra Detalle)' }
+                ];
+            }
+            
+            opciones.forEach(op => {
+                const option = document.createElement('option');
+                option.value = op.val;
+                option.textContent = op.text;
+                if (op.val === '0.2' || op.val === '0.05') option.selected = true;
+                select.appendChild(option);
+            });
+        }
+
+        function actualizarInfoMaterial(modelId) {
+            const tech = document.querySelector(`#${modelId} .printing-tech`).value;
+            const matId = document.querySelector(`#${modelId} .material-type`).value;
+            const material = MATERIALES[tech].find(m => m.id === matId);
+            
+            const infoDiv = document.getElementById(`info-${modelId}`);
+            if (material) {
+                infoDiv.textContent = material.desc;
+                infoDiv.className = 'material-info active';
+            }
+        }
+
+        function actualizarInfoTech(modelId) {
+            const tech = document.querySelector(`#${modelId} .printing-tech`).value;
+            const infoDiv = document.getElementById(`tech-info-${modelId}`);
+            
+            const techDescripciones = {
+                fdm: '🔧 FDM: Tecnología por deposición de filamento fundido. Ideal para prototipos funcionales, piezas mecánicas y objetos de gran tamaño. Mayor resistencia estructural.',
+                resina: '✨ SLA: Tecnología de estereolitografía con resina líquida. Ideal para detalles finos, miniaturas, joyería y superficies ultra lisas. Mayor precisión dimensional.'
+            };
+            
+            if (infoDiv) {
+                infoDiv.textContent = techDescripciones[tech] || '';
+                infoDiv.className = 'tech-info active';
+            }
+        }
+
+        function actualizarColoresSelect(modelId) {
+            const tech = document.querySelector(`#${modelId} .printing-tech`).value;
+            const matId = document.querySelector(`#${modelId} .material-type`).value;
+            const select = document.querySelector(`#${modelId} .print-color`);
+            const valorActual = select.value;
+            
+            select.innerHTML = '';
+            
+            let colores = [];
+            if (tech === 'fdm') {
+                // FDM: colores dependen del material
+                colores = COLORES_FDM[matId] || COLORES_FDM['pla'];
+            } else {
+                // Resina: colores dependen del material
+                colores = COLORES_RESINA[matId] || COLORES_RESINA['standard'];
+            }
+            
+            colores.forEach((color, index) => {
+                const option = document.createElement('option');
+                option.value = color.id;
+                option.textContent = color.nombre;
+                // Seleccionar el primer color por defecto o mantener el actual si existe
+                if (color.id === valorActual || (index === 0 && !colores.find(c => c.id === valorActual))) {
+                    option.selected = true;
+                }
+                select.appendChild(option);
+            });
+            
+            // Si el valor actual no está en las nuevas opciones, actualizar la config
+            const item = orden.find(m => m.id === modelId);
+            if (item) {
+                item.config.printColor = select.value;
+            }
+        }
+
+        function actualizarConfiguracion(modelId) {
+            const item = orden.find(m => m.id === modelId);
+            const el = document.getElementById(modelId);
+            
+            item.config.printingTech = el.querySelector('.printing-tech').value;
+            item.config.materialType = el.querySelector('.material-type').value;
+            item.config.layerHeight = el.querySelector('.layer-height').value;
+            item.config.infillDensity = el.querySelector('.infill-density').value;
+            item.config.printColor = el.querySelector('.print-color').value;
+            item.config.quantity = el.querySelector('.quantity').value;
+            
+            // Si cambió tecnología, actualizar materiales, calidades y colores
+            const prevTech = item.config.tech_prev;
+            const prevMat = item.config.mat_prev;
+            if (prevTech !== item.config.printingTech) {
+                cargarMaterialesSelect(modelId);
+                actualizarCalidades(modelId);
+                actualizarInfoTech(modelId);
+                item.config.tech_prev = item.config.printingTech;
+                // Reiniciar selección al default de la nueva lista
+                item.config.materialType = el.querySelector('.material-type').value;
+                item.config.layerHeight = el.querySelector('.layer-height').value;
+                actualizarColoresSelect(modelId);
+                item.config.printColor = el.querySelector('.print-color').value;
+            }
+            
+            // Si cambió el material (especialmente en resina), actualizar colores
+            if (prevMat !== item.config.materialType) {
+                item.config.mat_prev = item.config.materialType;
+                actualizarColoresSelect(modelId);
+                item.config.printColor = el.querySelector('.print-color').value;
+            }
+
+            actualizarInfoMaterial(modelId);
+            item.costos = calcularCostosItem(item);
+            
+            document.getElementById(`price-${modelId}`).textContent = '$' + Math.round(item.costos.total).toLocaleString('es-CO');
+            actualizarResumenOrden();
+        }
+
+        function eliminarModelo(modelId) {
+            orden = orden.filter(item => item.id !== modelId);
+            const el = document.getElementById(modelId);
+            if (el) el.remove();
+            
+            if (orden.length === 0) {
+                document.getElementById('initial-upload').style.display = 'block';
+                document.getElementById('add-more-section').style.display = 'none';
+                document.getElementById('order-summary').style.display = 'none';
+            }
+            
+            actualizarResumenOrden();
+        }
+
+        function actualizarResumenOrden() {
+            let totalModels = 0;
+            let totalWeight = 0;
+            let totalTime = 0;
+            let subtotal = 0;
+            
+            orden.forEach(item => {
+                totalModels += parseInt(item.config.quantity);
+                totalWeight += item.costos.pesoGramos;
+                totalTime += item.costos.tiempoHoras;
+                subtotal += item.costos.total;
+            });
+            
+            document.getElementById('total-models').textContent = totalModels;
+            document.getElementById('total-weight').textContent = Math.round(totalWeight) + ' g';
+            document.getElementById('total-time').textContent = totalTime.toFixed(1) + ' h';
+            document.getElementById('subtotal').textContent = '$' + Math.round(subtotal).toLocaleString('es-CO');
+            document.getElementById('order-total').textContent = 'TOTAL: $' + Math.round(subtotal).toLocaleString('es-CO') + ' COP';
+        }
+
+        function iniciarVisor(elementId, geometry) {
+            const container = document.getElementById(elementId);
+            
+            // Esperar un frame sirve para asegurar que el DOM tenga dimensiones reales
+            requestAnimationFrame(() => {
+                 // Si el contenedor se destruyó antes de iniciar
+                if(!document.getElementById(elementId)) return;
+
+                const width = container.clientWidth || 300;
+                const height = container.clientHeight || 225; // Fallback 4:3
+                
+                const scene = new THREE.Scene();
+                scene.background = new THREE.Color(0xf0f0f0); // Coincidir con CSS
+                
+                const camera = new THREE.PerspectiveCamera(45, width / height, 0.1, 1000);
+                
+                const renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
+                renderer.setSize(width, height);
+                // Importante: Canvas responsive
+                renderer.domElement.style.width = '100%';
+                renderer.domElement.style.height = '100%';
+                
+                container.innerHTML = '';
+                container.appendChild(renderer.domElement);
+                
+                // Material y Malla
+                const material = new THREE.MeshPhongMaterial({ 
+                    color: 0x4a86e8, 
+                    specular: 0x111111, 
+                    shininess: 200 
+                });
+                const mesh = new THREE.Mesh(geometry, material);
+                
+                // Centrar geometría
+                geometry.computeBoundingBox();
+                const center = new THREE.Vector3();
+                geometry.boundingBox.getCenter(center);
+                mesh.position.sub(center);
+                
+                // Ajustar cámara automáticamente según tamaño del objeto
+                const size = new THREE.Vector3();
+                geometry.boundingBox.getSize(size);
+                
+                // Encontrar la dimensión máxima para alejar la cámara lo suficiente
+                const maxDim = Math.max(size.x, size.y, size.z);
+                
+                // Calcular FOV vertical en radianes
+                const fov = camera.fov * (Math.PI / 180);
+                let cameraZ = Math.abs(maxDim / 2 / Math.tan(fov / 2));
+                
+                // Multiplicador para dar margen y asegurar que no se corte al rotar
+                cameraZ *= 2.0; 
+                
+                // Ajuste adicional si el objeto es muy ancho para el aspect ratio actual
+                if(size.x > size.y) {
+                    // Si es ancho, necesitamos alejar más basado en el aspect ratio
+                   const aspect = width / height;
+                   if (aspect < 1) cameraZ = cameraZ / aspect;
+                }
+
+                camera.position.z = cameraZ;
+
+                scene.add(mesh);
+                
+                // Luces
+                const ambientLight = new THREE.AmbientLight(0x606060);
+                scene.add(ambientLight);
+                
+                const directionalLight = new THREE.DirectionalLight(0xffffff, 0.9);
+                directionalLight.position.set(1, 1, 1);
+                scene.add(directionalLight);
+                
+                // Orientación fija inicial
+                mesh.rotation.x = -Math.PI / 2;
+                mesh.rotation.z = Math.PI / 6;
+
+                // Animación y Resize
+                const animate = function () {
+                    if(!document.getElementById(elementId)) return;
+                    requestAnimationFrame(animate);
+                    renderer.render(scene, camera);
+                };
+                
+                // Manejar redimensionamiento de ventana
+                const onResize = () => {
+                    if(!document.getElementById(elementId)) {
+                        window.removeEventListener('resize', onResize);
+                        return;
+                    }
+                    const newW = container.clientWidth;
+                    const newH = container.clientHeight;
+                    camera.aspect = newW / newH;
+                    camera.updateProjectionMatrix();
+                    renderer.setSize(newW, newH);
+                };
+                window.addEventListener('resize', onResize);
+
+                animate();
+                renderers.set(elementId, renderer);
+            });
+        }
+
+        // ============================================
+        // MODAL VISOR LOGIC
+        // ============================================
+        let modalRenderer, modalScene, modalCamera, modalControls, modalAnimationId;
+
+        function abrirModalVisor(item) {
+            const modal = document.getElementById('modal-visor');
+            const container = document.getElementById('modal-canvas-container');
+            const dimX = document.getElementById('modal-dim-x');
+            const dimY = document.getElementById('modal-dim-y');
+            const dimZ = document.getElementById('modal-dim-z');
+
+            // Set content
+            dimX.textContent = item.dimensions.x.toFixed(2);
+            dimY.textContent = item.dimensions.y.toFixed(2);
+            dimZ.textContent = item.dimensions.z.toFixed(2);
+
+            modal.style.display = 'flex';
+
+            // Initialize Three.js for Modal (Singleton-ish)
+            if (!modalRenderer) {
+                modalScene = new THREE.Scene();
+                modalScene.background = new THREE.Color(0xf5f5f5);
+
+                // Grid helper
+                const gridHelper = new THREE.GridHelper(500, 50, 0xdddddd, 0xeeeeee);
+                gridHelper.rotation.x = Math.PI / 2; // Grid en XY (o XZ dependiendo de la orientación)
+                // Mejor dejar grid en plano XZ por defecto
+                gridHelper.rotation.x = 0;
+                modalScene.add(gridHelper);
+                
+                // Lights
+                const ambientLight = new THREE.AmbientLight(0x666666);
+                modalScene.add(ambientLight);
+
+                const directionalLight = new THREE.DirectionalLight(0xffffff, 1.0);
+                directionalLight.position.set(100, 100, 100);
+                modalScene.add(directionalLight);
+                
+                const backLight = new THREE.DirectionalLight(0xffffff, 0.5);
+                backLight.position.set(-100, -50, -100);
+                modalScene.add(backLight);
+
+                modalCamera = new THREE.PerspectiveCamera(45, container.clientWidth / container.clientHeight, 0.1, 2000);
+                
+                modalRenderer = new THREE.WebGLRenderer({ antialias: true });
+                modalRenderer.setSize(container.clientWidth, container.clientHeight);
+                container.appendChild(modalRenderer.domElement);
+
+                // Controls
+                modalControls = new THREE.OrbitControls(modalCamera, modalRenderer.domElement);
+                modalControls.enableDamping = true;
+                modalControls.dampingFactor = 0.05;
+                modalControls.screenSpacePanning = false;
+            }
+
+            // Actualizar tamaño renderer por si cambió el tamaño de ventana mientras estaba oculto
+            const newW = container.clientWidth;
+            const newH = container.clientHeight;
+            if(modalRenderer.domElement.width !== newW || modalRenderer.domElement.height !== newH) {
+                modalRenderer.setSize(newW, newH);
+                modalCamera.aspect = newW / newH;
+                modalCamera.updateProjectionMatrix();
+            }
+
+            // Clear previous mesh
+            for(let i = modalScene.children.length - 1; i >= 0; i--) { 
+                 const obj = modalScene.children[i];
+                 if(obj.type === 'Mesh') modalScene.remove(obj); 
+            }
+
+            // Clone geometry and adding mesh
+            const material = new THREE.MeshPhongMaterial({ 
+                color: 0x61c5d9, 
+                specular: 0x111111, 
+                shininess: 100,
+                flatShading: false
+            });
+            const mesh = new THREE.Mesh(item.geometry, material);
+            
+            // Center geometry
+            const center = new THREE.Vector3();
+            item.geometry.boundingBox.getCenter(center);
+            mesh.position.sub(center);
+            
+            // Orientación FDM (Z-up vs Y-up ThreeJS default)
+            // STL suele venir Z-up. ThreeJS es Y-up.
+            // Rotamos x -90 para que Z sea arriba visualmente
+            mesh.rotation.x = -Math.PI / 2;
+            
+            modalScene.add(mesh);
+            
+            // Helper de ejes opcional
+            // const axesHelper = new THREE.AxesHelper( 50 );
+            // modalScene.add( axesHelper );
+
+            // Adjust Camera
+            const size = new THREE.Vector3();
+            item.geometry.boundingBox.getSize(size);
+            const maxDim = Math.max(size.x, size.y, size.z);
+            
+            // Posicionar camara
+            const fov = modalCamera.fov * (Math.PI / 180);
+            let cameraZ = Math.abs(maxDim / Math.sin(fov / 2));
+            
+            modalCamera.position.set(maxDim, maxDim, cameraZ * 1.5);
+            modalCamera.lookAt(0,0,0);
+            modalControls.target.set(0,0,0);
+            modalControls.update();
+
+            // Animation Loop
+            const animateModal = function () {
+                if(modal.style.display === 'none') {
+                    cancelAnimationFrame(modalAnimationId);
+                    return;
+                }
+                modalAnimationId = requestAnimationFrame(animateModal);
+                modalControls.update();
+                modalRenderer.render(modalScene, modalCamera);
+            };
+            animateModal();
+            
+            // Handle resize local
+            function onModalResize() {
+                if(modal.style.display === 'none') return;
+                const w = container.clientWidth;
+                const h = container.clientHeight;
+                modalCamera.aspect = w / h;
+                modalCamera.updateProjectionMatrix();
+                modalRenderer.setSize(w, h);
+            }
+            window.addEventListener('resize', onModalResize);
+        }
+
+        document.getElementById('modal-close-btn').addEventListener('click', () => {
+            document.getElementById('modal-visor').style.display = 'none';
+        });
+
+        // Close on clicking outside
+        document.getElementById('modal-visor').addEventListener('click', (e) => {
+           if(e.target.id === 'modal-visor') {
+               document.getElementById('modal-visor').style.display = 'none';
+           }
+        });
+
+        // ============================================
+        // EVENT LISTENER: SUBIDA DE ARCHIVOS (DRAG & DROP)
+        // ============================================
+        
+        function procesarArchivos(files) {
+            if (!files || files.length === 0) return;
+
+            Array.from(files).forEach(file => {
+                // Validación básica de extensión
+                if (!file.name.toLowerCase().endsWith('.stl')) {
+                    alert('El archivo ' + file.name + ' no es un archivo STL válido. Por favor sube solo archivos .stl');
+                    return;
+                }
+                
+                // Validación de tamaño (ej. 100MB por archivo)
+                if (file.size > 100 * 1024 * 1024) {
+                    if(!confirm(`El archivo ${file.name} es grande (${(file.size/1024/1024).toFixed(1)} MB). ¿Deseas continuar?`)) {
+                        return;
+                    }
+                }
+
+                const reader = new FileReader();
+                
+                reader.onload = function(e) {
+                    const loader = new THREE.STLLoader();
+                    try {
+                        const geometry = loader.parse(e.target.result);
+                        // Pasamos orden.length para el índice, que se actualiza al pushear
+                        crearElementoModelo(file, geometry, orden.length);
+                    } catch (error) {
+                        console.error(error);
+                        alert('Error al procesar el archivo ' + file.name + '. Puede que esté corrupto o no sea un STL válido.');
+                    }
+                };
+                
+                reader.readAsArrayBuffer(file);
+            });
+        }
+
+        function setupDragAndDrop(elementId) {
+            const dropZone = document.getElementById(elementId);
+            if (!dropZone) return;
+
+            const preventDefaults = (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+            };
+
+            const highlight = () => dropZone.classList.add('highlight');
+            const unhighlight = () => dropZone.classList.remove('highlight');
+
+            ['dragenter', 'dragover', 'dragleave', 'drop'].forEach(eventName => {
+                dropZone.addEventListener(eventName, preventDefaults, false);
+            });
+
+            ['dragenter', 'dragover'].forEach(eventName => {
+                dropZone.addEventListener(eventName, highlight, false);
+            });
+
+            ['dragleave', 'drop'].forEach(eventName => {
+                dropZone.addEventListener(eventName, unhighlight, false);
+            });
+
+            dropZone.addEventListener('drop', (e) => {
+                const dt = e.dataTransfer;
+                const files = dt.files;
+                procesarArchivos(files);
+            });
+        }
+
+        // Inicializar Drag & Drop
+        setupDragAndDrop('initial-upload');
+        setupDragAndDrop('add-more-section');
+
+        // Manejador para inputs de archivo tradicionales
+        const handleInputChange = (event) => {
+            procesarArchivos(event.target.files);
+            event.target.value = ''; // Limpiar input para permitir subir el mismo archivo
+        };
+
+        document.getElementById('stl-file').addEventListener('change', handleInputChange);
+        document.getElementById('add-more-file').addEventListener('change', handleInputChange);
+        
+        document.getElementById('clear-order').addEventListener('click', () => {
+            if(confirm('¿Estás seguro de querer borrar toda la orden?')) {
+                orden = [];
+                document.getElementById('models-container').innerHTML = '';
+                document.getElementById('initial-upload').style.display = 'block';
+                document.getElementById('add-more-section').style.display = 'none';
+                document.getElementById('order-summary').style.display = 'none';
+                actualizarResumenOrden();
+            }
+        });
+
+        // ============================================
+        // INTEGRACIÓN FINAL CON WOOCOMMERCE (AJAX)
+        // ============================================
+        const btnCotizar = document.getElementById('request-quote');
+        // Usa la URL global de WP si existe, sino fallback relativo
+        const ajaxUrl = (typeof my_ajax_object !== 'undefined' && my_ajax_object.ajax_url) 
+                        ? my_ajax_object.ajax_url 
+                        : '/wp-admin/admin-ajax.php';
+
+        btnCotizar.addEventListener('click', function(e) {
+            e.preventDefault();
+
+            if (orden.length === 0) {
+                alert("⚠️ Por favor sube al menos un modelo 3D.");
+                return;
+            }
+
+            // COMPROBACIÓN BÁSICA DE TAMAÑO (UX)
+            // Si los archivos pesan más de 500MB, avisar al usuario
+            const totalSize = orden.reduce((acc, item) => acc + (item.file ? item.file.size : 0), 0);
+            if (totalSize > 500 * 1024 * 1024) { // 500MB
+                if(!confirm('⚠️ El tamaño total de los archivos es bastante grande (>500MB). La subida puede tardar varios minutos dependiendo de tu conexión. ¿Deseas continuar?')) {
+                    return;
+                }
+            }
+
+            // 1. Feedback visual mejorado
+            const textoOriginal = btnCotizar.innerHTML;
+            btnCotizar.innerHTML = "⏳ Subiendo archivos al servidor... Por favor espere";
+            btnCotizar.disabled = true;
+            btnCotizar.style.opacity = "0.7";
+            btnCotizar.style.cursor = "wait";
+
+            // 2. Preparar los datos
+            let totalOrden = 0;
+            let resumenModelos = [];
+            const formData = new FormData();
+
+            formData.append('action', 'procesar_cotizacion_3d');
+            
+            orden.forEach((item, index) => {
+                totalOrden += item.costos.total;
+
+                // Info visual para el carrito
+                resumenModelos.push({
+                    nombre: item.nombre,
+                    material: item.config.materialType.toUpperCase(),
+                    tech: item.config.printingTech,
+                    relleno: item.config.infillDensity + '%',
+                    capa: item.config.layerHeight + 'mm',
+                    color: item.config.printColor,
+                    cantidad: item.config.quantity,
+                    dimensiones: `${item.dimensions.x.toFixed(1)}x${item.dimensions.y.toFixed(1)}x${item.dimensions.z.toFixed(1)} mm`,
+                    peso_est: Math.round(item.costos.pesoGramos) + 'g',
+                    // imagen_base64 removida
+                });
+
+                // ADJUNTAR ARCHIVO REAL AL FORM DATA
+                if (item.file) {
+                    formData.append('archivo_stl_' + index, item.file);
+                }
+            });
+
+            formData.append('precio_total', totalOrden);
+            formData.append('detalles_json', JSON.stringify(resumenModelos));
+
+            // 3. Enviar al servidor
+            fetch(ajaxUrl, {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => {
+                // Verificar si la respuesta es un JSON válido
+                const contentType = response.headers.get("content-type");
+                if (contentType && contentType.indexOf("application/json") !== -1) {
+                    return response.json();
+                } else {
+                    // Si no es JSON (ej: error fatal PHP por tamaño de archivo), lanzar error con texto
+                    return response.text().then(text => {
+                         throw new Error("Respuesta inválida del servidor. Posible error por tamaño de archivo.");
+                    });
+                }
+            })
+            .then(data => {
+                if (data.redirect) {
+                    window.location.href = data.redirect;
+                } else if (data.error) {
+                    throw new Error(data.error);
+                } else {
+                    // Fallback si no hay redirect explícito pero sí éxito
+                    window.location.href = '/cart/'; 
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                let msg = error.message;
+                if(msg.includes('Respuesta inválida')) {
+                    msg += "\n\nIntenta subir archivos más ligeros o contacta al administrador.";
+                }
+                alert("❌ Error: " + msg);
+                
+                // Restaurar botón
+                btnCotizar.innerHTML = textoOriginal;
+                btnCotizar.disabled = false;
+                btnCotizar.style.opacity = "1";
+                btnCotizar.style.cursor = "pointer";
+            });
+        });
+    })();
+</script>
