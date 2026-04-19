@@ -1,7 +1,7 @@
 import Link from 'next/link';
 import { getSession } from '@/lib/session';
 import { logoutAction } from '../(auth)/login/actions';
-import { Package, LogOut, Home } from 'lucide-react';
+import { Package, LogOut, Home, Tag } from 'lucide-react';
 
 export default async function AdminLayout({ children }: { children: React.ReactNode }) {
   const session = await getSession();
@@ -25,6 +25,13 @@ export default async function AdminLayout({ children }: { children: React.ReactN
           >
             <Package size={18} />
             Productos
+          </Link>
+          <Link
+            href="/admin/categories"
+            className="flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-headline font-medium text-slate-300 hover:bg-white/10 hover:text-white transition-colors"
+          >
+            <Tag size={18} />
+            Categorías
           </Link>
           <Link
             href="/"

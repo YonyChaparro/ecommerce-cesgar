@@ -18,10 +18,12 @@ model Product {
   slug        String         @unique
   category    String
   price       Int
-  img         String
-  alt         String?
-  description String?
-  stock       Int            @default(0)
+  img              String
+  alt              String?
+  shortDescription String?
+  description      String?
+  salePrice        Int?
+  stock            Int            @default(0)
   media       ProductMedia[]
   createdAt   DateTime       @default(now())
   updatedAt   DateTime       @updatedAt

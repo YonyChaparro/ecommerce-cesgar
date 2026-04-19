@@ -1,98 +1,111 @@
 import Navbar from '../components/Navbar';
 import Link from 'next/link';
+import { Suspense } from 'react';
 import { prisma } from '../../lib/prisma';
-import {
-  Search, ChevronDown, ArrowRight, Heart, ShieldCheck,
-} from 'lucide-react';
+import { ArrowRight, ShieldCheck } from 'lucide-react';
+import StoreFilters from './StoreFilters';
+import ProductCard from '../components/ProductCard';
 
-export default async function TiendaPage() {
-  const products = await prisma.product.findMany({
-    orderBy: { createdAt: 'desc' }
-  });
+export default async function TiendaPage({
+  searchParams,
+}: {
+  searchParams: Promise<{ categoria?: string; precioMin?: string; precioMax?: string }>;
+}) {
+  const { categoria, precioMin, precioMax } = await searchParams;
+
+  const minPrice = precioMin ? parseInt(precioMin, 10) : undefined;
+  const maxPrice = precioMax ? parseInt(precioMax, 10) : undefined;
+
+  const [products, categoryRows, priceAgg] = await Promise.all([
+    prisma.product.findMany({
+      where: {
+        ...(categoria ? { category: categoria } : {}),
+        ...((minPrice !== undefined || maxPrice !== undefined) ? {
+          price: {
+            ...(minPrice !== undefined ? { gte: minPrice } : {}),
+            ...(maxPrice !== undefined ? { lte: maxPrice } : {}),
+          },
+        } : {}),
+      },
+      orderBy: { createdAt: 'desc' },
+    }),
+    prisma.product.findMany({
+      select: { category: true },
+      distinct: ['category'],
+      orderBy: { category: 'asc' },
+    }),
+    prisma.product.aggregate({
+      _min: { price: true },
+      _max: { price: true },
+    }),
+  ]);
+
+  const categories = categoryRows.map((r) => r.category);
+  const globalMin = priceAgg._min.price ?? 0;
+  const globalMax = priceAgg._max.price ?? 999999;
 
   return (
     <>
       <Navbar />
-      {/* pt-16 navbar + pt-10 breadcrumb */}
       <main className="pt-26 min-h-screen bg-white">
         <div className="max-w-7xl mx-auto px-8 py-12">
 
           {/* Header */}
-          <div className="mb-12">
-            <h1 className="text-5xl font-headline font-bold text-[#16234d] mb-4">Tienda</h1>
-            <p className="text-slate-500 max-w-2xl text-lg border-l-4 border-[#4dbdcc] pl-6">
+          <div className="mb-10">
+            <h1 className="text-5xl font-headline font-bold text-inverse-surface mb-4">Tienda</h1>
+            <p className="text-slate-500 max-w-2xl text-lg border-l-4 border-primary-container pl-6">
               Insumos industriales y electrónicos especializados. Repuestos de alta precisión para maximizar tu productividad.
             </p>
           </div>
 
-          {/* Search & Filters */}
-          <div className="bg-[#f8fafc] p-2 rounded-2xl flex flex-col md:flex-row gap-2 mb-16 border border-slate-100">
-            <div className="flex-grow relative">
-              <Search size={20} className="absolute left-4 top-1/2 -translate-y-1/2 text-slate-400" />
-              <input
-                type="text"
-                placeholder="Buscar productos..."
-                className="w-full pl-12 pr-4 py-4 bg-transparent text-[#16234d] placeholder-slate-400 font-headline outline-none"
+          {/* Layout: sidebar + grid */}
+          <div className="flex flex-col lg:flex-row gap-10">
+
+            {/* Sidebar filters */}
+            <Suspense fallback={null}>
+              <StoreFilters
+                categories={categories}
+                priceMin={globalMin}
+                priceMax={globalMax}
               />
-            </div>
-            <div className="flex gap-2">
-              <button className="px-8 py-4 bg-[#4dbdcc] text-[#16234d] rounded-xl font-headline font-bold flex items-center gap-3 hover:bg-cyan-400 transition-colors">
-                Categorías
-                <ChevronDown size={16} />
-              </button>
-              <button className="px-8 py-4 bg-[#16234d] text-white rounded-xl font-headline font-bold hover:bg-slate-800 transition-colors">
-                Todos los productos
-              </button>
-            </div>
-          </div>
+            </Suspense>
 
-          {/* Section label */}
-          <div className="mb-8 flex justify-between items-end">
-             <h2 className="text-2xl font-headline font-bold text-[#16234d]">Todos los productos</h2>
-             <span className="text-slate-400 text-sm">{products.length} resultados</span>
-          </div>
+            {/* Products area */}
+            <div className="flex-1 min-w-0">
 
-          {/* Product Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-16">
-            {products.map((p) => {
-              return (
-                <Link href={`/tienda/${p.slug}`} key={p.id} className="group bg-white rounded-2xl border border-slate-100 p-4 hover:shadow-xl transition-all duration-300 flex flex-col">
-                  <div className="aspect-square bg-[#f8fafc] rounded-xl mb-6 overflow-hidden flex items-center justify-center">
-                    {/* eslint-disable-next-line @next/next/no-img-element */}
-                    <img
-                      alt={p.alt || p.name}
-                      className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-500"
-                      src={p.img}
-                    />
-                  </div>
-                  <div className="space-y-1 mb-6 flex-grow">
-                    <span className="text-[10px] font-bold uppercase tracking-widest text-slate-400">{p.category}</span>
-                    <h3 className="font-headline font-bold text-[#16234d] leading-tight h-10 overflow-hidden">{p.name}</h3>
-                    <div className="flex items-center gap-1 mt-2">
-                       <span className="text-lg font-bold text-[#16234d]">$ {p.price.toLocaleString('es-CO')}</span>
-                       <span className="text-[10px] text-slate-400">IVA incluido</span>
-                    </div>
-                  </div>
-                  <div className="flex flex-col gap-2 mt-auto">
-                    <button className="w-full py-3 bg-[#16234d] text-white rounded-lg font-headline font-bold text-xs uppercase tracking-widest hover:bg-[#4dbdcc] hover:text-[#16234d] transition-all">
-                      Añadir al carrito
-                    </button>
-                    <button className="flex items-center justify-center gap-2 text-slate-400 hover:text-red-500 text-xs font-bold transition-colors">
-                      <Heart size={14} /> Me gusta
-                    </button>
-                  </div>
-                </Link>
-              );
-            })}
+              {/* Section label */}
+              <div className="mb-6 flex justify-between items-end">
+                <h2 className="text-xl font-headline font-bold text-inverse-surface">
+                  {categoria ?? 'Todos los productos'}
+                </h2>
+                <span className="text-slate-400 text-sm">
+                  {products.length} resultado{products.length !== 1 ? 's' : ''}
+                </span>
+              </div>
+
+              {/* Product Grid */}
+              {products.length > 0 ? (
+                <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6 mb-16">
+                  {products.map((p) => (
+                    <ProductCard key={p.id} product={p} />
+                  ))}
+                </div>
+              ) : (
+                <div className="text-center py-24 text-slate-400">
+                  <p className="text-lg font-headline">No hay productos con estos filtros.</p>
+                </div>
+              )}
+
+            </div>
           </div>
 
           {/* Trust banner */}
           <div className="bg-slate-50 border border-slate-200 rounded-3xl p-8 flex flex-col md:flex-row items-center gap-6 max-w-4xl mx-auto shadow-sm mb-8">
-            <div className="w-16 h-16 rounded-full bg-[#4dbdcc]/10 flex items-center justify-center flex-shrink-0">
-              <ShieldCheck size={40} className="text-[#4dbdcc]" />
+            <div className="w-16 h-16 rounded-full bg-primary-container/10 flex items-center justify-center shrink-0">
+              <ShieldCheck size={40} className="text-primary-container" />
             </div>
             <div>
-              <h3 className="text-xl font-headline font-bold text-[#16234d] mb-1">Compra garantizada</h3>
+              <h3 className="text-xl font-headline font-bold text-inverse-surface mb-1">Compra garantizada</h3>
               <p className="text-slate-500 leading-relaxed text-sm">
                 Paga de manera segura con nuestra pasarela de pago certificada. Múltiples medios de pago disponibles incluyendo contra entrega en Bogotá y Medellín.
               </p>
@@ -100,10 +113,11 @@ export default async function TiendaPage() {
           </div>
 
           <div className="flex justify-center">
-            <Link href="/" className="inline-flex items-center gap-2 text-[#4dbdcc] font-bold hover:underline">
+            <Link href="/" className="inline-flex items-center gap-2 text-primary-container font-bold hover:underline">
               <ArrowRight size={16} className="rotate-180" /> Volver al inicio
             </Link>
           </div>
+
         </div>
       </main>
     </>

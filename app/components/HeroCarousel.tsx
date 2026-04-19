@@ -1,8 +1,18 @@
 'use client';
 
+import CountUp from '@/components/ui/CountUp';
+
+const METRICS = [
+  { to: 500, suffix: '+', label: 'Proyectos Completados' },
+  { to: 150, suffix: '+', label: 'Clientes Satisfechos' },
+  { to: 15,  suffix: '+', label: 'Materiales Disponibles' },
+  { to: 48,  suffix: 'h', label: 'Tiempo de Entrega' },
+];
+
 export default function HeroCarousel() {
+
   return (
-    <div className="relative overflow-hidden bg-gray-900 h-[870px]">
+    <div className="relative overflow-hidden bg-gray-900 h-217.5">
       {/* Background video */}
       <video
         className="absolute inset-0 w-full h-full object-cover"
@@ -29,21 +39,16 @@ export default function HeroCarousel() {
       </div>
 
       {/* Metrics Cards */}
-      <div className="absolute top-1/2 left-0 right-0 z-20 px-6 md:px-16">
+      <div className="absolute top-7/12 left-0 right-0 z-20 px-6 md:px-16">
         <div className="max-w-7xl mx-auto">
           <div className="grid grid-cols-4 gap-4">
-            {[
-              { value: '500+', label: 'Proyectos Completados' },
-              { value: '150+', label: 'Clientes Satisfechos' },
-              { value: '15+', label: 'Materiales Disponibles' },
-              { value: '48h', label: 'Tiempo de Entrega' },
-            ].map((metric) => (
+            {METRICS.map((metric) => (
               <div
                 key={metric.label}
                 className="bg-white/10 backdrop-blur-md border border-white/20 rounded-lg p-1 text-center hover:bg-white/15 transition-all duration-300"
               >
-                <div className="text-2xl md:text-3xl font-bold text-[#4dbdcc] mb-1">
-                  {metric.value}
+                <div className="text-2xl md:text-3xl font-bold text-[#4dbdcc] mb-1 tabular-nums">
+                  <CountUp to={metric.to} />{metric.suffix}
                 </div>
                 <div className="text-[10px] sm:text-xs md:text-sm text-gray-200 font-medium break-words">
                   {metric.label}

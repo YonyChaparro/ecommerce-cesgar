@@ -4,6 +4,7 @@ import { Disclosure, DisclosureButton, DisclosurePanel } from '@headlessui/react
 import { Bars3Icon, XMarkIcon } from '@heroicons/react/24/outline';
 import { Heart, User, ShoppingCart } from 'lucide-react';
 import Link from 'next/link';
+import { useCart } from './CartContext';
 
 const navigation = [
   { name: 'Inicio', href: '/', current: true },
@@ -17,6 +18,7 @@ function classNames(...classes: string[]) {
 }
 
 export default function Navbar() {
+  const { openCart, totalItems } = useCart();
   return (
     <Disclosure as="nav" className="fixed top-0 w-full z-50 bg-white/80 backdrop-blur-md border-b border-slate-100">
       <div className="mx-auto max-w-screen-2xl px-8">
@@ -68,7 +70,14 @@ export default function Navbar() {
             <div className="flex items-center gap-2 text-slate-600">
               <Heart size={22} className="cursor-pointer hover:text-primary-container transition-colors" />
               <Link href="/admin/login" aria-label="Administrar"><User size={22} className="hover:text-primary-container transition-colors" /></Link>
-              <ShoppingCart size={22} className="cursor-pointer hover:text-primary-container transition-colors" />
+              <button onClick={openCart} className="relative cursor-pointer hover:text-primary-container transition-colors" aria-label="Abrir carrito">
+                <ShoppingCart size={22} />
+                {totalItems > 0 && (
+                  <span className="absolute -top-2 -right-2 bg-primary-container text-white text-[10px] font-bold w-4 h-4 rounded-full flex items-center justify-center leading-none">
+                    {totalItems > 9 ? '9+' : totalItems}
+                  </span>
+                )}
+              </button>
             </div>
           </div>
 

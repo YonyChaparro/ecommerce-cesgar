@@ -1,8 +1,12 @@
 import React from 'react';
 import Link from 'next/link';
 import Navbar from '../../components/Navbar';
-import { ArrowLeft, Heart, ShieldCheck, Truck, Star, Plus, Minus, ShoppingCart } from 'lucide-react';
+import ProductImageCarousel from '../../components/ProductImageCarousel';
+import AddToCartButton from '../../components/AddToCartButton';
+import ProductCard from '../../components/ProductCard';
+import { ArrowLeft, ShieldCheck, Truck, Star } from 'lucide-react';
 import { prisma } from '../../../lib/prisma';
+import { cleanWordPressHtml } from '../../../lib/cleanHtml';
 import { notFound } from 'next/navigation';
 
 export default async function ProductPage({
@@ -13,12 +17,19 @@ export default async function ProductPage({
   const resolvedParams = await params;
   const slug = resolvedParams.slug;
   const product = await prisma.product.findUnique({
-    where: { slug }
+    where: { slug },
+    include: { media: { orderBy: { order: 'asc' } } },
   });
 
   if (!product) {
     notFound();
   }
+
+  const related = await prisma.product.findMany({
+    where: { category: product.category, slug: { not: product.slug } },
+    take: 4,
+    orderBy: { createdAt: 'desc' },
+  });
 
   return (
     <>
@@ -40,18 +51,15 @@ export default async function ProductPage({
           </Link>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 lg:gap-20">
-            {/* Product Image */}
-            <div className="bg-[#f8fafc] rounded-3xl p-8 border border-slate-100 flex items-center justify-center relative group">
-              <button className="absolute top-6 right-6 p-4 bg-white text-slate-400 hover:text-red-500 rounded-full shadow-sm hover:shadow-md transition-all z-10">
-                <Heart size={24} />
-              </button>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img 
-                src={product.img} 
-                alt={product.alt || product.name} 
-                  className="w-full max-w-[400px] object-cover group-hover:scale-105 transition-transform duration-700"
-                />
-              </div>
+            {/* Product Images */}
+            <ProductImageCarousel
+              images={[
+                { url: product.img, alt: product.alt || product.name },
+                ...product.media
+                  .filter((m) => m.type === 'image')
+                  .map((m) => ({ url: m.url, alt: m.alt || product.name })),
+              ]}
+            />
 
             {/* Product Details */}
             <div className="flex flex-col">
@@ -84,23 +92,22 @@ export default async function ProductPage({
                 </div>
               </div>
 
-              <p className="text-slate-500 mb-8 leading-relaxed text-lg">
-                Este producto original de alta calidad ha sido testeado para garantizar el mejor rendimiento en entornos industriales. Perfecto para optimizar la fiabilidad y precisión en tus proyectos diarios.
-              </p>
+              {product.shortDescription && (
+                <p className="text-slate-500 mb-8 leading-relaxed text-base">
+                  {product.shortDescription}
+                </p>
+              )}
 
               {/* Quantity & Add to Cart */}
-              <div className="flex flex-col sm:flex-row gap-4 mb-10">
-                <div className="flex items-center justify-between border-2 border-slate-200 rounded-xl px-4 py-3 bg-white w-full sm:w-32">
-                  <button className="text-slate-400 hover:text-[#16234d] transition-colors"><Minus size={20} /></button>
-                  <span className="font-bold text-[#16234d] text-lg">1</span>
-                  <button className="text-slate-400 hover:text-[#16234d] transition-colors"><Plus size={20} /></button>
-                </div>
-                
-                <button className="flex-1 bg-[#4dbdcc] text-[#16234d] hover:bg-cyan-400 hover:shadow-lg transition-all py-4 rounded-xl font-headline font-bold uppercase tracking-widest text-sm flex items-center justify-center gap-3">
-                  <ShoppingCart size={20} />
-                  Añadir al carrito
-                </button>
-              </div>
+              <AddToCartButton product={{
+                id: product.id,
+                slug: product.slug,
+                name: product.name,
+                price: product.price,
+                img: product.img,
+                alt: product.alt,
+                category: product.category,
+              }} />
 
               {/* Features / Guarantees */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-8 border-t border-slate-100">
@@ -125,7 +132,38 @@ export default async function ProductPage({
               </div>
             </div>
           </div>
-          
+
+          {/* Full description */}
+          {product.description && (
+            <div className="mt-16 border-t border-slate-100 pt-12">
+              <h2 className="text-2xl font-headline font-bold text-inverse-surface mb-8">Descripción del producto</h2>
+              <div
+                className="text-slate-600 leading-relaxed max-w-4xl
+                  [&_ul]:list-disc [&_ul]:pl-5 [&_ul]:space-y-2 [&_ul]:my-4
+                  [&_ol]:list-decimal [&_ol]:pl-5 [&_ol]:space-y-2 [&_ol]:my-4
+                  [&_li]:text-slate-600
+                  [&_p]:mb-4
+                  [&_h3]:font-bold [&_h3]:text-inverse-surface [&_h3]:text-lg [&_h3]:mt-6 [&_h3]:mb-2
+                  [&_strong]:font-semibold [&_strong]:text-inverse-surface"
+                dangerouslySetInnerHTML={{ __html: cleanWordPressHtml(product.description) }}
+              />
+            </div>
+          )}
+
+          {/* Related products */}
+          {related.length > 0 && (
+            <div className="mt-16 border-t border-slate-100 pt-12">
+              <h2 className="text-2xl font-headline font-bold text-inverse-surface mb-8">
+                También puedes estar interesado en:
+              </h2>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                {related.map((p) => (
+                  <ProductCard key={p.id} product={p} compact />
+                ))}
+              </div>
+            </div>
+          )}
+
         </div>
       </main>
     </>

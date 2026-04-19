@@ -36,8 +36,8 @@ interface Crumb {
 export default function Breadcrumbs() {
   const pathname = usePathname();
 
-  // Hide on home page — no breadcrumb needed for the root.
-  if (!pathname || pathname === '/') return null;
+  // Hide on home page and admin routes.
+  if (!pathname || pathname === '/' || pathname.startsWith('/admin')) return null;
 
   const segments = pathname.split('/').filter(Boolean);
 

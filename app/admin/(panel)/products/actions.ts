@@ -42,7 +42,7 @@ export async function createProduct(
   if (!name) errors.name = ['El nombre es obligatorio.'];
   if (!category) errors.category = ['La categoría es obligatoria.'];
   if (!img) errors.img = ['La URL de la imagen es obligatoria.'];
-  if (isNaN(price) || price < 0) errors.price = ['Ingresa un precio válido.'];
+  if (isNaN(price) || price < 0 || price > 2_147_483_647) errors.price = ['Ingresa un precio válido (máx. $2.147.483.647).'];
 
   if (Object.keys(errors).length) return { errors };
 
@@ -80,7 +80,7 @@ export async function updateProduct(
   if (!name) errors.name = ['El nombre es obligatorio.'];
   if (!category) errors.category = ['La categoría es obligatoria.'];
   if (!img) errors.img = ['La URL de la imagen es obligatoria.'];
-  if (isNaN(price) || price < 0) errors.price = ['Ingresa un precio válido.'];
+  if (isNaN(price) || price < 0 || price > 2_147_483_647) errors.price = ['Ingresa un precio válido (máx. $2.147.483.647).'];
 
   if (Object.keys(errors).length) return { errors };
 
