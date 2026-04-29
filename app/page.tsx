@@ -6,6 +6,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import HeroCarousel from './components/HeroCarousel';
 import Navbar from './components/Navbar';
+import BlogSection from './components/BlogSection';
 import ChromaGrid from '@/components/ui/ChromaGrid';
 import { LogoLoop } from '@/components/LogoLoop';
 import { prisma } from '../lib/prisma';
@@ -147,9 +148,21 @@ const PROJECTS = [
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default async function Home() {
-  const products = await prisma.product.findMany({
-    orderBy: { createdAt: 'desc' },
-  });
+  const [products, blogPosts] = await Promise.all([
+    prisma.product.findMany({ orderBy: { createdAt: 'desc' } }),
+    prisma.blogPost.findMany({
+      where: { status: 'published' },
+      orderBy: { publishedAt: 'desc' },
+      select: {
+        slug: true,
+        title: true,
+        excerpt: true,
+        coverImage: true,
+        publishedAt: true,
+        tags: { include: { tag: true }, take: 1 },
+      },
+    }),
+  ]);
   return (
     <>
       {/* ── Navbar ── */}
@@ -375,6 +388,9 @@ export default async function Home() {
               />
           </div>
         </section>
+
+        {/* ── Section 7: Blog ── */}
+        <BlogSection posts={blogPosts} />
 
       </main>
 
