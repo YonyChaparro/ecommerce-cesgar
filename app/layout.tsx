@@ -11,6 +11,9 @@ const geist = Geist({subsets:['latin'],variable:'--font-sans'});
 export const metadata: Metadata = {
   title: "Precision3D",
   description: "Impresión 3D industrial bajo demanda. Modelado, escaneo y mantenimiento.",
+  icons: {
+    icon: "/logotipo-empresa-cesgar.webp",
+  },
 };
 
 export default function RootLayout({

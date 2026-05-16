@@ -67,10 +67,10 @@ export default function BlogSection({ posts }: Props) {
             return (
               <ScrollStackItem
                 key={post.slug}
-                itemClassName={`${bg} flex flex-row gap-8 items-center`}
+                itemClassName={`${bg} flex flex-col sm:flex-row gap-4 sm:gap-8 items-start sm:items-center`}
               >
                 {post.coverImage && (
-                  <div className="shrink-0 w-48 h-full rounded-2xl overflow-hidden">
+                  <div className="hidden sm:block shrink-0 sm:w-40 md:w-48 sm:h-full rounded-xl overflow-hidden">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
                       src={post.coverImage}
@@ -79,31 +79,31 @@ export default function BlogSection({ posts }: Props) {
                     />
                   </div>
                 )}
-                <div className="flex flex-col justify-between flex-1 h-full">
-                <div>
-                  {tag && (
-                    <span className={`inline-block px-3 py-1 rounded-full text-xs font-bold uppercase tracking-widest mb-4 ${tagBg}`}>
-                      {tag}
-                    </span>
-                  )}
-                  <h3 className={`text-2xl font-headline font-bold mb-3 ${accent}`}>
-                    {post.title}
-                  </h3>
-                  {post.excerpt && (
-                    <p className="text-slate-600 text-sm leading-relaxed max-w-lg">
-                      {post.excerpt}
-                    </p>
-                  )}
-                </div>
-                <div className="flex items-center justify-between mt-6">
-                  {date && <span className="text-xs text-slate-400 font-medium">{date}</span>}
-                  <Link
-                    href={`/blog/${post.slug}`}
-                    className={`text-xs font-bold uppercase tracking-widest hover:underline ${accent}`}
-                  >
-                    Leer artículo →
-                  </Link>
-                </div>
+                <div className="flex flex-col justify-between flex-1 h-full min-h-0">
+                  <div>
+                    {tag && (
+                      <span className={`inline-block px-3 py-1 rounded-full text-xs font-bold uppercase tracking-widest mb-2 sm:mb-4 ${tagBg}`}>
+                        {tag}
+                      </span>
+                    )}
+                    <h3 className={`text-lg sm:text-xl md:text-2xl font-headline font-bold mb-2 sm:mb-3 leading-snug ${accent}`}>
+                      {post.title}
+                    </h3>
+                    {post.excerpt && (
+                      <p className="text-slate-600 text-sm leading-relaxed max-w-lg line-clamp-2 sm:line-clamp-3">
+                        {post.excerpt}
+                      </p>
+                    )}
+                  </div>
+                  <div className="flex items-center justify-between mt-3 sm:mt-6">
+                    {date && <span className="text-xs text-slate-400 font-medium">{date}</span>}
+                    <Link
+                      href={`/blog/${post.slug}`}
+                      className={`text-xs font-bold uppercase tracking-widest hover:underline ${accent}`}
+                    >
+                      Leer artículo →
+                    </Link>
+                  </div>
                 </div>
               </ScrollStackItem>
             );

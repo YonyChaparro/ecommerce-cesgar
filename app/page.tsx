@@ -1,6 +1,5 @@
 import {
   Settings2, Cpu, ArrowRight, ChevronRight,
-  Printer, Wrench, ScanLine, PenTool, Hammer,
 } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
@@ -10,56 +9,9 @@ import BlogSection from './components/BlogSection';
 import ChromaGrid from '@/components/ui/ChromaGrid';
 import { LogoLoop } from '@/components/LogoLoop';
 import { prisma } from '../lib/prisma';
+import { SERVICES } from './data/services';
 
-// ─── Static data ──────────────────────────────────────────────────────────────
-
-const SERVICES = [
-  {
-    icon: <Printer size={32} />,
-    title: 'Cotizar al instante',
-    desc: 'Sube tu archivo y genera una cotización inmediata para impresión 3D. Sin esperas, sin complicaciones.',
-    cta: 'Subir STL y cotizar',
-    accent: 'bg-blue-600',
-    light: 'bg-blue-50 text-blue-600',
-    iconColor: 'text-blue-400',
-  },
-  {
-    icon: <Wrench size={32} />,
-    title: 'Repuestos para tus impresoras',
-    desc: 'Encuentra y cotiza boquillas, extrusores, correas, drivers y todo lo que necesitas para mantener tu impresora en marcha.',
-    cta: 'Cotizar repuesto',
-    accent: 'bg-orange-600',
-    light: 'bg-orange-50 text-orange-600',
-    iconColor: 'text-orange-400',
-  },
-  {
-    icon: <ScanLine size={32} />,
-    title: 'Escaneo 3D',
-    desc: 'Capturamos tu pieza u objeto con escáner de alta precisión y la convertimos en un modelo digital listo para producción o ingeniería inversa.',
-    cta: 'Cotizar escaneo',
-    accent: 'bg-teal-600',
-    light: 'bg-teal-50 text-teal-600',
-    iconColor: 'text-teal-400',
-  },
-  {
-    icon: <PenTool size={32} />,
-    title: 'Diseño 3D',
-    desc: 'Nuestros ingenieros modelan tu idea desde cero o adaptan un diseño existente, entregando archivos optimizados para fabricación.',
-    cta: 'Cotizar diseño',
-    accent: 'bg-purple-600',
-    light: 'bg-purple-50 text-purple-600',
-    iconColor: 'text-purple-400',
-  },
-  {
-    icon: <Hammer size={32} />,
-    title: 'Prototipado y fabricación',
-    desc: 'De la idea al objeto en el menor tiempo posible. Producimos prototipos funcionales y series cortas con materiales de ingeniería.',
-    cta: 'Cotizar fabricación',
-    accent: 'bg-[#16234d]',
-    light: 'bg-[#16234d]/10 text-[#16234d]',
-    iconColor: 'text-yellow-400',
-  },
-];
+// ─── Static data ───────────────────────────────────────────────────────────────
 
 
 const PROJECTS = [
@@ -182,13 +134,13 @@ export default async function Home() {
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
               {SERVICES.map((s, i) => (
-                <a
+                <Link
                   key={s.title}
-                  href="/cotizador"
+                  href={s.href ?? '/cotizador'}
                   className={`group flex flex-col rounded-2xl border border-slate-200 p-6 transition-all duration-300 relative overflow-hidden cursor-pointer bg-white opacity-75 hover:opacity-100 ${i === 0 ? 'sm:col-span-2' : ''}`}
                 >
                   <div className="absolute inset-0 bg-white" />
-                  {i === 2 && <Image src="/scanner.png" alt="" width={300} height={300} className="absolute right-0 top-0 bottom-0 h-full w-1/2 object-contain opacity-90 pointer-events-none select-none transition-transform duration-300 group-hover:scale-105" />}
+                  {s.image && <Image src={s.image} alt="" width={300} height={300} className="absolute right-0 top-0 bottom-0 h-full w-1/2 object-contain opacity-90 pointer-events-none select-none translate-y-10 transition-transform duration-300 group-hover:scale-105 group-hover:translate-y-4" />}
                   <div className={`relative z-10 flex flex-col h-full transition-transform duration-300 group-hover:scale-105`}>
                     <div className={`w-14 h-14 rounded-xl flex items-center justify-center mb-5 bg-slate-100 ${s.iconColor}`}>
                       {s.icon}
@@ -196,15 +148,15 @@ export default async function Home() {
                     <h3 className="font-headline font-bold text-lg mb-3 leading-snug text-slate-900">
                       {s.title}
                     </h3>
-                    <p className={`text-sm leading-relaxed flex-1 mb-6 text-slate-500 ${i === 2 ? 'w-1/2' : ''}`}>
+                    <p className={`text-sm leading-relaxed flex-1 mb-6 text-slate-500 ${s.image ? 'w-1/2 pr-2' : ''}`}>
                       {s.desc}
                     </p>
-                    <span className="inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl font-headline font-bold text-sm text-white bg-slate-800 group-hover:bg-slate-700 transition-all">
+                    <span className="inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl font-headline font-bold text-sm text-white bg-slate-800 group-hover:bg-slate-700 transition-all w-fit">
                       {s.cta}
                       <ArrowRight size={15} />
                     </span>
                   </div>
-                </a>
+                </Link>
               ))}
             </div>
           </div>

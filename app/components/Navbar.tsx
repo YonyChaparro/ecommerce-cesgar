@@ -1,84 +1,119 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import { Disclosure, DisclosureButton, DisclosurePanel } from '@headlessui/react';
 import { Bars3Icon, XMarkIcon } from '@heroicons/react/24/outline';
-import { Heart, User, ShoppingCart } from 'lucide-react';
+import { User, ShoppingCart } from 'lucide-react';
 import Link from 'next/link';
+import { usePathname } from 'next/navigation';
 import { useCart } from './CartContext';
 
-const navigation = [
-  { name: 'Inicio', href: '/', current: true },
-  { name: 'Tienda', href: '/tienda', current: false },
-  { name: 'Servicios', href: '#', current: false },
-  { name: 'Blog', href: '/blog', current: false },
+const NAV_ITEMS = [
+  { label: 'Inicio',    href: '/'          },
+  { label: 'Tienda',   href: '/tienda'     },
+  { label: 'Servicios', href: '/servicios' },
+  { label: 'Blog',     href: '/blog'       },
 ];
-
-function classNames(...classes: string[]) {
-  return classes.filter(Boolean).join(' ');
-}
 
 export default function Navbar() {
   const { openCart, totalItems } = useCart();
+  const pathname = usePathname();
+  const [scrolled, setScrolled] = useState(false);
+
+  useEffect(() => {
+    const onScroll = () => setScrolled(window.scrollY > 10);
+    window.addEventListener('scroll', onScroll, { passive: true });
+    return () => window.removeEventListener('scroll', onScroll);
+  }, []);
+
+  const isActive = (href: string) =>
+    href === '/' ? pathname === '/' : pathname.startsWith(href);
+
   return (
-    <Disclosure as="nav" className="fixed top-0 w-full z-50 bg-white/80 backdrop-blur-md border-b border-slate-100">
-      <div className="mx-auto max-w-screen-2xl px-8">
-        <div className="relative flex h-16 items-center justify-between">
+    <Disclosure
+      as="header"
+      className={`fixed top-0 w-full z-50 transition-all duration-300 ${
+        scrolled
+          ? 'bg-white/92 backdrop-blur-md shadow-sm shadow-slate-200/60 border-b border-slate-100'
+          : 'bg-white/70 backdrop-blur-sm'
+      }`}
+    >
+      <div className="mx-auto max-w-screen-2xl px-6 sm:px-8">
+        <div className="flex h-18 items-center gap-4">
 
-          {/* Mobile menu button */}
-          <div className="absolute inset-y-0 left-0 flex items-center md:hidden">
-            <DisclosureButton className="group relative inline-flex items-center justify-center rounded-md p-2 text-slate-600 hover:bg-slate-100 hover:text-primary-container focus:outline-none">
-              <span className="absolute -inset-0.5" />
-              <span className="sr-only">Abrir menú</span>
-              <Bars3Icon aria-hidden="true" className="block size-6 group-data-open:hidden" />
-              <XMarkIcon aria-hidden="true" className="hidden size-6 group-data-open:block" />
-            </DisclosureButton>
-          </div>
+          {/* Logo */}
+          <Link href="/" className="shrink-0 flex items-center">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/logotipo-empresa-cesgar.webp"
+              alt="Cesgar"
+              className="h-11 w-auto object-contain"
+            />
+          </Link>
 
-          {/* Logo + desktop links */}
-          <div className="flex flex-1 items-center justify-center md:items-stretch md:justify-start">
-            <div className="flex shrink-0 items-center">
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src="/logotipo-empresa-cesgar.webp" alt="Cesgar" className="h-10 w-auto object-contain" />
-            </div>
-            <div className="hidden md:ml-8 md:flex md:items-center md:gap-6">
-              {navigation.map((item) => (
-                <a
-                  key={item.name}
+          {/* Desktop nav links */}
+          <nav className="hidden md:flex items-center gap-0.5 flex-1" aria-label="Principal">
+            {NAV_ITEMS.map((item) => {
+              const active = isActive(item.href);
+              return (
+                <Link
+                  key={item.href}
                   href={item.href}
-                  aria-current={item.current ? 'page' : undefined}
-                  className={classNames(
-                    item.current
-                      ? 'text-primary-container font-bold border-b-2 border-primary-container'
-                      : 'text-slate-600 hover:text-primary-container',
-                    'font-headline tracking-tight transition-colors text-sm py-1',
-                  )}
+                  aria-current={active ? 'page' : undefined}
+                  className={`relative px-4 py-2 rounded-lg text-base font-headline font-semibold tracking-tight transition-all duration-200 ${
+                    active
+                      ? 'text-primary-container bg-primary-container/10'
+                      : 'text-slate-500 hover:text-slate-900 hover:bg-slate-100/70'
+                  }`}
                 >
-                  {item.name}
-                </a>
-              ))}
-            </div>
-          </div>
+                  {item.label}
+                  {active && (
+                    <span
+                      className="absolute bottom-1.5 left-1/2 -translate-x-1/2 w-1 h-1 rounded-full bg-primary-container"
+                      aria-hidden="true"
+                    />
+                  )}
+                </Link>
+              );
+            })}
+          </nav>
 
-          {/* Right side: CTA + icons */}
-          <div className="absolute inset-y-0 right-0 flex items-center gap-4 md:static md:inset-auto md:ml-6">
-            <button
-              type="button"
-              className="bg-primary-container text-white px-5 py-2 rounded-full font-headline font-bold text-sm hover:opacity-90 transition-opacity"
+          {/* Right actions */}
+          <div className="flex items-center gap-1 ml-auto md:ml-0">
+            <Link
+              href="/cotizador"
+              className="hidden sm:inline-flex items-center bg-primary-container text-white px-5 py-2.5 rounded-full font-headline font-bold text-sm tracking-wide hover:brightness-110 transition-all whitespace-nowrap mr-1"
             >
               COTIZA AHORA
+            </Link>
+
+            <Link
+              href="/admin/login"
+              aria-label="Administrar"
+              className="p-2 rounded-lg text-slate-500 hover:bg-slate-100 hover:text-slate-700 transition-colors"
+            >
+              <User size={21} />
+            </Link>
+
+            <button
+              onClick={openCart}
+              aria-label="Abrir carrito"
+              className="relative p-2 rounded-lg text-slate-500 hover:bg-slate-100 hover:text-slate-700 transition-colors"
+            >
+              <ShoppingCart size={21} />
+              {totalItems > 0 && (
+                <span className="absolute top-1 right-1 bg-primary-container text-white text-[9px] font-bold min-w-3.5 h-3.5 rounded-full flex items-center justify-center px-0.5 leading-none">
+                  {totalItems > 9 ? '9+' : totalItems}
+                </span>
+              )}
             </button>
-            <div className="flex items-center gap-2 text-slate-600">
-              <Heart size={22} className="cursor-pointer hover:text-primary-container transition-colors" />
-              <Link href="/admin/login" aria-label="Administrar"><User size={22} className="hover:text-primary-container transition-colors" /></Link>
-              <button onClick={openCart} className="relative cursor-pointer hover:text-primary-container transition-colors" aria-label="Abrir carrito">
-                <ShoppingCart size={22} />
-                {totalItems > 0 && (
-                  <span className="absolute -top-2 -right-2 bg-primary-container text-white text-[10px] font-bold w-4 h-4 rounded-full flex items-center justify-center leading-none">
-                    {totalItems > 9 ? '9+' : totalItems}
-                  </span>
-                )}
-              </button>
-            </div>
+
+            {/* Mobile hamburger */}
+            <DisclosureButton className="group md:hidden p-2 rounded-lg text-slate-500 hover:bg-slate-100 hover:text-slate-700 transition-colors focus:outline-none">
+              <span className="sr-only">Abrir menú</span>
+              <Bars3Icon className="size-6 group-data-open:hidden" />
+              <XMarkIcon className="size-6 hidden group-data-open:block" />
+            </DisclosureButton>
           </div>
 
         </div>
@@ -86,30 +121,38 @@ export default function Navbar() {
 
       {/* Mobile panel */}
       <DisclosurePanel className="md:hidden border-t border-slate-100 bg-white/95 backdrop-blur-md">
-        <div className="space-y-1 px-4 pt-2 pb-4">
-          {navigation.map((item) => (
-            <DisclosureButton
-              key={item.name}
-              as="a"
-              href={item.href}
-              aria-current={item.current ? 'page' : undefined}
-              className={classNames(
-                item.current
-                  ? 'text-primary-container font-bold bg-primary-container/5'
-                  : 'text-slate-600 hover:text-primary-container hover:bg-slate-50',
-                'block rounded-md px-3 py-2 text-base font-headline tracking-tight transition-colors',
-              )}
-            >
-              {item.name}
-            </DisclosureButton>
-          ))}
-          <div className="pt-3">
-            <button
-              type="button"
-              className="w-full bg-primary-container text-white px-5 py-2.5 rounded-full font-headline font-bold text-sm hover:opacity-90 transition-opacity"
+        <div className="px-4 pt-3 pb-5 space-y-1">
+          {NAV_ITEMS.map((item) => {
+            const active = isActive(item.href);
+            return (
+              <DisclosureButton
+                key={item.href}
+                as="a"
+                href={item.href}
+                aria-current={active ? 'page' : undefined}
+                className={`flex items-center gap-2.5 w-full px-3 py-2.5 rounded-xl text-sm font-headline font-semibold tracking-tight transition-colors ${
+                  active
+                    ? 'text-primary-container bg-primary-container/10'
+                    : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+                }`}
+              >
+                <span
+                  className={`w-1.5 h-1.5 rounded-full shrink-0 ${
+                    active ? 'bg-primary-container' : 'bg-slate-200'
+                  }`}
+                />
+                {item.label}
+              </DisclosureButton>
+            );
+          })}
+
+          <div className="pt-3 mt-3 border-t border-slate-100">
+            <a
+              href="/cotizador"
+              className="flex items-center justify-center w-full bg-primary-container text-white px-5 py-3 rounded-xl font-headline font-bold text-sm tracking-wide hover:opacity-90 transition-opacity"
             >
               COTIZA AHORA
-            </button>
+            </a>
           </div>
         </div>
       </DisclosurePanel>
