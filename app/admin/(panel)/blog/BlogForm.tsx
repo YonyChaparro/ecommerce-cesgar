@@ -3,6 +3,7 @@
 import { useActionState, useRef, useEffect } from 'react';
 import type { BlogFormState } from './actions';
 import TipTapEditor from '@/components/TipTapEditor';
+import ImageUploader from '@/components/admin/ImageUploader';
 import type { BlogPost, BlogTag } from '@prisma/client';
 
 type Props = {
@@ -102,15 +103,10 @@ export default function BlogForm({ action, post, submitLabel }: Props) {
 
         {/* Cover image */}
         <div className="sm:col-span-2">
-          <label className="block text-xs font-bold text-slate-600 mb-1 uppercase tracking-wide">
-            Imagen de portada (URL)
-          </label>
-          <input
+          <ImageUploader
             name="coverImage"
-            type="url"
+            label="Imagen de portada"
             defaultValue={post?.coverImage ?? ''}
-            placeholder="https://..."
-            className={inputCls}
           />
           {field('coverImage') && (
             <p className="text-red-500 text-xs mt-1">{field('coverImage')}</p>
@@ -184,13 +180,13 @@ export default function BlogForm({ action, post, submitLabel }: Props) {
         <button
           type="submit"
           disabled={pending}
-          className="bg-[#16234d] hover:bg-[#4dbdcc] text-white hover:text-[#16234d] font-headline font-bold px-8 py-3 rounded-xl transition-all disabled:opacity-50 text-sm"
+          className="bg-inverse-surface hover:bg-primary-container text-white hover:text-inverse-surface font-headline font-bold px-8 py-3 rounded-xl transition-all disabled:opacity-50 text-sm"
         >
           {pending ? 'Guardando…' : submitLabel}
         </button>
         <a
           href="/admin/blog"
-          className="text-slate-400 hover:text-[#16234d] text-sm font-medium transition-colors"
+          className="text-slate-400 hover:text-inverse-surface text-sm font-medium transition-colors"
         >
           Cancelar
         </a>

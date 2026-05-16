@@ -13,88 +13,14 @@ import { SERVICES } from './data/services';
 
 // ─── Static data ───────────────────────────────────────────────────────────────
 
-
-const PROJECTS = [
-  {
-    img: 'https://lh3.googleusercontent.com/aida-public/AB6AXuD2HxACAEofBmkqBzuetu5K7TyokwRVKGSCtxkIhXZNvzMEhqtJRXB3vNpdTnXR9y-UNooCZ3VpS1LnhoMwoY7pk6YtGByctaianAtsBwndPt64skWpIvjVBKwUCh5zcD2ilPnx0XkrZu3cf6n2TZ3N6ZsleYHJ0hOOtgEVyvQ7jv6FTS6UIfFmr61ukT3h8wlTIJbG0PtfLkvXURWNL4pzLI-stc1rfwPiql4DNjrhqoNcB5To8Et3PD_Nt-jqBv4d3Kns-FjA4ek',
-    alt: 'Prototipo industrial',
-    badge: 'Industrial',
-    title: 'Sistema de Engranajes Personalizados',
-    desc: 'Desarrollo de un sistema completo de engranajes para maquinaria industrial con tolerancias de alta precisión.',
-    material: 'Nylon PA12',
-    borderColor: '#4dbdcc',
-    gradient: 'linear-gradient(145deg,#0a2a3a,#0a1842)',
-  },
-  {
-    img: 'https://lh3.googleusercontent.com/aida-public/AB6AXuCv6qUeKRAWyUPKx37FHVJ8tCHq_w8lh-X_ZEjND-ZxMxbK4DA692DQNBJabIrH_6kJBIT1Img9N_uy81IIz5jCsHWTFxIAaYgHpK4YUmJDzSA2RbWb1NSs4vkeX36Zjo3Sv76vPggHibq_ymXQxnhp3BzYN04wHDUewiNjc5rc1b47_yuD5AbrNZeaDV7LuN7MbZ4EOuzdfLtiwiUJC50wU_C3W4ZLrXZvK5vqSfevotO9Nk_wWX31bXseCGX1vrODwakWaa7Xl9I',
-    alt: 'Prototipo de carcasa',
-    badge: 'Prototipado',
-    title: 'Prototipo de Carcasa Electrónica',
-    desc: 'Diseño y fabricación de carcasa protectora para dispositivo IoT con acabado profesional.',
-    material: 'PLA Industrial',
-    borderColor: '#505c8a',
-    gradient: 'linear-gradient(210deg,#16234d,#0a0f1f)',
-  },
-  {
-    img: 'https://lh3.googleusercontent.com/aida-public/AB6AXuCnrn9qvlTW8MyN6vi8vbNg3rj4Q4k7sOZKCGNQ0Y0B-DN-r0IpRGbb9bjrvYt6Mjnwpc0CA-S8YatrLMu6cwFcsPdLva8k_oO_I81XvTSk7wNwmmjxLYP68yQyvKdivwMQyuYRz7Ewb_l4h4mjAouQjVvsyaFSeKwwVrXKUnSUZzlKH3cthgaKOgltReFrlMmIreXnvuv4-Z1XnpHCTYAVQRFMb-j-N5CaUHwekTm_e498rQJiwaupUsuwt9lDNa7TvDETHw3efd0',
-    alt: 'Pieza automotriz',
-    badge: 'Automotriz',
-    title: 'Repuestos Automotrices',
-    desc: 'Fabricación de piezas de repuesto descontinuadas para vehículos clásicos y de colección.',
-    material: 'PETG Reforzado',
-    borderColor: '#904d14',
-    gradient: 'linear-gradient(165deg,#3a1800,#1a0800)',
-  },
-  {
-    img: 'https://lh3.googleusercontent.com/aida-public/AB6AXuATJY-spvKCPPbudfVEMArvrRtF8LLF000jKjLRiRN2aufQ7xrsqmNCBBzaJp1VddGELJ-LCKsQSo6cGa5G1n_NQOAs8AdVW_5fVyak3A3FI5igVWZAK3x4u4EEfilNiLjJlGtFdZYyHcFQx_oTZntUzAp6p6arys5rfUTLnfIXnjR66mQnSODOJlb0gheH9q3I996OJ9mKG_3v0e5Y_SSf_dR-grTQxdUfFt2zI9pI6EsOOD3sEtj-Aa_aMkVOfJ6Oo6g_GjvoqU8',
-    alt: 'Maqueta arquitectónica',
-    badge: 'Arquitectura',
-    title: 'Maqueta Arquitectónica',
-    desc: 'Modelo a escala de proyecto residencial con detalles de alta fidelidad para presentación a inversionistas.',
-    material: 'Resina UV',
-    borderColor: '#006973',
-    gradient: 'linear-gradient(195deg,#003a40,#001a1f)',
-  },
-  {
-    img: 'https://lh3.googleusercontent.com/aida-public/AB6AXuAvIAwM6QBD5ufdlfEBNwmoYA9hx1y6VuL_oPqUFSQQvF11I4x_YfuBPt4GaFm9cMukqD491gOj7TPQHjUWt5ygBj4MJJpCVV0wzWl--OHDqyDyR1COzzxY_yzHqjsZxdLrLr_2jXcf-Vwqu1M6PEqfk_mDxX4GnYyNuVBXDBTXU8Wd5x_RuesPDdcKe4zmEo40vBDdawEEQYfmkLjOs2RvSMF7r71AXg1gx6FjpMOH0mC-N61OqC6STmjIMRaHIuL8ZRmXGg4FMl4',
-    alt: 'Jigs y fixtures',
-    badge: 'Herramientas',
-    title: 'Jigs y Fixtures de Producción',
-    desc: 'Herramientas de posicionamiento personalizadas para línea de ensamblaje electrónico.',
-    material: 'ABS Industrial',
-    borderColor: '#4dbdcc',
-    gradient: 'linear-gradient(225deg,#0a2a3a,#0a1842)',
-  },
-  {
-    img: 'https://www.3ds.com/assets/invest/2022-10/iStock-1182118213%20%281%29.jpg',
-    alt: 'Proyecto médico',
-    badge: 'Médico',
-    title: 'Modelos Anatómicos Quirúrgicos',
-    desc: 'Réplicas de alta fidelidad de estructuras óseas para planificación y entrenamiento quirúrgico.',
-    material: 'Resina Biocompatible',
-    borderColor: '#7c3aed',
-    gradient: 'linear-gradient(160deg,#2e1065,#0f0a1e)',
-  },
-  {
-    img: 'https://lh3.googleusercontent.com/aida-public/AB6AXuD2HxACAEofBmkqBzuetu5K7TyokwRVKGSCtxkIhXZNvzMEhqtJRXB3vNpdTnXR9y-UNooCZ3VpS1LnhoMwoY7pk6YtGByctaianAtsBwndPt64skWpIvjVBKwUCh5zcD2ilPnx0XkrZu3cf6n2TZ3N6ZsleYHJ0hOOtgEVyvQ7jv6FTS6UIfFmr61ukT3h8wlTIJbG0PtfLkvXURWNL4pzLI-stc1rfwPiql4DNjrhqoNcB5To8Et3PD_Nt-jqBv4d3Kns-FjA4ek',
-    alt: 'Estructura de dron',
-    badge: 'Aeronáutica',
-    title: 'Estructura de Dron Personalizado',
-    desc: 'Chasis ligero y resistente para dron de inspección industrial, optimizado para vuelo en entornos confinados.',
-    material: 'Fibra de Carbono + PLA',
-    borderColor: '#16a34a',
-    gradient: 'linear-gradient(175deg,#052e16,#011a0e)',
-  },
-  {
-    img: 'https://lh3.googleusercontent.com/aida-public/AB6AXuCv6qUeKRAWyUPKx37FHVJ8tCHq_w8lh-X_ZEjND-ZxMxbK4DA692DQNBJabIrH_6kJBIT1Img9N_uy81IIz5jCsHWTFxIAaYgHpK4YUmJDzSA2RbWb1NSs4vkeX36Zjo3Sv76vPggHibq_ymXQxnhp3BzYN04wHDUewiNjc5rc1b47_yuD5AbrNZeaDV7LuN7MbZ4EOuzdfLtiwiUJC50wU_C3W4ZLrXZvK5vqSfevotO9Nk_wWX31bXseCGX1vrODwakWaa7Xl9I',
-    alt: 'Articulaciones robóticas',
-    badge: 'Robótica',
-    title: 'Articulaciones para Brazo Robótico',
-    desc: 'Conjunto de articulaciones de 6 ejes impresas en alta resolución para brazo colaborativo de precisión.',
-    material: 'TPU Flexible + ABS',
-    borderColor: '#db2777',
-    gradient: 'linear-gradient(185deg,#4a0020,#1f000d)',
-  },
+const CARD_STYLES = [
+  { borderColor: '#4dbdcc', gradient: 'linear-gradient(145deg,#0a2a3a,#0a1842)' },
+  { borderColor: '#505c8a', gradient: 'linear-gradient(210deg,#16234d,#0a0f1f)' },
+  { borderColor: '#904d14', gradient: 'linear-gradient(165deg,#3a1800,#1a0800)' },
+  { borderColor: '#006973', gradient: 'linear-gradient(195deg,#003a40,#001a1f)' },
+  { borderColor: '#7c3aed', gradient: 'linear-gradient(160deg,#2e1065,#0f0a1e)' },
+  { borderColor: '#16a34a', gradient: 'linear-gradient(175deg,#052e16,#011a0e)' },
+  { borderColor: '#db2777', gradient: 'linear-gradient(185deg,#4a0020,#1f000d)' },
 ];
 
 // ─── Page ─────────────────────────────────────────────────────────────────────
@@ -137,11 +63,11 @@ export default async function Home() {
                 <Link
                   key={s.title}
                   href={s.href ?? '/cotizador'}
-                  className={`group flex flex-col rounded-2xl border border-slate-200 p-6 transition-all duration-300 relative overflow-hidden cursor-pointer bg-white opacity-75 hover:opacity-100 ${i === 0 ? 'sm:col-span-2' : ''}`}
+                  className={`group/service flex flex-col rounded-2xl border border-slate-200 p-6 transition-all duration-300 relative overflow-hidden cursor-pointer bg-white opacity-75 hover:opacity-100 ${i === 0 ? 'sm:col-span-2' : ''}`}
                 >
                   <div className="absolute inset-0 bg-white" />
-                  {s.image && <Image src={s.image} alt="" width={300} height={300} className="absolute right-0 top-0 bottom-0 h-full w-1/2 object-contain opacity-90 pointer-events-none select-none translate-y-10 transition-transform duration-300 group-hover:scale-105 group-hover:translate-y-4" />}
-                  <div className={`relative z-10 flex flex-col h-full transition-transform duration-300 group-hover:scale-105`}>
+                  {s.image && <Image src={s.image} alt="" width={300} height={300} className="absolute right-0 top-0 bottom-0 h-full w-1/2 object-contain opacity-90 pointer-events-none select-none translate-y-10 transition-transform duration-300 group-hover/service:scale-105 group-hover/service:translate-y-4" />}
+                  <div className={`relative z-10 flex flex-col h-full transition-transform duration-300 group-hover/service:scale-105`}>
                     <div className={`w-14 h-14 rounded-xl flex items-center justify-center mb-5 bg-slate-100 ${s.iconColor}`}>
                       {s.icon}
                     </div>
@@ -151,7 +77,7 @@ export default async function Home() {
                     <p className={`text-sm leading-relaxed flex-1 mb-6 text-slate-500 ${s.image ? 'w-1/2 pr-2' : ''}`}>
                       {s.desc}
                     </p>
-                    <span className="inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl font-headline font-bold text-sm text-white bg-slate-800 group-hover:bg-slate-700 transition-all w-fit">
+                    <span className="inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl font-headline font-bold text-sm text-white bg-slate-800 group-hover/service:bg-slate-700 transition-all w-fit">
                       {s.cta}
                       <ArrowRight size={15} />
                     </span>
@@ -250,14 +176,14 @@ export default async function Home() {
               node: (
                 <Link
                   href={`/tienda/${p.slug}`}
-                  className="group w-52 flex flex-col bg-white rounded-2xl border border-slate-100 p-4 hover:shadow-xl transition-all duration-300"
+                  className="group/card w-52 flex flex-col bg-white rounded-2xl border border-slate-100 p-4 hover:shadow-xl transition-all duration-300"
                 >
                   <div className="aspect-square bg-[#f8fafc] rounded-xl mb-4 overflow-hidden flex items-center justify-center">
                     {/* eslint-disable-next-line @next/next/no-img-element */}
                     <img
                       src={p.img}
                       alt={p.alt || p.name}
-                      className="w-full h-full object-contain p-2 group-hover:scale-105 transition-transform duration-500"
+                      className="w-full h-full object-contain p-2 group-hover/card:scale-105 transition-transform duration-500"
                     />
                   </div>
                   <div className="grow space-y-1 mb-3">
@@ -265,7 +191,7 @@ export default async function Home() {
                     <h4 className="font-headline font-bold text-inverse-surface text-xs leading-tight line-clamp-2">{p.name}</h4>
                     <span className="text-base font-bold text-inverse-surface block">$ {p.price.toLocaleString('es-CO')}</span>
                   </div>
-                  <div className="w-full py-2 bg-inverse-surface text-white rounded-lg font-headline font-bold text-[10px] uppercase tracking-widest text-center group-hover:bg-primary-container group-hover:text-inverse-surface transition-all">
+                  <div className="w-full py-2 bg-inverse-surface text-white rounded-lg font-headline font-bold text-[10px] uppercase tracking-widest text-center group-hover/card:bg-primary-container group-hover/card:text-inverse-surface transition-all">
                     Ver producto
                   </div>
                 </Link>
@@ -314,30 +240,32 @@ export default async function Home() {
           />
         </section>
 
-        {/* ── Section 6: Projects ── */}
+        {/* ── Section 6: Blog grid ── */}
         <section className="bg-zinc-900 py-24">
           <div className="max-w-7xl mx-auto px-8">
             <div className="text-center mb-16">
               <div className="mb-4 inline-block px-4 py-1.5 bg-primary-container/10 text-primary rounded-full text-xs font-bold uppercase tracking-widest font-headline">
-                Portafolio
+                Blog
               </div>
-              <h2 className="text-4xl md:text-5xl font-headline font-bold text-white mb-6">Proyectos Realizados</h2>
+              <h2 className="text-4xl md:text-5xl font-headline font-bold text-white mb-6">Recursos y artículos</h2>
               <p className="text-zinc-400 text-lg max-w-2xl mx-auto">
-                Descubre algunos de los proyectos que hemos desarrollado para nuestros clientes. Desde prototipos funcionales hasta piezas de producción industrial.
+                Conocimiento técnico sobre impresión 3D, materiales y fabricación digital.
               </p>
             </div>
 
             <ChromaGrid
-                items={PROJECTS.map((p) => ({
-                  image: p.img,
-                  title: p.title,
-                  subtitle: p.desc,
-                  handle: p.badge,
-                  location: p.material,
-                  borderColor: p.borderColor,
-                  gradient: p.gradient,
-                }))}
-              />
+              items={blogPosts.map((p, i) => ({
+                image: p.coverImage ?? '',
+                title: p.title,
+                subtitle: p.excerpt ?? '',
+                handle: p.tags[0]?.tag.name,
+                location: p.publishedAt
+                  ? new Date(p.publishedAt).toLocaleDateString('es-CO', { day: 'numeric', month: 'short', year: 'numeric' })
+                  : undefined,
+                ...CARD_STYLES[i % CARD_STYLES.length],
+                url: `/blog/${p.slug}`,
+              }))}
+            />
           </div>
         </section>
 

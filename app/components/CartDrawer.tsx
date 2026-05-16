@@ -1,7 +1,7 @@
 'use client';
 import { Dialog } from '@headlessui/react';
 import { motion, AnimatePresence } from 'motion/react';
-import { X, Minus, Plus, Trash2, ShoppingBag } from 'lucide-react';
+import { X, Minus, Plus, Trash2, ShoppingBag, Box } from 'lucide-react';
 import Link from 'next/link';
 import { useCart } from './CartContext';
 
@@ -82,12 +82,16 @@ export default function CartDrawer() {
                           className="flex gap-4 py-4 border-b border-slate-50 last:border-0 overflow-hidden"
                         >
                           <div className="w-20 h-20 bg-slate-50 rounded-xl overflow-hidden shrink-0 flex items-center justify-center">
-                            {/* eslint-disable-next-line @next/next/no-img-element */}
-                            <img
-                              src={item.img}
-                              alt={item.alt || item.name}
-                              className="w-full h-full object-contain p-1"
-                            />
+                            {item.id.startsWith('cotizador-') ? (
+                              <Box size={32} className="text-cyan-400" />
+                            ) : (
+                              // eslint-disable-next-line @next/next/no-img-element
+                              <img
+                                src={item.img}
+                                alt={item.alt || item.name}
+                                className="w-full h-full object-contain p-1"
+                              />
+                            )}
                           </div>
                           <div className="flex-1 min-w-0">
                             <span className="text-[9px] font-bold uppercase tracking-widest text-slate-400">

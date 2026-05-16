@@ -8,7 +8,7 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "mysql"
   url      = env("DATABASE_URL")
 }
 
@@ -20,8 +20,8 @@ model Product {
   price       Int
   img              String
   alt              String?
-  shortDescription String?
-  description      String?
+  shortDescription String?  @db.Text
+  description      String?  @db.LongText
   salePrice        Int?
   stock            Int            @default(0)
   media       ProductMedia[]
@@ -57,9 +57,9 @@ model BlogPost {
   id          String       @id @default(cuid())
   title       String
   slug        String       @unique
-  excerpt     String?
+  excerpt     String?      @db.Text
   coverImage  String?
-  content     String       // TipTap JSON serialized as string
+  content     String       @db.LongText // TipTap JSON serialized as string
   status      String       @default("draft")
   publishedAt DateTime?
   authorId    String
@@ -86,23 +86,30 @@ model BlogPostTag {
 }
 
 // status: "pending" | "approved" | "rejected" | "in_process" | "cancelled"
+// type:   "product" | "cotizador" | "mixed"
 model Order {
   id           String      @id @default(cuid())
   preferenceId String?     @unique
   paymentId    String?
   status       String      @default("pending")
+  type         String      @default("product")
   total        Int
   items        OrderItem[]
   createdAt    DateTime    @default(now())
   updatedAt    DateTime    @updatedAt
 }
 
+// itemType: "product" | "cotizador"
 model OrderItem {
-  id        String @id @default(cuid())
+  id        String  @id @default(cuid())
   orderId   String
-  order     Order  @relation(fields: [orderId], references: [id], onDelete: Cascade)
-  productId String
+  order     Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  itemType  String  @default("product")
+  productId String?
+  slug      String?
+  category  String?
   name      String
   price     Int
   quantity  Int
+  note      String?  @db.Text
 }

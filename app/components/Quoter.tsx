@@ -2,7 +2,17 @@
 
 import { useState, useRef, useCallback, useEffect } from 'react';
 import { createPortal } from 'react-dom';
-import { Zap, CloudUpload, Box, X, Loader2, Plus, Layers, Scale, Clock, ShoppingCart } from 'lucide-react';
+import dynamic from 'next/dynamic';
+import { Zap, CloudUpload, X, Loader2, Plus, Layers, Scale, Clock, ShoppingCart, Maximize2 } from 'lucide-react';
+import { useCart } from '@/app/components/CartContext';
+
+const STLViewer = dynamic(() => import('@/components/STLViewer'), { ssr: false, loading: () => (
+  <div className="w-full h-full flex items-center justify-center">
+    <Loader2 size={28} className="text-cyan-400 animate-spin" />
+  </div>
+)});
+
+const STLViewerFull = dynamic(() => import('@/components/STLViewerFull'), { ssr: false });
 
 // ─── Constants from cotizador.html ────────────────────────────────────────────
 
@@ -266,20 +276,41 @@ function ConfigurationModal({
     onUpdate(model.id, newConf);
   };
 
-  const [mounted, setMounted] = useState(false);
+  const [mounted,       setMounted]       = useState(false);
+  const [showFullscreen, setShowFullscreen] = useState(false);
   useEffect(() => setMounted(true), []);
 
   if (!mounted) return null;
 
   return createPortal(
-    <div className="fixed inset-0 z-[9999] flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 md:p-8">
+    <>
+      {showFullscreen && (
+        <STLViewerFull
+          file={model.file}
+          stlData={model.stl}
+          onClose={() => setShowFullscreen(false)}
+        />
+      )}
+    <div className="fixed inset-0 z-9999 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 md:p-8">
       <div className="bg-slate-800 border border-slate-600 rounded-2xl w-full max-w-6xl shadow-2xl overflow-hidden flex flex-col md:flex-row max-h-[90vh]">
-        
+
         {/* Left Side: Summary Menu */}
         <div className="bg-slate-900/50 p-6 md:p-8 flex flex-col items-center justify-center md:w-1/3 border-b md:border-b-0 md:border-r border-slate-700 relative shrink-0 overflow-y-auto">
-          <div className="text-center w-full max-w-[300px]">
-            <Box size={48} className="text-cyan-400 mx-auto mb-4 opacity-50" />
-            <h3 className="text-xl font-bold text-white mb-2 line-clamp-2 break-words leading-tight">{model.file.name}</h3>
+          <div className="text-center w-full max-w-75">
+            <div
+              className="group relative w-full aspect-square rounded-xl overflow-hidden mb-4 bg-[#0d1525] cursor-pointer"
+              onClick={() => setShowFullscreen(true)}
+              title="Expandir vista 3D"
+            >
+              <STLViewer file={model.file} />
+              <div className="absolute inset-0 flex items-center justify-center bg-black/0 group-hover:bg-black/40 transition-colors">
+                <div className="opacity-0 group-hover:opacity-100 transition-opacity bg-white/10 backdrop-blur-sm border border-white/20 rounded-xl p-3 flex flex-col items-center gap-1">
+                  <Maximize2 size={20} className="text-white" />
+                  <span className="text-white text-[10px] font-bold uppercase tracking-widest">Expandir</span>
+                </div>
+              </div>
+            </div>
+            <h3 className="text-xl font-bold text-white mb-2 line-clamp-2 wrap-break-word leading-tight">{model.file.name}</h3>
             {model.stl ? (
               <div className="text-slate-400 text-sm space-y-1 mb-6">
                 <p>Dimensiones:</p>
@@ -432,7 +463,8 @@ function ConfigurationModal({
           </button>
         </div>
       </div>
-    </div>,
+    </div>
+    </>,
     document.body
   );
 }
@@ -442,9 +474,45 @@ function ConfigurationModal({
 export default function Quoter() {
   const [models, setModels] = useState<QuoterModel[]>([]);
   const [configuringModelId, setConfiguringModelId] = useState<string | null>(null);
-  
+  const { addItem, openCart, items: cartItems } = useCart();
+
   const primaryInputRef = useRef<HTMLInputElement>(null);
   const addMoreInputRef = useRef<HTMLInputElement>(null);
+
+  const addToCart = useCallback(() => {
+    const existingIds = new Set(cartItems.map((i) => i.id));
+    models.forEach((m) => {
+      const cartId = `cotizador-${m.id}`;
+      if (existingIds.has(cartId)) return;
+      const { cost, weightG, timeH } = calculateItemCosts(m) as { cost: number; unitPrice?: number; weightG: number; timeH: number };
+      const matObj = MATERIALES[m.config.printingTech].find(mat => mat.id === m.config.materialType) || MATERIALES[m.config.printingTech][0];
+      const colorObj = getAvailableColors(m.config.printingTech, m.config.materialType).find(c => c.id === m.config.printColor);
+      const dims = m.stl ? `${m.stl.dimensions.x}×${m.stl.dimensions.y}×${m.stl.dimensions.z}mm` : null;
+      const note = [
+        m.config.printingTech.toUpperCase(),
+        matObj.nombre,
+        colorObj?.nombre,
+        `${m.config.layerHeight}mm`,
+        m.config.printingTech === 'fdm' ? `${m.config.infillDensity}% relleno` : null,
+        dims,
+        `~${(weightG / m.config.quantity).toFixed(1)}g/u`,
+        `~${(timeH / m.config.quantity).toFixed(1)}h/u`,
+        m.config.postProcessing ? 'Post-proc.' : 'Sin post-proc.',
+      ].filter(Boolean).join(' · ');
+      const effectiveUnitPrice = Math.max(1, Math.round(cost / m.config.quantity));
+      addItem({
+        id: cartId,
+        slug: 'cotizador',
+        name: m.file.name.replace(/\.stl$/i, ''),
+        price: effectiveUnitPrice,
+        img: '/3d-print.svg',
+        alt: note,
+        category: 'Impresión 3D',
+        note,
+      }, m.config.quantity);
+    });
+    openCart();
+  }, [models, cartItems, addItem, openCart]);
 
   const handleFiles = useCallback((files: FileList | null) => {
     if (!files) return;
@@ -534,7 +602,7 @@ export default function Quoter() {
       )}
       
       {/* Label */}
-      <div className="flex items-center gap-2 mb-8 text-[#4dbdcc] text-xs font-bold uppercase tracking-widest">
+      <div className="flex items-center gap-2 mb-8 text-primary-container text-xs font-bold uppercase tracking-widest">
         <Zap size={16} />
         Cotización automática
       </div>
@@ -542,13 +610,13 @@ export default function Quoter() {
       {/* Upload zone (hidden when models exist) */}
       {!hasModels && (
         <div
-          className="bg-gradient-to-b from-slate-700/50 to-slate-800/50 p-8 rounded-xl border-2 border-dashed border-[#4dbdcc]/40 text-center mb-6 cursor-pointer transition-all hover:border-[#4dbdcc] hover:from-slate-700 hover:to-slate-700 group"
+          className="bg-linear-to-b from-slate-700/50 to-slate-800/50 p-8 rounded-xl border-2 border-dashed border-primary-container/40 text-center mb-6 cursor-pointer transition-all hover:border-primary-container hover:from-slate-700 hover:to-slate-700 group"
           onClick={() => primaryInputRef.current?.click()}
           onDragOver={(e) => e.preventDefault()}
           onDrop={(e) => { e.preventDefault(); handleFiles(e.dataTransfer.files); }}
         >
           <div className="w-20 h-20 bg-cyan-500/10 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform">
-             <CloudUpload size={40} className="text-[#4dbdcc]" />
+             <CloudUpload size={40} className="text-primary-container" />
           </div>
           <h3 className="text-xl font-bold mb-2 text-white">Sube tu primer modelo STL</h3>
           <p className="text-slate-400 text-sm mb-6 max-w-md mx-auto">Calcularemos automáticamente el costo, tiempo y material necesario para tu impresión 3D.</p>
@@ -563,7 +631,7 @@ export default function Quoter() {
           <button
             type="button"
             onClick={(e) => { e.stopPropagation(); primaryInputRef.current?.click(); }}
-            className="inline-block bg-[#4dbdcc] hover:bg-cyan-500 text-slate-900 px-8 py-3 rounded-full font-bold text-sm transition-all cursor-pointer shadow-[0_0_15px_rgba(34,211,238,0.3)] hover:shadow-[0_0_25px_rgba(34,211,238,0.5)]"
+            className="inline-block bg-primary-container hover:bg-cyan-500 text-slate-900 px-8 py-3 rounded-full font-bold text-sm transition-all cursor-pointer shadow-[0_0_15px_rgba(34,211,238,0.3)] hover:shadow-[0_0_25px_rgba(34,211,238,0.5)]"
           >
             Seleccionar Archivos
           </button>
@@ -583,15 +651,15 @@ export default function Quoter() {
             return (
               <div key={model.id} className="bg-slate-700/30 hover:bg-slate-700/60 rounded-xl p-5 border border-slate-600/50 transition-colors group">
                 <div className="flex flex-col md:flex-row items-start gap-4">
-                  <div className="w-10 h-10 rounded-lg bg-cyan-500/20 text-[#4dbdcc] flex items-center justify-center font-bold text-lg flex-shrink-0">
+                  <div className="w-10 h-10 rounded-lg bg-cyan-500/20 text-primary-container flex items-center justify-center font-bold text-lg shrink-0">
                     {index + 1}
                   </div>
                   
                   <div className="flex-1 min-w-0 w-full overflow-hidden">
                     <div className="flex items-start justify-between">
                        <h4 className="text-white font-bold text-lg mb-2 truncate max-w-[80%]">{model.file.name}</h4>
-                       <div className="flex gap-2 md:hidden flex-shrink-0">
-                          <button onClick={() => setConfiguringModelId(model.id)} className="bg-slate-600 hover:bg-[#4dbdcc] hover:text-slate-900 text-white p-2 rounded-lg"><Zap size={16} /></button>
+                       <div className="flex gap-2 md:hidden shrink-0">
+                          <button onClick={() => setConfiguringModelId(model.id)} className="bg-slate-600 hover:bg-primary-container hover:text-slate-900 text-white p-2 rounded-lg"><Zap size={16} /></button>
                           <button onClick={() => removeModel(model.id)} className="bg-slate-800 hover:bg-red-500/20 text-slate-400 hover:text-red-400 p-2 rounded-lg cursor-pointer"><X size={16} /></button>
                        </div>
                     </div>
@@ -600,7 +668,7 @@ export default function Quoter() {
                       <span className="text-[10px] bg-slate-800 text-slate-300 px-2 py-1 rounded border border-slate-600 font-medium flex items-center gap-1 uppercase tracking-wider whitespace-nowrap">
                         🖨️ {model.config.printingTech === 'fdm' ? 'FDM' : 'RESINA'}
                       </span>
-                      <span className="text-[10px] bg-cyan-900/30 text-cyan-300 px-2 py-1 rounded border border-cyan-800 font-medium flex items-center gap-1 uppercase tracking-wider whitespace-nowrap truncate max-w-[150px]">
+                      <span className="text-[10px] bg-cyan-900/30 text-cyan-300 px-2 py-1 rounded border border-cyan-800 font-medium flex items-center gap-1 uppercase tracking-wider whitespace-nowrap truncate max-w-37.5">
                         🧱 {MATERIALES[model.config.printingTech].find(m => m.id === model.config.materialType)?.nombre}
                       </span>
                       <span className="text-[10px] bg-slate-800 text-slate-300 px-2 py-1 rounded border border-slate-600 font-medium flex items-center gap-1 uppercase tracking-wider whitespace-nowrap">
@@ -611,15 +679,15 @@ export default function Quoter() {
                           🏗️ REL {model.config.infillDensity}%
                         </span>
                       )}
-                      <span className="text-[10px] bg-slate-800 text-slate-300 px-2 py-1 rounded border border-slate-600 font-medium flex items-center gap-1 uppercase tracking-wider whitespace-nowrap truncate max-w-[120px]">
+                      <span className="text-[10px] bg-slate-800 text-slate-300 px-2 py-1 rounded border border-slate-600 font-medium flex items-center gap-1 uppercase tracking-wider whitespace-nowrap truncate max-w-30">
                         🎨 {printColorObj?.nombre}
                       </span>
                     </div>
                   </div>
                   
-                  <div className="flex flex-wrap md:flex-nowrap items-center gap-3 border-t border-slate-600/50 pt-4 md:pt-0 md:border-t-0 md:border-l md:pl-4 w-full md:w-auto mt-2 md:mt-0 justify-between md:justify-end flex-shrink-0">
-                     <div className="text-left md:text-right min-w-[110px] overflow-hidden">
-                        <div className="text-xl sm:text-2xl font-bold text-[#4dbdcc] font-mono whitespace-nowrap truncate w-full">
+                  <div className="flex flex-wrap md:flex-nowrap items-center gap-3 border-t border-slate-600/50 pt-4 md:pt-0 md:border-t-0 md:border-l md:pl-4 w-full md:w-auto mt-2 md:mt-0 justify-between md:justify-end shrink-0">
+                     <div className="text-left md:text-right min-w-27.5 overflow-hidden">
+                        <div className="text-xl sm:text-2xl font-bold text-primary-container font-mono whitespace-nowrap truncate w-full">
                           ${costs.cost.toLocaleString('es-CO')}
                         </div>
                         <div className="text-[10px] sm:text-[11px] text-slate-400 font-medium tracking-wide whitespace-nowrap">
@@ -627,10 +695,10 @@ export default function Quoter() {
                         </div>
                      </div>
                      
-                     <div className="hidden md:flex gap-2 flex-shrink-0">
+                     <div className="hidden md:flex gap-2 shrink-0">
                        <button
                           onClick={() => setConfiguringModelId(model.id)}
-                          className="bg-slate-700 border border-slate-600 hover:bg-[#4dbdcc] hover:text-slate-900 text-white p-2.5 rounded-xl transition-colors shadow-sm cursor-pointer"
+                          className="bg-slate-700 border border-slate-600 hover:bg-primary-container hover:text-slate-900 text-white p-2.5 rounded-xl transition-colors shadow-sm cursor-pointer"
                           title="Configurar Impresión"
                        >
                          <Zap size={18} />
@@ -665,7 +733,7 @@ export default function Quoter() {
           <button
             type="button"
             onClick={() => addMoreInputRef.current?.click()}
-            className="border-2 border-dashed border-[#4dbdcc]/40 text-[#4dbdcc] px-6 py-3 rounded-lg font-headline font-bold text-sm transition-all hover:border-[#4dbdcc] hover:bg-slate-700/50 cursor-pointer inline-flex items-center gap-2"
+            className="border-2 border-dashed border-primary-container/40 text-primary-container px-6 py-3 rounded-lg font-headline font-bold text-sm transition-all hover:border-primary-container hover:bg-slate-700/50 cursor-pointer inline-flex items-center gap-2"
           >
             <Plus size={18} /> Agregar otro modelo
           </button>
@@ -675,7 +743,7 @@ export default function Quoter() {
       {/* Summary Menu */}
       {hasModels && (
         <div className="bg-slate-900 rounded-2xl p-4 md:p-5 border border-slate-700 shadow-2xl mt-6 relative overflow-hidden flex flex-row flex-wrap items-center justify-between gap-6">
-          <div className="absolute top-0 left-0 w-full h-1 bg-gradient-to-r from-transparent via-[#4dbdcc] to-transparent opacity-50"></div>
+          <div className="absolute top-0 left-0 w-full h-1 bg-linear-to-r from-transparent via-primary-container to-transparent opacity-50"></div>
           
           {/* Details */}
           <div className="flex flex-row flex-wrap items-center gap-6 flex-1 min-w-0">
@@ -712,26 +780,26 @@ export default function Quoter() {
           </div>
 
           {/* Action */}
-          <div className="flex flex-col items-center gap-4 sm:gap-6 border-slate-700/50 pl-0 md:pl-6 md:border-l ml-auto flex-shrink-0">
+          <div className="flex flex-col items-center gap-4 sm:gap-6 border-slate-700/50 pl-0 md:pl-6 md:border-l ml-auto shrink-0">
             <div className="text-right">
-              <div className="text-[10px] text-slate-400 uppercase font-bold tracking-widest mb-1">
-                 Total
-              </div>
-              <div className="text-2xl sm:text-3xl font-bold text-[#4dbdcc] font-mono leading-none flex items-baseline justify-end">
+              <div className="text-[10px] text-slate-400 uppercase font-bold tracking-widest mb-1">Total estimado</div>
+              <div className="text-2xl sm:text-3xl font-bold text-primary-container font-mono leading-none flex items-baseline justify-end">
                 <span className="text-sm sm:text-base opacity-60 mr-1 font-sans">$</span>
                 {Math.round(totals.price).toLocaleString('es-CO')}
               </div>
             </div>
-            
+
             <button
-              className="bg-[#4dbdcc] hover:bg-cyan-400 text-slate-900 px-5 py-3 rounded-xl font-bold text-sm sm:text-base transition-all shadow-[0_0_20px_rgba(77,189,204,0.15)] flex items-center gap-2 whitespace-nowrap cursor-pointer"
+              onClick={addToCart}
+              className="bg-primary-container hover:bg-cyan-400 text-slate-900 px-5 py-3 rounded-xl font-bold text-sm sm:text-base transition-all shadow-[0_0_20px_rgba(77,189,204,0.15)] flex items-center gap-2 whitespace-nowrap cursor-pointer"
             >
-              Pagar <Zap size={18} className="fill-current border-transparent" />
+              <ShoppingCart size={18} /> Añadir al carrito
             </button>
           </div>
 
         </div>
       )}
+
     </div>
   );
 }

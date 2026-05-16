@@ -1,5 +1,6 @@
 'use client';
 import React, { useRef, useEffect } from 'react';
+import { useRouter } from 'next/navigation';
 import { gsap } from 'gsap';
 
 export interface ChromaItem {
@@ -30,8 +31,9 @@ const ChromaGrid: React.FC<ChromaGridProps> = ({
   radius = 300,
   damping = 0.45,
   fadeOut = 0.6,
-  ease = 'power3.out'
+  ease = 'power3.out',
 }) => {
+  const router = useRouter();
   const rootRef = useRef<HTMLDivElement>(null);
   const fadeRef = useRef<HTMLDivElement>(null);
   const setX = useRef<SetterFn | null>(null);
@@ -80,7 +82,9 @@ const ChromaGrid: React.FC<ChromaGridProps> = ({
   };
 
   const handleCardClick = (url?: string) => {
-    if (url) window.open(url, '_blank', 'noopener,noreferrer');
+    if (!url) return;
+    if (url.startsWith('/')) router.push(url);
+    else window.open(url, '_blank', 'noopener,noreferrer');
   };
 
   const handleCardMove: React.MouseEventHandler<HTMLElement> = e => {
@@ -109,7 +113,7 @@ const ChromaGrid: React.FC<ChromaGridProps> = ({
           key={i}
           onMouseMove={handleCardMove}
           onClick={() => handleCardClick(c.url)}
-          className="group relative flex flex-col rounded-[20px] overflow-hidden border-2 border-transparent transition-colors duration-300 cursor-pointer"
+          className="group relative flex flex-col rounded-[20px] overflow-hidden border-2 border-transparent transition-colors duration-300 cursor-pointer aspect-2/3"
           style={
             {
               '--card-border': c.borderColor || 'transparent',
@@ -125,13 +129,13 @@ const ChromaGrid: React.FC<ChromaGridProps> = ({
                 'radial-gradient(circle at var(--mouse-x) var(--mouse-y), var(--spotlight-color), transparent 70%)'
             }}
           />
-          <div className="relative z-10 flex-1 p-[10px] box-border">
+          <div className="relative z-10 flex-1 p-2.5 box-border">
             <img src={c.image} alt={c.title} loading="lazy" className="w-full h-full object-cover rounded-[10px]" />
           </div>
           <footer className="relative z-10 p-3 text-white font-sans grid grid-cols-[1fr_auto] gap-x-3 gap-y-1">
             <h3 className="m-0 text-[1.05rem] font-semibold">{c.title}</h3>
             {c.handle && <span className="text-[0.95rem] opacity-80 text-right">{c.handle}</span>}
-            <p className="m-0 text-[0.85rem] opacity-85">{c.subtitle}</p>
+            <p className="m-0 text-[0.72rem] opacity-75 line-clamp-2">{c.subtitle}</p>
             {c.location && <span className="text-[0.85rem] opacity-85 text-right">{c.location}</span>}
           </footer>
         </article>
@@ -150,7 +154,7 @@ const ChromaGrid: React.FC<ChromaGridProps> = ({
       />
       <div
         ref={fadeRef}
-        className="absolute inset-0 pointer-events-none transition-opacity duration-[250ms] z-40 rounded-[20px]"
+        className="absolute inset-0 pointer-events-none transition-opacity duration-250 z-40 rounded-[20px]"
         style={{
           backdropFilter: 'grayscale(1) brightness(0.78)',
           WebkitBackdropFilter: 'grayscale(1) brightness(0.78)',

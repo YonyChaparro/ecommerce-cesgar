@@ -10,6 +10,7 @@ export interface CartItem {
   alt: string | null;
   category: string;
   quantity: number;
+  note?: string;
 }
 
 interface CartState {

@@ -247,14 +247,14 @@ export default async function RepuestosPage() {
                   node: (
                     <Link
                       href={`/tienda/${p.slug}`}
-                      className="group w-52 flex flex-col bg-white/5 border border-white/10 rounded-2xl p-4 hover:bg-white/10 hover:border-orange-500/30 transition-all duration-300"
+                      className="group/card w-52 flex flex-col bg-white/5 border border-white/10 rounded-2xl p-4 hover:bg-white/10 hover:border-orange-500/30 transition-all duration-300"
                     >
                       <div className="aspect-square bg-white/8 rounded-xl mb-4 overflow-hidden flex items-center justify-center">
                         {/* eslint-disable-next-line @next/next/no-img-element */}
                         <img
                           src={p.img}
                           alt={p.alt || p.name}
-                          className="w-full h-full object-contain p-2 group-hover:scale-105 transition-transform duration-500"
+                          className="w-full h-full object-contain p-2 group-hover/card:scale-105 transition-transform duration-500"
                         />
                       </div>
                       <div className="grow space-y-1 mb-3">
@@ -262,7 +262,7 @@ export default async function RepuestosPage() {
                         <h4 className="font-headline font-bold text-white text-xs leading-tight line-clamp-2">{p.name}</h4>
                         <span className="text-base font-bold text-white block">$ {p.price.toLocaleString('es-CO')}</span>
                       </div>
-                      <div className="w-full py-2 bg-white/10 text-white rounded-lg font-headline font-bold text-[10px] uppercase tracking-widest text-center group-hover:bg-primary-container transition-all">
+                      <div className="w-full py-2 bg-white/10 text-white rounded-lg font-headline font-bold text-[10px] uppercase tracking-widest text-center group-hover/card:bg-primary-container transition-all">
                         Ver producto
                       </div>
                     </Link>

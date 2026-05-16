@@ -3,7 +3,7 @@
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Minus, Plus, Trash2, ShoppingBag, ArrowLeft, LockKeyhole } from 'lucide-react';
+import { Minus, Plus, Trash2, ShoppingBag, ArrowLeft, LockKeyhole, Box } from 'lucide-react';
 import { useCart } from '@/app/components/CartContext';
 
 export default function CarritoPage() {
@@ -21,7 +21,11 @@ export default function CarritoPage() {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          items: items.map((i) => ({ id: i.id, quantity: i.quantity })),
+          items: items.map((i) => ({
+            id: i.id,
+            quantity: i.quantity,
+            ...(i.id.startsWith('cotizador-') ? { name: i.name, price: i.price, note: i.note ?? i.alt ?? '' } : {}),
+          })),
         }),
       });
 
@@ -78,13 +82,17 @@ export default function CarritoPage() {
                 key={item.id}
                 className="bg-white rounded-2xl p-4 flex gap-4 shadow-sm border border-slate-100"
               >
-                <div className="w-24 h-24 bg-slate-50 rounded-xl overflow-hidden shrink-0">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img
-                    src={item.img}
-                    alt={item.alt || item.name}
-                    className="w-full h-full object-contain p-1"
-                  />
+                <div className="w-24 h-24 bg-slate-50 rounded-xl overflow-hidden shrink-0 flex items-center justify-center">
+                  {item.id.startsWith('cotizador-') ? (
+                    <Box size={36} className="text-cyan-400" />
+                  ) : (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img
+                      src={item.img}
+                      alt={item.alt || item.name}
+                      className="w-full h-full object-contain p-1"
+                    />
+                  )}
                 </div>
                 <div className="flex-1 min-w-0">
                   <span className="text-[9px] font-bold uppercase tracking-widest text-slate-400">

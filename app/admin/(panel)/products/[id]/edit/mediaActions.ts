@@ -4,6 +4,13 @@ import { redirect } from 'next/navigation';
 import { prisma } from '@/lib/prisma';
 import { getSession } from '@/lib/session';
 
+async function revalidateProduct(productId: string) {
+  revalidatePath(`/admin/products/${productId}/edit`);
+  const product = await prisma.product.findUnique({ where: { id: productId }, select: { slug: true } });
+  if (product) revalidatePath(`/tienda/${product.slug}`);
+  revalidatePath('/tienda');
+}
+
 async function requireAdmin() {
   const session = await getSession();
   if (!session) redirect('/admin/login');
@@ -30,18 +37,18 @@ export async function addMedia(
     data: { productId, type, url, alt, order },
   });
 
-  revalidatePath(`/admin/products/${productId}/edit`);
+  await revalidateProduct(productId);
 }
 
 export async function deleteMedia(mediaId: string, productId: string) {
   await requireAdmin();
   await prisma.productMedia.delete({ where: { id: mediaId } });
-  revalidatePath(`/admin/products/${productId}/edit`);
+  await revalidateProduct(productId);
 }
 
 export async function updateMediaOrder(mediaId: string, productId: string, formData: FormData) {
   await requireAdmin();
   const order = Number(formData.get('order') ?? 0);
   await prisma.productMedia.update({ where: { id: mediaId }, data: { order } });
-  revalidatePath(`/admin/products/${productId}/edit`);
+  await revalidateProduct(productId);
 }
