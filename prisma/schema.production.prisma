@@ -1,0 +1,126 @@
+// Schema de PRODUCCIÓN — MySQL (Hostinger Business Hosting)
+// Usado automáticamente cuando DATABASE_URL empieza con mysql://
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model Product {
+  id               String         @id @default(cuid())
+  name             String
+  slug             String         @unique
+  category         String
+  price            Int
+  img              String
+  alt              String?
+  shortDescription String?        @db.Text
+  description      String?        @db.LongText
+  salePrice        Int?
+  stock            Int            @default(0)
+  media            ProductMedia[]
+  createdAt        DateTime       @default(now())
+  updatedAt        DateTime       @updatedAt
+}
+
+model ProductMedia {
+  id        String   @id @default(cuid())
+  productId String
+  product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
+  type      String   // "image" | "video"
+  url       String
+  alt       String?
+  order     Int      @default(0)
+  createdAt DateTime @default(now())
+}
+
+// role: "ADMIN" | "EDITOR"
+model User {
+  id           String     @id @default(cuid())
+  email        String     @unique
+  passwordHash String
+  name         String
+  role         String     @default("EDITOR")
+  posts        BlogPost[]
+  createdAt    DateTime   @default(now())
+  updatedAt    DateTime   @updatedAt
+}
+
+// status: "draft" | "published"
+model BlogPost {
+  id          String        @id @default(cuid())
+  title       String
+  slug        String        @unique
+  excerpt     String?       @db.Text
+  coverImage  String?
+  content     String        @db.LongText // TipTap JSON serialized as string
+  status      String        @default("draft")
+  publishedAt DateTime?
+  authorId    String
+  author      User          @relation(fields: [authorId], references: [id])
+  tags        BlogPostTag[]
+  createdAt   DateTime      @default(now())
+  updatedAt   DateTime      @updatedAt
+}
+
+model BlogTag {
+  id    String        @id @default(cuid())
+  name  String        @unique
+  slug  String        @unique
+  posts BlogPostTag[]
+}
+
+model BlogPostTag {
+  postId String
+  tagId  String
+  post   BlogPost @relation(fields: [postId], references: [id], onDelete: Cascade)
+  tag    BlogTag  @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([postId, tagId])
+}
+
+// status: "pending" | "approved" | "rejected" | "in_process" | "cancelled"
+// type:   "product" | "cotizador" | "mixed"
+model Order {
+  id                   String      @id @default(cuid())
+  preferenceId         String?     @unique
+  paymentId            String?
+  status               String      @default("pending")
+  type                 String      @default("product")
+  total                Int
+  shippingName         String?
+  shippingEmail        String?
+  shippingDocType      String?
+  shippingDocNumber    String?
+  shippingPhone        String?
+  shippingAddress      String?
+  shippingNeighborhood String?
+  shippingAddressExtra String?
+  shippingDepartment   String?
+  shippingCity         String?
+  shippingPostalCode   String?
+  shippingInstructions String?     @db.Text
+  items                OrderItem[]
+  createdAt            DateTime    @default(now())
+  updatedAt            DateTime    @updatedAt
+}
+
+// itemType: "product" | "cotizador"
+model OrderItem {
+  id        String  @id @default(cuid())
+  orderId   String
+  order     Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  itemType  String  @default("product")
+  productId String?
+  slug      String?
+  category  String?
+  name      String
+  price     Int
+  quantity  Int
+  note      String? @db.Text
+  modelUrl  String?
+}
