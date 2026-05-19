@@ -1,13 +1,19 @@
 import { MercadoPagoConfig, Payment, Preference } from "mercadopago";
 
-if (!process.env.MP_ACCESS_TOKEN) {
-  throw new Error("MP_ACCESS_TOKEN is not defined");
+function buildClient(): MercadoPagoConfig {
+  if (!process.env.MP_ACCESS_TOKEN) {
+    throw new Error("MP_ACCESS_TOKEN is not defined");
+  }
+  return new MercadoPagoConfig({
+    accessToken: process.env.MP_ACCESS_TOKEN,
+    options: { timeout: 10000 },
+  });
 }
 
-export const mpClient = new MercadoPagoConfig({
-  accessToken: process.env.MP_ACCESS_TOKEN,
-  options: { timeout: 5000 },
-});
+export function getPreference(): Preference {
+  return new Preference(buildClient());
+}
 
-export const preference = new Preference(mpClient);
-export const payment = new Payment(mpClient);
+export function getPayment(): Payment {
+  return new Payment(buildClient());
+}

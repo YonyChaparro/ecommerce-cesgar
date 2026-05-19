@@ -11,6 +11,7 @@ export interface CartItem {
   category: string;
   quantity: number;
   note?: string;
+  modelUrl?: string;
 }
 
 interface CartState {

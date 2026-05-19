@@ -8,7 +8,7 @@ generator client {
 }
 
 datasource db {
-  provider = "mysql"
+  provider = "sqlite"
   url      = env("DATABASE_URL")
 }
 
@@ -20,8 +20,8 @@ model Product {
   price       Int
   img              String
   alt              String?
-  shortDescription String?  @db.Text
-  description      String?  @db.LongText
+  shortDescription String?
+  description      String?
   salePrice        Int?
   stock            Int            @default(0)
   media       ProductMedia[]
@@ -57,9 +57,9 @@ model BlogPost {
   id          String       @id @default(cuid())
   title       String
   slug        String       @unique
-  excerpt     String?      @db.Text
+  excerpt     String?
   coverImage  String?
-  content     String       @db.LongText // TipTap JSON serialized as string
+  content     String       // TipTap JSON serialized as string
   status      String       @default("draft")
   publishedAt DateTime?
   authorId    String
@@ -88,15 +88,27 @@ model BlogPostTag {
 // status: "pending" | "approved" | "rejected" | "in_process" | "cancelled"
 // type:   "product" | "cotizador" | "mixed"
 model Order {
-  id           String      @id @default(cuid())
-  preferenceId String?     @unique
-  paymentId    String?
-  status       String      @default("pending")
-  type         String      @default("product")
-  total        Int
-  items        OrderItem[]
-  createdAt    DateTime    @default(now())
-  updatedAt    DateTime    @updatedAt
+  id                   String      @id @default(cuid())
+  preferenceId         String?     @unique
+  paymentId            String?
+  status               String      @default("pending")
+  type                 String      @default("product")
+  total                Int
+  shippingName         String?
+  shippingEmail        String?
+  shippingDocType      String?
+  shippingDocNumber    String?
+  shippingPhone        String?
+  shippingAddress      String?
+  shippingNeighborhood String?
+  shippingAddressExtra String?
+  shippingDepartment   String?
+  shippingCity         String?
+  shippingPostalCode   String?
+  shippingInstructions String?
+  items                OrderItem[]
+  createdAt            DateTime    @default(now())
+  updatedAt            DateTime    @updatedAt
 }
 
 // itemType: "product" | "cotizador"
@@ -111,5 +123,6 @@ model OrderItem {
   name      String
   price     Int
   quantity  Int
-  note      String?  @db.Text
+  note      String?
+  modelUrl  String?
 }

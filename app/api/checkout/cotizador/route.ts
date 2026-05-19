@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { preference } from '@/lib/mercadopago';
+import { getPreference } from '@/lib/mercadopago';
 import { prisma } from '@/lib/prisma';
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000';
@@ -55,7 +55,7 @@ export async function POST(req: Request) {
       currency_id: 'COP',
     }));
 
-    const result = await preference.create({
+    const result = await getPreference().create({
       body: {
         items: mpItems,
         back_urls: {
@@ -64,7 +64,9 @@ export async function POST(req: Request) {
           pending: `${APP_URL}/pago/pendiente`,
         },
         ...(isProduction && { auto_return: 'approved' }),
-        ...(isProduction && { notification_url: `${APP_URL}/api/webhooks/mercadopago` }),
+        notification_url: `${APP_URL}/api/webhooks/mercadopago`,
+        binary_mode: true,
+        statement_descriptor: 'CESGAR',
         external_reference: order.id,
       },
     });

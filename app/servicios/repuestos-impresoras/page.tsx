@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic';
 import type { Metadata } from 'next';
 import {
   Wrench, Cpu, Settings, Package, Shield, Flame, Hammer,

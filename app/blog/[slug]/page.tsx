@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { prisma } from '@/lib/prisma';
@@ -5,12 +6,18 @@ import { tiptapToHtml } from '@/lib/tiptap-html';
 import Navbar from '@/app/components/Navbar';
 import { CalendarDays, User, ArrowLeft, Tag } from 'lucide-react';
 
+export const dynamicParams = true;
+
 export async function generateStaticParams() {
-  const posts = await prisma.blogPost.findMany({
-    where: { status: 'published' },
-    select: { slug: true },
-  });
-  return posts.map((p) => ({ slug: p.slug }));
+  try {
+    const posts = await prisma.blogPost.findMany({
+      where: { status: 'published' },
+      select: { slug: true },
+    });
+    return posts.map((p) => ({ slug: p.slug }));
+  } catch {
+    return [];
+  }
 }
 
 export default async function BlogPostPage({ params }: { params: Promise<{ slug: string }> }) {

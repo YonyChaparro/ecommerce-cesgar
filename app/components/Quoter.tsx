@@ -475,43 +475,61 @@ export default function Quoter() {
   const [models, setModels] = useState<QuoterModel[]>([]);
   const [configuringModelId, setConfiguringModelId] = useState<string | null>(null);
   const { addItem, openCart, items: cartItems } = useCart();
+  const [uploadLoading, setUploadLoading] = useState(false);
 
   const primaryInputRef = useRef<HTMLInputElement>(null);
   const addMoreInputRef = useRef<HTMLInputElement>(null);
 
-  const addToCart = useCallback(() => {
-    const existingIds = new Set(cartItems.map((i) => i.id));
-    models.forEach((m) => {
-      const cartId = `cotizador-${m.id}`;
-      if (existingIds.has(cartId)) return;
-      const { cost, weightG, timeH } = calculateItemCosts(m) as { cost: number; unitPrice?: number; weightG: number; timeH: number };
-      const matObj = MATERIALES[m.config.printingTech].find(mat => mat.id === m.config.materialType) || MATERIALES[m.config.printingTech][0];
-      const colorObj = getAvailableColors(m.config.printingTech, m.config.materialType).find(c => c.id === m.config.printColor);
-      const dims = m.stl ? `${m.stl.dimensions.x}×${m.stl.dimensions.y}×${m.stl.dimensions.z}mm` : null;
-      const note = [
-        m.config.printingTech.toUpperCase(),
-        matObj.nombre,
-        colorObj?.nombre,
-        `${m.config.layerHeight}mm`,
-        m.config.printingTech === 'fdm' ? `${m.config.infillDensity}% relleno` : null,
-        dims,
-        `~${(weightG / m.config.quantity).toFixed(1)}g/u`,
-        `~${(timeH / m.config.quantity).toFixed(1)}h/u`,
-        m.config.postProcessing ? 'Post-proc.' : 'Sin post-proc.',
-      ].filter(Boolean).join(' · ');
-      const effectiveUnitPrice = Math.max(1, Math.round(cost / m.config.quantity));
-      addItem({
-        id: cartId,
-        slug: 'cotizador',
-        name: m.file.name.replace(/\.stl$/i, ''),
-        price: effectiveUnitPrice,
-        img: '/3d-print.svg',
-        alt: note,
-        category: 'Impresión 3D',
-        note,
-      }, m.config.quantity);
-    });
-    openCart();
+  const addToCart = useCallback(async () => {
+    setUploadLoading(true);
+    try {
+      const existingIds = new Set(cartItems.map((i) => i.id));
+      for (const m of models) {
+        const cartId = `cotizador-${m.id}`;
+        if (existingIds.has(cartId)) continue;
+        const { cost, weightG, timeH } = calculateItemCosts(m) as { cost: number; unitPrice?: number; weightG: number; timeH: number };
+        const matObj = MATERIALES[m.config.printingTech].find(mat => mat.id === m.config.materialType) || MATERIALES[m.config.printingTech][0];
+        const colorObj = getAvailableColors(m.config.printingTech, m.config.materialType).find(c => c.id === m.config.printColor);
+        const dims = m.stl ? `${m.stl.dimensions.x}×${m.stl.dimensions.y}×${m.stl.dimensions.z}mm` : null;
+        const note = [
+          m.config.printingTech.toUpperCase(),
+          matObj.nombre,
+          colorObj?.nombre,
+          `${m.config.layerHeight}mm`,
+          m.config.printingTech === 'fdm' ? `${m.config.infillDensity}% relleno` : null,
+          dims,
+          `~${(weightG / m.config.quantity).toFixed(1)}g/u`,
+          `~${(timeH / m.config.quantity).toFixed(1)}h/u`,
+          m.config.postProcessing ? 'Post-proc.' : 'Sin post-proc.',
+        ].filter(Boolean).join(' · ');
+        const effectiveUnitPrice = Math.max(1, Math.round(cost / m.config.quantity));
+
+        let modelUrl: string | undefined;
+        try {
+          const fd = new FormData();
+          fd.append('file', m.file);
+          const res = await fetch('/api/stl-upload', { method: 'POST', body: fd });
+          if (res.ok) modelUrl = (await res.json()).url;
+        } catch {
+          // Upload failure is non-blocking — order proceeds without download link
+        }
+
+        addItem({
+          id: cartId,
+          slug: 'cotizador',
+          name: m.file.name.replace(/\.stl$/i, ''),
+          price: effectiveUnitPrice,
+          img: '/3d-print.svg',
+          alt: note,
+          category: 'Impresión 3D',
+          note,
+          modelUrl,
+        }, m.config.quantity);
+      }
+      openCart();
+    } finally {
+      setUploadLoading(false);
+    }
   }, [models, cartItems, addItem, openCart]);
 
   const handleFiles = useCallback((files: FileList | null) => {
@@ -791,9 +809,14 @@ export default function Quoter() {
 
             <button
               onClick={addToCart}
-              className="bg-primary-container hover:bg-cyan-400 text-slate-900 px-5 py-3 rounded-xl font-bold text-sm sm:text-base transition-all shadow-[0_0_20px_rgba(77,189,204,0.15)] flex items-center gap-2 whitespace-nowrap cursor-pointer"
+              disabled={uploadLoading}
+              className="bg-primary-container hover:bg-cyan-400 disabled:opacity-60 disabled:cursor-not-allowed text-slate-900 px-5 py-3 rounded-xl font-bold text-sm sm:text-base transition-all shadow-[0_0_20px_rgba(77,189,204,0.15)] flex items-center gap-2 whitespace-nowrap cursor-pointer"
             >
-              <ShoppingCart size={18} /> Añadir al carrito
+              {uploadLoading ? (
+                <><Loader2 size={18} className="animate-spin" /> Subiendo modelos…</>
+              ) : (
+                <><ShoppingCart size={18} /> Añadir al carrito</>
+              )}
             </button>
           </div>
 

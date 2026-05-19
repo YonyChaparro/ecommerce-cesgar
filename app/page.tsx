@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic';
 import {
   Settings2, Cpu, ArrowRight, ChevronRight,
 } from 'lucide-react';

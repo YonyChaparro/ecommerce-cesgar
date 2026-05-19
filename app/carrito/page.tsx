@@ -1,49 +1,11 @@
 'use client';
 
-import { useState } from 'react';
-import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { Minus, Plus, Trash2, ShoppingBag, ArrowLeft, LockKeyhole, Box } from 'lucide-react';
+import { Minus, Plus, Trash2, ShoppingBag, ArrowLeft, ArrowRight, Box } from 'lucide-react';
 import { useCart } from '@/app/components/CartContext';
 
 export default function CarritoPage() {
   const { items, removeItem, updateQty, clearCart, totalPrice } = useCart();
-  const router = useRouter();
-  const [loading, setLoading] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  async function handleCheckout() {
-    setLoading(true);
-    setError(null);
-
-    try {
-      const res = await fetch('/api/checkout', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          items: items.map((i) => ({
-            id: i.id,
-            quantity: i.quantity,
-            ...(i.id.startsWith('cotizador-') ? { name: i.name, price: i.price, note: i.note ?? i.alt ?? '' } : {}),
-          })),
-        }),
-      });
-
-      const data = await res.json();
-
-      if (!res.ok) {
-        setError(data.error ?? 'Error al procesar el pago');
-        return;
-      }
-
-      clearCart();
-      router.push(data.url);
-    } catch {
-      setError('No se pudo conectar con el servidor. Intenta de nuevo.');
-    } finally {
-      setLoading(false);
-    }
-  }
 
   if (items.length === 0) {
     return (
@@ -162,26 +124,13 @@ export default function CarritoPage() {
                 <p className="text-xs text-slate-400 mt-1">Envío calculado al finalizar.</p>
               </div>
 
-              {error && (
-                <p className="text-sm text-red-500 bg-red-50 rounded-lg px-3 py-2 mb-4">
-                  {error}
-                </p>
-              )}
-
-              <button
-                onClick={handleCheckout}
-                disabled={loading}
-                className="w-full py-4 bg-[#009ee3] hover:bg-[#007eb5] disabled:opacity-60 text-white rounded-xl font-headline font-bold text-sm transition-colors flex items-center justify-center gap-2"
+              <Link
+                href="/checkout"
+                className="w-full py-4 bg-inverse-surface hover:bg-primary-container hover:text-inverse-surface text-white rounded-xl font-headline font-bold text-sm transition-colors flex items-center justify-center gap-2"
               >
-                {loading ? (
-                  <span className="animate-pulse">Procesando...</span>
-                ) : (
-                  <>
-                    <LockKeyhole size={16} />
-                    Pagar con MercadoPago
-                  </>
-                )}
-              </button>
+                Continuar con la compra
+                <ArrowRight size={16} />
+              </Link>
 
               <button
                 onClick={clearCart}
