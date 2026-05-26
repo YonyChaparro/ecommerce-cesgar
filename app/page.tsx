@@ -27,21 +27,27 @@ const CARD_STYLES = [
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default async function Home() {
-  const [products, blogPosts] = await Promise.all([
-    prisma.product.findMany({ orderBy: { createdAt: 'desc' } }),
-    prisma.blogPost.findMany({
-      where: { status: 'published' },
-      orderBy: { publishedAt: 'desc' },
-      select: {
-        slug: true,
-        title: true,
-        excerpt: true,
-        coverImage: true,
-        publishedAt: true,
-        tags: { include: { tag: true }, take: 1 },
-      },
-    }),
-  ]);
+  let products: any[] = [];
+  let blogPosts: any[] = [];
+  try {
+    [products, blogPosts] = await Promise.all([
+      prisma.product.findMany({ orderBy: { createdAt: 'desc' } }),
+      prisma.blogPost.findMany({
+        where: { status: 'published' },
+        orderBy: { publishedAt: 'desc' },
+        select: {
+          slug: true,
+          title: true,
+          excerpt: true,
+          coverImage: true,
+          publishedAt: true,
+          tags: { include: { tag: true }, take: 1 },
+        },
+      }),
+    ]);
+  } catch (e) {
+    console.error('[Home] DB error:', e);
+  }
   return (
     <>
       {/* ── Navbar ── */}

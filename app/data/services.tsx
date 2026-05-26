@@ -33,7 +33,7 @@ export const SERVICES = [
     desc: 'Nuestros ingenieros modelan tu idea desde cero o adaptan un diseño existente, entregando archivos optimizados para fabricación.',
     cta: 'Cotizar diseño',
     iconColor: 'text-purple-400',
-    image: '/Diseño.jpg',
+    image: '/Diseno3D.png',
     href: '/servicios/diseno-3d',
   },
   {
