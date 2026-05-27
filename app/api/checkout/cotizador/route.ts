@@ -65,7 +65,7 @@ export async function POST(req: Request) {
         },
         ...(isProduction && { auto_return: 'approved' }),
         notification_url: `${APP_URL}/api/webhooks/mercadopago`,
-        binary_mode: true,
+        binary_mode: false,
         statement_descriptor: 'CESGAR',
         external_reference: order.id,
       },

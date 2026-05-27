@@ -2,6 +2,7 @@ import type { Metadata } from 'next';
 import {
   PenTool, Shapes, ScanLine, Car, Cog, Wrench, Layers, ArrowRight, ChevronRight,
 } from 'lucide-react';
+import Image from 'next/image';
 import Link from 'next/link';
 import Navbar from '../../components/Navbar';
 
@@ -86,7 +87,7 @@ export default function Diseno3DPage() {
               </p>
               <div className="flex flex-wrap gap-3">
                 <Link
-                  href="/cotizador"
+                  href="https://wa.me/573057956352" target="_blank" rel="noopener noreferrer"
                   className="inline-flex items-center gap-2 bg-primary-container text-white px-6 py-3 rounded-full font-headline font-bold text-sm tracking-wide hover:brightness-110 transition-all"
                 >
                   Cotizar diseño
@@ -102,8 +103,8 @@ export default function Diseno3DPage() {
             </div>
 
             <div className="relative hidden lg:flex items-center justify-center">
-              <div className="w-full aspect-square max-w-md rounded-3xl bg-white/5 border border-white/10 flex items-center justify-center">
-                <PenTool size={120} className="text-purple-400/40" strokeWidth={1} />
+              <div className="w-full aspect-square max-w-md rounded-3xl bg-white/5 border border-white/10 flex items-center justify-center overflow-hidden">
+                <Image src="/Diseno3DService.png" alt="Diseño 3D" width={400} height={400} className="w-full h-full object-cover" />
               </div>
               <div className="absolute -bottom-4 -right-4 w-32 h-32 rounded-2xl bg-purple-500/10 blur-2xl" />
             </div>
@@ -154,7 +155,7 @@ export default function Diseno3DPage() {
                   </p>
                 </div>
                 <Link
-                  href="/cotizador"
+                  href="https://wa.me/573057956352" target="_blank" rel="noopener noreferrer"
                   className="mt-6 inline-flex items-center gap-2 bg-primary-container text-white px-5 py-3 rounded-xl font-headline font-bold text-sm hover:brightness-110 transition-all w-fit"
                 >
                   Cotizar ahora
@@ -257,7 +258,7 @@ export default function Diseno3DPage() {
             </p>
             <div className="flex flex-wrap justify-center gap-3">
               <Link
-                href="/cotizador"
+                href="https://wa.me/573057956352" target="_blank" rel="noopener noreferrer"
                 className="inline-flex items-center gap-2 bg-primary-container text-white px-7 py-3.5 rounded-full font-headline font-bold text-sm tracking-wide hover:brightness-110 transition-all"
               >
                 Solicitar cotización

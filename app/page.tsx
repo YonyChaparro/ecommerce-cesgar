@@ -70,7 +70,7 @@ export default async function Home() {
                 <Link
                   key={s.title}
                   href={s.href ?? '/cotizador'}
-                  className={`group/service flex flex-col rounded-2xl border border-slate-200 p-6 transition-all duration-300 relative overflow-hidden cursor-pointer bg-white opacity-75 hover:opacity-100 ${i === 0 ? 'sm:col-span-2' : ''}`}
+                  className={`group/service flex flex-col rounded-2xl border border-slate-200 p-6 transition-all duration-300 relative overflow-hidden cursor-pointer bg-white sm:opacity-75 sm:hover:opacity-100 ${i === 0 ? 'sm:col-span-2' : ''}`}
                 >
                   <div className="absolute inset-0 bg-white" />
                   {s.image && <Image src={s.image} alt="" width={300} height={300} className="absolute right-0 top-0 bottom-0 h-full w-1/2 object-contain opacity-90 pointer-events-none select-none translate-y-10 transition-transform duration-300 group-hover/service:scale-105 group-hover/service:translate-y-4" />}
@@ -123,7 +123,7 @@ export default async function Home() {
                   Explora nuestra tienda técnica
                 </h2>
                 <p className="text-slate-600 text-lg mb-8 leading-relaxed">
-                  Desde boquillas de alta precisión hasta placas de control industriales, en Precision3D encuentras todo lo que tu impresora necesita. Contamos con un inventario especializado de repuestos, insumos electrónicos y recursos técnicos.
+                  Desde boquillas de alta precisión hasta placas de control industriales, en Cesgar encuentras todo lo que tu impresora necesita. Contamos con un inventario especializado de repuestos, insumos electrónicos y recursos técnicos.
                 </p>
                 <div className="grid grid-cols-2 gap-6 mb-10 w-full">
                   <div className="flex items-start gap-3">

@@ -47,10 +47,10 @@ export default function BlogForm({ action, post, submitLabel }: Props) {
   const field = (name: string) => state?.errors?.[name]?.[0];
 
   const inputCls =
-    'w-full border border-slate-200 rounded-xl px-4 py-3 text-[#16234d] text-sm outline-none focus:border-[#4dbdcc] focus:ring-2 focus:ring-[#4dbdcc]/20 transition';
+    'w-full border border-slate-200 rounded-xl px-4 py-3 text-inverse-surface text-sm outline-none focus:border-primary-container focus:ring-2 focus:ring-primary-container/20 transition';
 
   return (
-    <form action={formAction} className="space-y-6 max-w-4xl">
+    <form action={formAction} className="space-y-5 sm:space-y-6 max-w-4xl">
       {state?.message && (
         <p className="text-red-500 text-sm font-medium bg-red-50 px-4 py-3 rounded-xl">
           {state.message}
@@ -176,11 +176,11 @@ export default function BlogForm({ action, post, submitLabel }: Props) {
         )}
       </div>
 
-      <div className="flex items-center gap-4 pt-2">
+      <div className="flex flex-wrap items-center gap-3 pt-2">
         <button
           type="submit"
           disabled={pending}
-          className="bg-inverse-surface hover:bg-primary-container text-white hover:text-inverse-surface font-headline font-bold px-8 py-3 rounded-xl transition-all disabled:opacity-50 text-sm"
+          className="bg-inverse-surface hover:bg-primary-container text-white hover:text-inverse-surface font-headline font-bold px-6 sm:px-8 py-3 rounded-xl transition-all disabled:opacity-50 text-sm w-full sm:w-auto"
         >
           {pending ? 'Guardando…' : submitLabel}
         </button>

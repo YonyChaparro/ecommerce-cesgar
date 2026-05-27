@@ -126,3 +126,10 @@ model OrderItem {
   note      String?
   modelUrl  String?
 }
+
+// Generic key/value store for app configuration
+model Setting {
+  key       String   @id
+  value     String
+  updatedAt DateTime @updatedAt
+}

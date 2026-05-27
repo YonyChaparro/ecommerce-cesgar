@@ -16,9 +16,9 @@ export default async function EditBlogPostPage({ params }: { params: Promise<{ i
   const action = updatePost.bind(null, id);
 
   return (
-    <div className="p-8">
-      <div className="mb-8">
-        <h1 className="text-2xl font-headline font-bold text-[#16234d]">Editar artículo</h1>
+    <div className="p-4 sm:p-6 md:p-8">
+      <div className="mb-5 sm:mb-8">
+        <h1 className="text-xl sm:text-2xl font-headline font-bold text-inverse-surface">Editar artículo</h1>
         <p className="text-slate-500 text-sm mt-1 truncate max-w-xl">{post.title}</p>
       </div>
       <BlogForm action={action} post={post} submitLabel="Guardar cambios" />

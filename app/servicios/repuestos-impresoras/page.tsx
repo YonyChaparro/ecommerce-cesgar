@@ -4,6 +4,7 @@ import {
   Wrench, Cpu, Settings, Package, Shield, Flame, Hammer,
   ArrowRight, ChevronRight,
 } from 'lucide-react';
+import Image from 'next/image';
 import Link from 'next/link';
 import Navbar from '../../components/Navbar';
 import { LogoLoop } from '@/components/LogoLoop';
@@ -101,10 +102,10 @@ export default async function RepuestosPage() {
               </p>
               <div className="flex flex-wrap gap-3">
                 <Link
-                  href="/cotizador"
+                  href="/tienda"
                   className="inline-flex items-center gap-2 bg-primary-container text-white px-6 py-3 rounded-full font-headline font-bold text-sm tracking-wide hover:brightness-110 transition-all"
                 >
-                  Cotizar repuesto
+                  Ver tienda
                   <ArrowRight size={15} />
                 </Link>
                 <Link
@@ -117,8 +118,8 @@ export default async function RepuestosPage() {
             </div>
 
             <div className="relative hidden lg:flex items-center justify-center">
-              <div className="w-full aspect-square max-w-md rounded-3xl bg-white/5 border border-white/10 flex items-center justify-center">
-                <Wrench size={120} className="text-orange-400/40" strokeWidth={1} />
+              <div className="w-full aspect-square max-w-md rounded-3xl bg-white/5 border border-white/10 flex items-center justify-center overflow-hidden">
+                <Image src="/Repuestos para Impresoras.png" alt="Repuestos para impresoras 3D" width={400} height={400} className="w-full h-full object-cover" />
               </div>
               <div className="absolute -bottom-4 -right-4 w-32 h-32 rounded-2xl bg-orange-500/10 blur-2xl" />
             </div>
@@ -169,10 +170,10 @@ export default async function RepuestosPage() {
                   </p>
                 </div>
                 <Link
-                  href="/cotizador"
+                  href="/tienda"
                   className="mt-6 inline-flex items-center gap-2 bg-primary-container text-white px-5 py-3 rounded-xl font-headline font-bold text-sm hover:brightness-110 transition-all w-fit"
                 >
-                  Cotizar ahora
+                  Ver tienda
                   <ArrowRight size={14} />
                 </Link>
               </div>
@@ -324,7 +325,7 @@ export default async function RepuestosPage() {
             </p>
             <div className="flex flex-wrap justify-center gap-3">
               <Link
-                href="/cotizador"
+                href="https://wa.me/573057956352" target="_blank" rel="noopener noreferrer"
                 className="inline-flex items-center gap-2 bg-primary-container text-white px-7 py-3.5 rounded-full font-headline font-bold text-sm tracking-wide hover:brightness-110 transition-all"
               >
                 Solicitar cotización

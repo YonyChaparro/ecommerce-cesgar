@@ -7,15 +7,19 @@ const { execSync } = require('child_process');
 const fs = require('fs');
 const path = require('path');
 
-// Load .env manually so process.env is populated before we check DATABASE_URL
-try {
-  const envPath = path.join(process.cwd(), '.env');
-  const lines = fs.readFileSync(envPath, 'utf8').split('\n');
-  for (const line of lines) {
-    const m = line.match(/^([A-Z_][A-Z0-9_]*)\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s#]*))/);
-    if (m && !process.env[m[1]]) process.env[m[1]] = m[2] ?? m[3] ?? m[4] ?? '';
-  }
-} catch (_) {}
+// Load env files in Next.js priority order: .env.local overrides .env
+function loadEnvFile(filePath) {
+  try {
+    const lines = fs.readFileSync(filePath, 'utf8').split('\n');
+    for (const line of lines) {
+      const m = line.match(/^([A-Z_][A-Z0-9_]*)\s*=\s*(?:"([^"]*)"|'([^']*)'|([^\s#]*))/);
+      if (m) process.env[m[1]] = m[2] ?? m[3] ?? m[4] ?? '';
+    }
+  } catch (_) {}
+}
+// Load base first, then local override (matches Next.js behaviour)
+loadEnvFile(path.join(process.cwd(), '.env'));
+loadEnvFile(path.join(process.cwd(), '.env.local'));
 
 const url = process.env.DATABASE_URL ?? '';
 const isMySQL = url.startsWith('mysql://');

@@ -5,6 +5,8 @@ import { createPortal } from 'react-dom';
 import dynamic from 'next/dynamic';
 import { Zap, CloudUpload, X, Loader2, Plus, Layers, Scale, Clock, ShoppingCart, Maximize2 } from 'lucide-react';
 import { useCart } from '@/app/components/CartContext';
+import { type QuoterPricing, DEFAULT_QUOTER_PRICING } from '@/lib/quoter-types';
+// DEFAULT_QUOTER_PRICING is used as the default prop value below
 
 const STLViewer = dynamic(() => import('@/components/STLViewer'), { ssr: false, loading: () => (
   <div className="w-full h-full flex items-center justify-center">
@@ -14,26 +16,7 @@ const STLViewer = dynamic(() => import('@/components/STLViewer'), { ssr: false, 
 
 const STLViewerFull = dynamic(() => import('@/components/STLViewerFull'), { ssr: false });
 
-// ─── Constants from cotizador.html ────────────────────────────────────────────
-
-const MATERIALES: Record<string, any[]> = {
-  fdm: [
-    { id: 'pla', nombre: 'PLA', precioGramo: 420, densidad: 1.00, desc: 'Ideal para prototipos, biodegradable' },
-    { id: 'abs', nombre: 'ABS', precioGramo: 490, densidad: 1.04, desc: 'Resistente al calor (100 °C), durable, estanqueidad' },
-    { id: 'petg', nombre: 'PETG', precioGramo: 430, densidad: 1.27, desc: 'Resistente, ligeramente flexible' },
-    { id: 'nylon', nombre: 'Nylon', precioGramo: 800, densidad: 1.27, desc: 'Resistente, flexible, alta temperatura (180 °C)' },
-    { id: 'tpu', nombre: 'TPU', precioGramo: 900, densidad: 1.27, desc: 'Resistente, flexible Y elastico' },
-    { id: 'pp', nombre: 'Polipropileno', precioGramo: 900, densidad: 1.27, desc: 'Resistente, flexible' }
-  ],
-  resina: [
-    { id: 'standard', nombre: 'Standard', precioGramo: 700, densidad: 1.12, desc: 'Resina estándar para impresión SLA' },
-    { id: 'abs_like', nombre: 'ABS-Like', precioGramo: 800, densidad: 1.15, desc: 'Resina con propiedades similares al ABS' },
-    { id: 'ultra_transparente', nombre: 'Ultra Transparente', precioGramo: 900, densidad: 1.12, desc: 'Resina ultra transparente para piezas cristalinas' },
-    { id: 'tough', nombre: 'Tough', precioGramo: 1200, densidad: 1.15, desc: 'Resina resistente para piezas mecánicas' },
-    { id: 'nylon', nombre: 'Nylon Anti-impact', precioGramo: 2400, densidad: 1.15, desc: 'Resina tipo nylon anti impactos' },
-    { id: 'f80', nombre: 'F-80', precioGramo: 2400, densidad: 1.15, desc: 'Resina flexible y elástica' }
-  ]
-};
+// ─── Constants ────────────────────────────────────────────────────────────────
 
 const COLORES: Record<string, Record<string, any[]>> = {
   fdm: {
@@ -60,22 +43,6 @@ const COLORES: Record<string, Record<string, any[]>> = {
   }
 };
 
-const TARIFAS = {
-  costoSetup: 1000,
-  precioHora: 300,
-  postProcesado: 2000,
-  multiplicadorCalidad: {
-    fdm: { '0.3': 0.9, '0.2': 1.0, '0.15': 1.2, '0.1': 1.5, '0.05': 2.0 } as Record<string, number>,
-    resina: { '0.1': 1.0, '0.05': 1.4, '0.02': 1.8 } as Record<string, number>,
-  },
-  multiplicadorRelleno: {
-    '15': 0.8, '20': 0.9, '40': 1.0, '60': 1.3, '80': 1.7, '100': 2.0
-  } as Record<string, number>,
-  multiplicadorCantidad: [
-    { min: 50, mult: 0.7 }, { min: 20, mult: 0.75 }, { min: 10, mult: 0.8 }, 
-    { min: 5, mult: 0.85 }, { min: 3, mult: 0.9 }, { min: 2, mult: 0.95 }, { min: 1, mult: 1.0 }
-  ]
-};
 
 // ─── Types and Parser ────────────────────────────────────────────────────────
 
@@ -97,6 +64,7 @@ interface QuoterModel {
     printColor: string;
     quantity: number;
     postProcessing: boolean;
+    factorEscalado: number;
   };
 }
 
@@ -166,51 +134,56 @@ function isHollow(stl: STLData | null): boolean {
   return relacion < 0.2;
 }
 
-function calculateItemCosts(model: QuoterModel) {
+function calculateItemCosts(model: QuoterModel, pricing: QuoterPricing) {
   if (!model.stl) return { cost: 0, weightG: 0, timeH: 0 };
-  
-  const tech = model.config.printingTech;
+
+  const tech = model.config.printingTech as 'fdm' | 'resina';
   const materialId = model.config.materialType;
   const layerHeight = model.config.layerHeight;
   const infill = model.config.infillDensity;
   const quantity = model.config.quantity;
-  
-  const matObj = MATERIALES[tech].find(m => m.id === materialId) || MATERIALES[tech][0];
+
+  const mats = pricing.materiales[tech] ?? [];
+  const matObj = mats.find(m => m.id === materialId) || mats[0];
+  const { tarifas } = pricing;
+
+  const factor = model.config.factorEscalado ?? 1;
   const isObjHollow = isHollow(model.stl);
-  const volCm3 = model.stl.volumeMm3 / 1000;
-  
+  const volCm3 = (model.stl.volumeMm3 / 1000) * Math.pow(factor, 3);
+
   let pesoGramos = volCm3 * matObj.densidad;
   if (!isObjHollow && tech !== 'resina') {
     pesoGramos *= parseInt(infill) / 100;
   }
 
   let costoMaterial = pesoGramos * matObj.precioGramo;
-  const multiplicadorCalidad = TARIFAS.multiplicadorCalidad[tech as 'fdm' | 'resina'][layerHeight] || 1.0;
+  const multiplicadorCalidad = (tarifas.multiplicadorCalidad[tech] ?? {})[layerHeight] ?? 1.0;
   costoMaterial *= multiplicadorCalidad;
-  
+
   if (!isObjHollow && tech !== 'resina') {
-    costoMaterial *= TARIFAS.multiplicadorRelleno[infill] || 1.0;
+    costoMaterial *= tarifas.multiplicadorRelleno[infill] ?? 1.0;
   }
-  
+
   const baseTimePerCm3 = tech === 'fdm' ? 0.15 : 0.08;
   let tiempoHoras = volCm3 * baseTimePerCm3;
   if (parseFloat(layerHeight) < 0.1) tiempoHoras *= 1.5;
   if (parseFloat(layerHeight) < 0.05) tiempoHoras *= 2.0;
-  
-  const costoTiempo = tiempoHoras * TARIFAS.precioHora;
-  const costoPost = model.config.postProcessing ? TARIFAS.postProcesado : 0;
-  
+
+  const costoTiempo = tiempoHoras * tarifas.precioHora;
+  const costoPost = model.config.postProcessing ? tarifas.postProcesado : 0;
+
   let descuentoCantidad = 1.0;
-  for (const discount of TARIFAS.multiplicadorCantidad) {
+  for (const discount of tarifas.multiplicadorCantidad) {
     if (quantity >= discount.min) {
       descuentoCantidad = discount.mult;
       break;
     }
   }
-  
-  const subtotalUnitario = TARIFAS.costoSetup + costoMaterial + costoTiempo + costoPost;
-  const total = subtotalUnitario * quantity * Math.min(1.0, descuentoCantidad); 
-  
+
+  const costoEscalado = factor !== 1 ? (tarifas.costoEscalado ?? 0) : 0;
+  const subtotalUnitario = tarifas.costoSetup + costoMaterial + costoTiempo + costoPost + costoEscalado;
+  const total = subtotalUnitario * quantity * Math.min(1.0, descuentoCantidad);
+
   return {
     cost: Math.round(total),
     weightG: pesoGramos * quantity,
@@ -241,28 +214,31 @@ function getAvailableQualities(tech: string) {
 
 // ─── Modal Component ─────────────────────────────────────────────────────────
 
-function ConfigurationModal({ 
-  model, 
-  onUpdate, 
-  onClose 
-}: { 
-  model: QuoterModel, 
+function ConfigurationModal({
+  model,
+  onUpdate,
+  onClose,
+  pricing,
+}: {
+  model: QuoterModel,
   onUpdate: (id: string, config: any) => void,
-  onClose: () => void 
+  onClose: () => void,
+  pricing: QuoterPricing,
 }) {
   const c = model.config;
-  const mats = MATERIALES[c.printingTech];
+  const mats = (pricing.materiales[c.printingTech as 'fdm' | 'resina'] ?? []).filter(m => !m.disabled);
   const matObj = mats.find(m => m.id === c.materialType) || mats[0];
   const colors = getAvailableColors(c.printingTech, c.materialType);
   const qualities = getAvailableQualities(c.printingTech);
-  
-  const { cost, timeH, weightG } = calculateItemCosts(model);
+
+  const { cost, timeH, weightG } = calculateItemCosts(model, pricing);
 
   const hc = (key: string, val: any) => {
     const newConf = { ...c, [key]: val };
-    
+
     if (key === 'printingTech') {
-      newConf.materialType = MATERIALES[val as string][0].id;
+      const techMats = (pricing.materiales[val as 'fdm' | 'resina'] ?? []).filter(m => !m.disabled);
+      newConf.materialType = techMats[0]?.id ?? '';
       newConf.layerHeight = val === 'fdm' ? '0.2' : '0.05';
       const cList = getAvailableColors(val as string, newConf.materialType);
       newConf.printColor = cList[0].id;
@@ -272,7 +248,7 @@ function ConfigurationModal({
         newConf.printColor = cList[0].id;
       }
     }
-    
+
     onUpdate(model.id, newConf);
   };
 
@@ -292,13 +268,13 @@ function ConfigurationModal({
         />
       )}
     <div className="fixed inset-0 z-9999 flex items-center justify-center bg-black/80 backdrop-blur-sm p-4 md:p-8">
-      <div className="bg-slate-800 border border-slate-600 rounded-2xl w-full max-w-6xl shadow-2xl overflow-hidden flex flex-col md:flex-row max-h-[90vh]">
+      <div className="bg-slate-800 border border-slate-600 rounded-2xl w-full max-w-6xl shadow-2xl overflow-y-auto md:overflow-hidden flex flex-col md:flex-row max-h-[90vh]">
 
         {/* Left Side: Summary Menu */}
-        <div className="bg-slate-900/50 p-6 md:p-8 flex flex-col items-center justify-center md:w-1/3 border-b md:border-b-0 md:border-r border-slate-700 relative shrink-0 overflow-y-auto">
+        <div className="bg-slate-900/50 p-4 md:p-8 flex flex-col items-center justify-center md:w-1/3 border-b md:border-b-0 md:border-r border-slate-700 relative shrink-0 md:overflow-y-auto">
           <div className="text-center w-full max-w-75">
             <div
-              className="group relative w-full aspect-square rounded-xl overflow-hidden mb-4 bg-[#0d1525] cursor-pointer"
+              className="group relative w-full max-w-45 sm:max-w-none mx-auto aspect-square rounded-xl overflow-hidden mb-4 bg-[#0d1525] cursor-pointer"
               onClick={() => setShowFullscreen(true)}
               title="Expandir vista 3D"
             >
@@ -315,10 +291,13 @@ function ConfigurationModal({
               <div className="text-slate-400 text-sm space-y-1 mb-6">
                 <p>Dimensiones:</p>
                 <div className="flex gap-2 justify-center font-mono text-[10px] sm:text-xs flex-wrap">
-                  <span className="bg-slate-800 px-2 py-1 rounded whitespace-nowrap">X: {model.stl.dimensions.x}</span>
-                  <span className="bg-slate-800 px-2 py-1 rounded whitespace-nowrap">Y: {model.stl.dimensions.y}</span>
-                  <span className="bg-slate-800 px-2 py-1 rounded whitespace-nowrap">Z: {model.stl.dimensions.z}</span>
+                  <span className="bg-slate-800 px-2 py-1 rounded whitespace-nowrap">X: {(model.stl.dimensions.x * c.factorEscalado).toFixed(1)}</span>
+                  <span className="bg-slate-800 px-2 py-1 rounded whitespace-nowrap">Y: {(model.stl.dimensions.y * c.factorEscalado).toFixed(1)}</span>
+                  <span className="bg-slate-800 px-2 py-1 rounded whitespace-nowrap">Z: {(model.stl.dimensions.z * c.factorEscalado).toFixed(1)}</span>
                 </div>
+                {c.factorEscalado !== 1 && (
+                  <p className="text-[10px] text-slate-500 mt-1">Original × {c.factorEscalado}</p>
+                )}
                 <p className="mt-4 text-cyan-400 font-bold bg-cyan-950/30 px-3 py-1 rounded-full border border-cyan-900/50 inline-block text-xs sm:text-sm">
                   {isHollow(model.stl) ? '🫧 Pieza Hueca' : '⬤ Pieza Sólida'}
                 </p>
@@ -342,15 +321,15 @@ function ConfigurationModal({
         </div>
 
         {/* Right Side: Config Form */}
-        <div className="p-6 md:p-8 md:w-2/3 overflow-y-auto relative w-full">
-          <button 
+        <div className="p-4 sm:p-6 md:p-8 md:w-2/3 md:overflow-y-auto relative w-full">
+          <button
             onClick={onClose}
-            className="absolute top-6 right-6 text-slate-400 hover:text-white hover:bg-slate-700 p-2 rounded-lg transition-colors border border-transparent hover:border-slate-600"
+            className="absolute top-4 right-4 sm:top-6 sm:right-6 text-slate-400 hover:text-white hover:bg-slate-700 p-3 rounded-lg transition-colors border border-transparent hover:border-slate-600"
           >
             <X size={20} />
           </button>
-          
-          <h2 className="text-2xl font-bold text-white mb-6 pr-10">Configuración de Impresión</h2>
+
+          <h2 className="text-xl sm:text-2xl font-bold text-white mb-6 pr-12">Configuración de Impresión</h2>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Tech */}
@@ -446,6 +425,39 @@ function ConfigurationModal({
               />
             </div>
             
+            {/* Scale Factor */}
+            <div className="col-span-1 md:col-span-2">
+              <label className="block text-[11px] font-bold text-cyan-400 uppercase mb-2 tracking-wider">⚖️ Factor de Escalado</label>
+              <div className="flex items-center gap-3">
+                <input
+                  type="range"
+                  min={0.1}
+                  max={5}
+                  step={0.05}
+                  value={c.factorEscalado}
+                  onChange={e => hc('factorEscalado', parseFloat(e.target.value))}
+                  className="flex-1 accent-cyan-400 cursor-pointer"
+                />
+                <input
+                  type="number"
+                  min={0.1}
+                  max={10}
+                  step={0.05}
+                  value={c.factorEscalado}
+                  onChange={e => hc('factorEscalado', Math.max(0.1, parseFloat(e.target.value) || 1))}
+                  className="w-20 bg-slate-900/50 text-white text-sm rounded-xl px-3 py-3 border border-slate-600 focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none transition-colors text-center font-mono"
+                />
+              </div>
+              <p className="text-[10px] text-slate-400 mt-1.5">
+                1.0 = tamaño original · 2.0 = doble · 0.5 = mitad
+                {c.factorEscalado !== 1 && (
+                  <span className="text-cyan-400 ml-2 font-bold">
+                    · Vol. ×{Math.pow(c.factorEscalado, 3).toFixed(2)}
+                  </span>
+                )}
+              </p>
+            </div>
+
             {/* Post prep */}
             <div className="col-span-1 md:col-span-2">
                <label className="flex items-center space-x-3 cursor-pointer p-4 bg-slate-800 rounded-xl border border-slate-700 hover:bg-slate-700 hover:border-slate-500 transition-colors mt-2 group">
@@ -471,7 +483,7 @@ function ConfigurationModal({
 
 // ─── Main Component ───────────────────────────────────────────────────────────
 
-export default function Quoter() {
+export default function Quoter({ pricing = DEFAULT_QUOTER_PRICING }: { pricing?: QuoterPricing }) {
   const [models, setModels] = useState<QuoterModel[]>([]);
   const [configuringModelId, setConfiguringModelId] = useState<string | null>(null);
   const { addItem, openCart, items: cartItems } = useCart();
@@ -487,16 +499,21 @@ export default function Quoter() {
       for (const m of models) {
         const cartId = `cotizador-${m.id}`;
         if (existingIds.has(cartId)) continue;
-        const { cost, weightG, timeH } = calculateItemCosts(m) as { cost: number; unitPrice?: number; weightG: number; timeH: number };
-        const matObj = MATERIALES[m.config.printingTech].find(mat => mat.id === m.config.materialType) || MATERIALES[m.config.printingTech][0];
+        const { cost, weightG, timeH } = calculateItemCosts(m, pricing) as { cost: number; unitPrice?: number; weightG: number; timeH: number };
+        const techMats = pricing.materiales[m.config.printingTech as 'fdm' | 'resina'] ?? [];
+        const matObj = techMats.find(mat => mat.id === m.config.materialType) || techMats[0];
         const colorObj = getAvailableColors(m.config.printingTech, m.config.materialType).find(c => c.id === m.config.printColor);
-        const dims = m.stl ? `${m.stl.dimensions.x}×${m.stl.dimensions.y}×${m.stl.dimensions.z}mm` : null;
+        const sf = m.config.factorEscalado ?? 1;
+        const dims = m.stl
+          ? `${(m.stl.dimensions.x * sf).toFixed(1)}×${(m.stl.dimensions.y * sf).toFixed(1)}×${(m.stl.dimensions.z * sf).toFixed(1)}mm`
+          : null;
         const note = [
           m.config.printingTech.toUpperCase(),
           matObj.nombre,
           colorObj?.nombre,
           `${m.config.layerHeight}mm`,
           m.config.printingTech === 'fdm' ? `${m.config.infillDensity}% relleno` : null,
+          sf !== 1 ? `Escala ×${sf}` : null,
           dims,
           `~${(weightG / m.config.quantity).toFixed(1)}g/u`,
           `~${(timeH / m.config.quantity).toFixed(1)}h/u`,
@@ -556,12 +573,13 @@ export default function Quoter() {
         stl: null,
         config: {
           printingTech: 'fdm',
-          materialType: 'pla',
+          materialType: (pricing.materiales.fdm.find(m => !m.disabled) ?? pricing.materiales.fdm[0])?.id ?? 'pla',
           layerHeight: '0.2',
           infillDensity: '40',
           printColor: 'blue',
           quantity: 1,
-          postProcessing: false
+          postProcessing: false,
+          factorEscalado: 1,
         }
       };
       
@@ -595,7 +613,7 @@ export default function Quoter() {
 
   const totals = models.reduce(
     (acc, m) => {
-      const costs = calculateItemCosts(m);
+      const costs = calculateItemCosts(m, pricing);
       return { 
         weight: acc.weight + costs.weightG, 
         time: acc.time + costs.timeH, 
@@ -609,13 +627,14 @@ export default function Quoter() {
   const configuringModel = configuringModelId ? models.find(m => m.id === configuringModelId) : null;
 
   return (
-    <div className="bg-slate-800/40 backdrop-blur-sm rounded-2xl p-8 border border-white/10 relative">
+    <div className="bg-slate-800/40 backdrop-blur-sm rounded-2xl p-4 sm:p-8 border border-white/10 relative">
       {/* Configuration Modal */}
       {configuringModel && (
-        <ConfigurationModal 
-          model={configuringModel} 
-          onUpdate={updateModelConfig} 
-          onClose={() => setConfiguringModelId(null)} 
+        <ConfigurationModal
+          model={configuringModel}
+          onUpdate={updateModelConfig}
+          onClose={() => setConfiguringModelId(null)}
+          pricing={pricing}
         />
       )}
       
@@ -628,7 +647,7 @@ export default function Quoter() {
       {/* Upload zone (hidden when models exist) */}
       {!hasModels && (
         <div
-          className="bg-linear-to-b from-slate-700/50 to-slate-800/50 p-8 rounded-xl border-2 border-dashed border-primary-container/40 text-center mb-6 cursor-pointer transition-all hover:border-primary-container hover:from-slate-700 hover:to-slate-700 group"
+          className="bg-linear-to-b from-slate-700/50 to-slate-800/50 p-5 sm:p-8 rounded-xl border-2 border-dashed border-primary-container/40 text-center mb-6 cursor-pointer transition-all hover:border-primary-container hover:from-slate-700 hover:to-slate-700 group"
           onClick={() => primaryInputRef.current?.click()}
           onDragOver={(e) => e.preventDefault()}
           onDrop={(e) => { e.preventDefault(); handleFiles(e.dataTransfer.files); }}
@@ -636,7 +655,7 @@ export default function Quoter() {
           <div className="w-20 h-20 bg-cyan-500/10 rounded-full flex items-center justify-center mx-auto mb-4 group-hover:scale-110 transition-transform">
              <CloudUpload size={40} className="text-primary-container" />
           </div>
-          <h3 className="text-xl font-bold mb-2 text-white">Sube tu primer modelo STL</h3>
+          <h3 className="text-lg sm:text-xl font-bold mb-2 text-white">Sube tu primer modelo STL</h3>
           <p className="text-slate-400 text-sm mb-6 max-w-md mx-auto">Calcularemos automáticamente el costo, tiempo y material necesario para tu impresión 3D.</p>
           <input
             ref={primaryInputRef}
@@ -661,7 +680,7 @@ export default function Quoter() {
       {hasModels && (
         <div className="space-y-4 mb-8">
           {models.map((model, index) => {
-            const costs = calculateItemCosts(model);
+            const costs = calculateItemCosts(model, pricing);
             
             const printColorObj = getAvailableColors(model.config.printingTech, model.config.materialType).find(c => c.id === model.config.printColor);
             const qualityObj = getAvailableQualities(model.config.printingTech).find(q => q.val === model.config.layerHeight);
@@ -677,8 +696,8 @@ export default function Quoter() {
                     <div className="flex items-start justify-between">
                        <h4 className="text-white font-bold text-lg mb-2 truncate max-w-[80%]">{model.file.name}</h4>
                        <div className="flex gap-2 md:hidden shrink-0">
-                          <button onClick={() => setConfiguringModelId(model.id)} className="bg-slate-600 hover:bg-primary-container hover:text-slate-900 text-white p-2 rounded-lg"><Zap size={16} /></button>
-                          <button onClick={() => removeModel(model.id)} className="bg-slate-800 hover:bg-red-500/20 text-slate-400 hover:text-red-400 p-2 rounded-lg cursor-pointer"><X size={16} /></button>
+                          <button onClick={() => setConfiguringModelId(model.id)} className="bg-slate-600 hover:bg-primary-container hover:text-slate-900 text-white p-3 rounded-lg"><Zap size={18} /></button>
+                          <button onClick={() => removeModel(model.id)} className="bg-slate-800 hover:bg-red-500/20 text-slate-400 hover:text-red-400 p-3 rounded-lg cursor-pointer"><X size={18} /></button>
                        </div>
                     </div>
                     
@@ -687,7 +706,7 @@ export default function Quoter() {
                         🖨️ {model.config.printingTech === 'fdm' ? 'FDM' : 'RESINA'}
                       </span>
                       <span className="text-[10px] bg-cyan-900/30 text-cyan-300 px-2 py-1 rounded border border-cyan-800 font-medium flex items-center gap-1 uppercase tracking-wider whitespace-nowrap truncate max-w-37.5">
-                        🧱 {MATERIALES[model.config.printingTech].find(m => m.id === model.config.materialType)?.nombre}
+                        🧱 {(pricing.materiales[model.config.printingTech as 'fdm' | 'resina'] ?? []).find(m => m.id === model.config.materialType)?.nombre}
                       </span>
                       <span className="text-[10px] bg-slate-800 text-slate-300 px-2 py-1 rounded border border-slate-600 font-medium flex items-center gap-1 uppercase tracking-wider whitespace-nowrap">
                         📏 {qualityObj?.text.split(' ')[0]} {qualityObj?.text.includes('Borrador') ? '(Borrador)' : qualityObj?.text.includes('Rápido') ? '(Rápido)' : ''}
@@ -700,6 +719,11 @@ export default function Quoter() {
                       <span className="text-[10px] bg-slate-800 text-slate-300 px-2 py-1 rounded border border-slate-600 font-medium flex items-center gap-1 uppercase tracking-wider whitespace-nowrap truncate max-w-30">
                         🎨 {printColorObj?.nombre}
                       </span>
+                      {(model.config.factorEscalado ?? 1) !== 1 && (
+                        <span className="text-[10px] bg-cyan-900/40 text-cyan-300 px-2 py-1 rounded border border-cyan-800 font-bold flex items-center gap-1 whitespace-nowrap">
+                          ⚖️ ×{model.config.factorEscalado}
+                        </span>
+                      )}
                     </div>
                   </div>
                   
@@ -758,68 +782,58 @@ export default function Quoter() {
         </div>
       )}
 
-      {/* Summary Menu */}
+      {/* Summary */}
       {hasModels && (
-        <div className="bg-slate-900 rounded-2xl p-4 md:p-5 border border-slate-700 shadow-2xl mt-6 relative overflow-hidden flex flex-row flex-wrap items-center justify-between gap-6">
-          <div className="absolute top-0 left-0 w-full h-1 bg-linear-to-r from-transparent via-primary-container to-transparent opacity-50"></div>
-          
-          {/* Details */}
-          <div className="flex flex-row flex-wrap items-center gap-6 flex-1 min-w-0">
-            <h3 className="text-white font-bold text-lg flex items-center gap-2 font-headline whitespace-nowrap">
-              <ShoppingCart className="text-cyan-400" size={20} />
-              Resumen
-            </h3>
-            
-            <div className="flex flex-row items-center gap-4 text-sm text-slate-300">
+        <div className="bg-slate-900 rounded-2xl p-4 border border-slate-700 shadow-2xl mt-6 relative overflow-hidden">
+          <div className="absolute top-0 left-0 w-full h-1 bg-linear-to-r from-transparent via-primary-container to-transparent opacity-50" />
+
+          {/* Stats + clear */}
+          <div className="flex items-center justify-between gap-2 mb-4">
+            <div className="flex items-center gap-3 text-sm text-slate-300 flex-wrap">
               <div className="flex items-center gap-1.5">
-                <Layers size={16} className="text-slate-500" />
-                <span><strong className="text-white text-base">{models.reduce((t, m) => t + m.config.quantity, 0)}</strong> pz</span>
+                <Layers size={15} className="text-slate-500 shrink-0" />
+                <span><strong className="text-white">{models.reduce((t, m) => t + m.config.quantity, 0)}</strong> pz</span>
               </div>
-              <div className="w-1 h-1 rounded-full bg-slate-700"></div>
+              <div className="w-1 h-1 rounded-full bg-slate-700 shrink-0" />
               <div className="flex items-center gap-1.5">
-                <Scale size={16} className="text-slate-500" />
-                <span><strong className="text-white text-base">{totals.weight.toFixed(0)}</strong> g</span>
+                <Scale size={15} className="text-slate-500 shrink-0" />
+                <span><strong className="text-white">{totals.weight.toFixed(0)}</strong> g</span>
               </div>
-              <div className="w-1 h-1 rounded-full bg-slate-700"></div>
+              <div className="w-1 h-1 rounded-full bg-slate-700 shrink-0" />
               <div className="flex items-center gap-1.5">
-                <Clock size={16} className="text-slate-500" />
-                <span><strong className="text-white text-base">{totals.time.toFixed(1)}</strong> h</span>
+                <Clock size={15} className="text-slate-500 shrink-0" />
+                <span><strong className="text-white">{totals.time.toFixed(1)}</strong> h</span>
               </div>
             </div>
-            
             <button
-               onClick={() => {
-                 if(confirm('¿Seguro quieres vacíar la bandeja por completo?')) setModels([]);
-               }}
-               className="text-xs font-bold text-slate-500 hover:text-red-400 transition-colors flex items-center gap-1 cursor-pointer whitespace-nowrap border-l border-slate-700/50 pl-4"
+              onClick={() => { if (confirm('¿Seguro quieres vacíar la bandeja?')) setModels([]); }}
+              className="text-xs text-slate-500 hover:text-red-400 transition-colors flex items-center gap-1 shrink-0 cursor-pointer px-2 py-1.5"
             >
-               <X size={14} /> Vacíar
+              <X size={13} /> Vacíar
             </button>
           </div>
 
-          {/* Action */}
-          <div className="flex flex-col items-center gap-4 sm:gap-6 border-slate-700/50 pl-0 md:pl-6 md:border-l ml-auto shrink-0">
-            <div className="text-right">
-              <div className="text-[10px] text-slate-400 uppercase font-bold tracking-widest mb-1">Total estimado</div>
-              <div className="text-2xl sm:text-3xl font-bold text-primary-container font-mono leading-none flex items-baseline justify-end">
-                <span className="text-sm sm:text-base opacity-60 mr-1 font-sans">$</span>
+          {/* Price + action */}
+          <div className="flex items-center justify-between gap-3 pt-3 border-t border-slate-700/50">
+            <div>
+              <div className="text-[10px] text-slate-400 uppercase font-bold tracking-widest mb-0.5">Total estimado</div>
+              <div className="text-2xl font-bold text-primary-container font-mono leading-none flex items-baseline gap-0.5">
+                <span className="text-sm opacity-60 font-sans">$</span>
                 {Math.round(totals.price).toLocaleString('es-CO')}
               </div>
             </div>
-
             <button
               onClick={addToCart}
               disabled={uploadLoading}
-              className="bg-primary-container hover:bg-cyan-400 disabled:opacity-60 disabled:cursor-not-allowed text-slate-900 px-5 py-3 rounded-xl font-bold text-sm sm:text-base transition-all shadow-[0_0_20px_rgba(77,189,204,0.15)] flex items-center gap-2 whitespace-nowrap cursor-pointer"
+              className="bg-primary-container hover:bg-cyan-400 disabled:opacity-60 disabled:cursor-not-allowed text-slate-900 px-4 py-3 rounded-xl font-bold text-sm transition-all shadow-[0_0_20px_rgba(77,189,204,0.15)] flex items-center gap-2 whitespace-nowrap shrink-0 cursor-pointer"
             >
               {uploadLoading ? (
-                <><Loader2 size={18} className="animate-spin" /> Subiendo modelos…</>
+                <><Loader2 size={17} className="animate-spin" /> Subiendo…</>
               ) : (
-                <><ShoppingCart size={18} /> Añadir al carrito</>
+                <><ShoppingCart size={17} /> Añadir al carrito</>
               )}
             </button>
           </div>
-
         </div>
       )}
 

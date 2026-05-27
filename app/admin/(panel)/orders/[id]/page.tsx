@@ -23,8 +23,8 @@ function Row({ label, value }: { label: string; value?: string | null }) {
   if (!value) return null;
   return (
     <div className="flex gap-2 text-sm">
-      <span className="text-slate-400 w-36 shrink-0">{label}</span>
-      <span className="text-inverse-surface font-medium">{value}</span>
+      <span className="text-slate-400 w-24 sm:w-36 shrink-0">{label}</span>
+      <span className="text-inverse-surface font-medium wrap-break-word min-w-0">{value}</span>
     </div>
   );
 }
@@ -48,9 +48,9 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
   const cotizadorItems = order.items.filter((i) => i.itemType === 'cotizador');
 
   return (
-    <div className="p-8 max-w-5xl">
+    <div className="p-4 sm:p-6 md:p-8 max-w-5xl">
       {/* Header */}
-      <div className="flex items-start gap-4 mb-8">
+      <div className="flex items-start gap-4 mb-5 sm:mb-8">
         <Link
           href="/admin/orders"
           className="p-2 rounded-lg text-slate-400 hover:text-inverse-surface hover:bg-slate-100 transition-colors mt-0.5"
@@ -83,7 +83,7 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
           {/* Productos */}
           {productItems.length > 0 && (
             <section className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-              <div className="flex items-center gap-2 px-6 py-4 border-b border-slate-50">
+              <div className="flex items-center gap-2 px-4 sm:px-6 py-4 border-b border-slate-50">
                 <Package size={15} className="text-slate-400" />
                 <h2 className="font-headline font-bold text-inverse-surface text-sm">
                   Productos ({productItems.length})
@@ -91,7 +91,7 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
               </div>
               <div className="divide-y divide-slate-50">
                 {productItems.map((item) => (
-                  <div key={item.id} className="px-6 py-4 flex items-start justify-between gap-4">
+                  <div key={item.id} className="px-4 sm:px-6 py-4 flex items-start justify-between gap-4">
                     <div className="flex-1 min-w-0">
                       {item.category && (
                         <p className="text-[10px] font-bold uppercase tracking-widest text-slate-400 mb-0.5">
@@ -120,7 +120,7 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
           {/* Cotizador 3D */}
           {cotizadorItems.length > 0 && (
             <section className="bg-white rounded-2xl border border-slate-100 shadow-sm overflow-hidden">
-              <div className="flex items-center gap-2 px-6 py-4 border-b border-slate-50">
+              <div className="flex items-center gap-2 px-4 sm:px-6 py-4 border-b border-slate-50">
                 <Box size={15} className="text-cyan-500" />
                 <h2 className="font-headline font-bold text-inverse-surface text-sm">
                   Impresiones 3D ({cotizadorItems.length})
@@ -128,20 +128,28 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
               </div>
               <div className="divide-y divide-slate-50">
                 {cotizadorItems.map((item) => (
-                  <div key={item.id} className="px-6 py-4">
+                  <div key={item.id} className="px-4 sm:px-6 py-4">
                     <div className="flex items-start justify-between gap-4">
                       <div className="flex-1 min-w-0">
                         <p className="font-medium text-inverse-surface text-sm leading-snug">{item.name}</p>
-                        {item.modelUrl && (
+                        {item.note && (
+                          <p className="mt-1.5 text-xs text-slate-500 bg-slate-50 rounded-lg px-3 py-2 font-mono leading-relaxed">
+                            {item.note}
+                          </p>
+                        )}
+                        {item.modelUrl ? (
                           <a
                             href={item.modelUrl}
+                            download
                             target="_blank"
                             rel="noopener noreferrer"
-                            className="inline-flex items-center gap-1 text-xs text-primary-container hover:text-primary-container/70 transition-colors mt-1"
+                            className="inline-flex items-center gap-2 mt-3 px-3 py-1.5 rounded-lg bg-cyan-50 border border-cyan-200 text-cyan-700 hover:bg-cyan-100 hover:border-cyan-300 transition-colors text-xs font-bold"
                           >
-                            <Download size={11} />
+                            <Download size={13} />
                             Descargar modelo STL
                           </a>
+                        ) : (
+                          <p className="mt-2 text-[11px] text-slate-400 italic">Sin modelo adjunto</p>
                         )}
                       </div>
                       <div className="text-right shrink-0">
@@ -153,11 +161,6 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
                         </p>
                       </div>
                     </div>
-                    {item.note && (
-                      <p className="mt-2 text-xs text-slate-500 bg-slate-50 rounded-lg px-3 py-2 font-mono leading-relaxed">
-                        {item.note}
-                      </p>
-                    )}
                   </div>
                 ))}
               </div>
@@ -165,7 +168,7 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
           )}
 
           {/* Total */}
-          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm px-6 py-4 flex justify-between items-center">
+          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm px-4 sm:px-6 py-4 flex justify-between items-center">
             <span className="font-headline font-bold text-slate-500">Total pagado</span>
             <span className="font-headline font-bold text-xl text-inverse-surface">
               ${order.total.toLocaleString('es-CO')}
@@ -173,7 +176,7 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
           </div>
 
           {/* IDs técnicos */}
-          <section className="bg-white rounded-2xl border border-slate-100 shadow-sm px-6 py-4 space-y-2">
+          <section className="bg-white rounded-2xl border border-slate-100 shadow-sm px-4 sm:px-6 py-4 space-y-2">
             <h3 className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-3">Referencias</h3>
             <Row label="ID orden" value={order.id} />
             <Row label="ID preferencia MP" value={order.preferenceId} />
@@ -185,14 +188,14 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
         <div className="space-y-5">
 
           {/* Estado */}
-          <section className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
+          <section className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 sm:p-5">
             <h3 className="text-xs font-bold uppercase tracking-widest text-slate-400 mb-3">Estado de la orden</h3>
             <StatusUpdater orderId={order.id} currentStatus={order.status} />
           </section>
 
           {/* Datos del cliente */}
           {(order.shippingName || order.shippingEmail || order.shippingPhone) && (
-            <section className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
+            <section className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 sm:p-5">
               <div className="flex items-center gap-2 mb-4">
                 <User size={14} className="text-slate-400" />
                 <h3 className="text-xs font-bold uppercase tracking-widest text-slate-400">Destinatario</h3>
@@ -235,7 +238,7 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
 
           {/* Dirección de envío */}
           {order.shippingAddress && (
-            <section className="bg-white rounded-2xl border border-slate-100 shadow-sm p-5">
+            <section className="bg-white rounded-2xl border border-slate-100 shadow-sm p-4 sm:p-5">
               <div className="flex items-center gap-2 mb-4">
                 <MapPin size={14} className="text-slate-400" />
                 <h3 className="text-xs font-bold uppercase tracking-widest text-slate-400">Envío</h3>

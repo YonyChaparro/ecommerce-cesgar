@@ -2,25 +2,28 @@ import type { Metadata } from 'next';
 import { Zap, Package, Cog, Truck } from 'lucide-react';
 import Navbar from '../components/Navbar';
 import Quoter from '../components/Quoter';
+import { getQuoterPricing } from '@/lib/quoter-config';
 
 export const metadata: Metadata = {
-  title: 'Cotizador | Precision3D',
+  title: 'Cotizador | Cesgar',
   description: 'Cotiza tu impresión 3D industrial al instante. Carga tu archivo STL y obtén precio, materiales y tiempos en segundos.',
 };
 
-export default function CotizadorPage() {
+export default async function CotizadorPage() {
+  const pricing = await getQuoterPricing();
+
   return (
     <>
       <Navbar />
       <main className="min-h-screen bg-[#16234d] text-white">
-        <div className="max-w-7xl mx-auto px-8 pt-36 pb-24">
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-start">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-24 sm:pt-36 pb-12 sm:pb-24">
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-8 lg:gap-16 items-start">
             {/* Left copy */}
             <div>
-              <h1 className="text-4xl font-headline font-bold mb-6 text-[#4dbdcc]">
+              <h1 className="text-2xl sm:text-3xl lg:text-4xl font-headline font-bold mb-6 text-[#4dbdcc]">
                 Cotiza tu impresión 3D industrial al instante
               </h1>
-              <p className="text-slate-300 mb-10 text-lg">
+              <p className="text-slate-300 mb-10 text-base sm:text-lg">
                 Carga tu archivo STL 3D y obtén el precio al instante. Nuestro sistema calcula materiales, tiempos y costos para que avances sin perder tiempo. Configura cada modelo con tus preferencias exactas.
               </p>
               <div className="space-y-6">
@@ -39,7 +42,7 @@ export default function CotizadorPage() {
             </div>
 
             {/* Right: quoter */}
-            <Quoter />
+            <Quoter pricing={pricing} />
           </div>
         </div>
       </main>

@@ -9,8 +9,8 @@ import { cn } from "@/lib/utils";
 const geist = Geist({subsets:['latin'],variable:'--font-sans'});
 
 export const metadata: Metadata = {
-  title: "Precision3D",
-  description: "Impresión 3D industrial bajo demanda. Modelado, escaneo y mantenimiento.",
+  title: "Cesgar | Impresión 3D & Repuestos",
+  description: "Impresión 3D industrial bajo demanda. Repuestos, escaneo 3D, diseño y fabricación.",
   icons: {
     icon: "/logotipo-empresa-cesgar.webp",
   },

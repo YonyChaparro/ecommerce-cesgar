@@ -245,7 +245,7 @@ export default function STLViewerFull({ file, stlData, onClose }: Props) {
             </span>
           )}
         </div>
-        <button onClick={onClose} className="p-2 text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition-colors shrink-0">
+        <button onClick={onClose} className="p-3 text-slate-400 hover:text-white hover:bg-white/10 rounded-lg transition-colors shrink-0">
           <X size={18} />
         </button>
       </div>
@@ -255,8 +255,8 @@ export default function STLViewerFull({ file, stlData, onClose }: Props) {
         {/* Canvas */}
         <div ref={mountRef} className="flex-1 cursor-grab active:cursor-grabbing" />
 
-        {/* Right sidebar */}
-        <div className="w-44 bg-black/30 border-l border-white/8 backdrop-blur-sm flex flex-col p-3 gap-0.5 overflow-y-auto shrink-0">
+        {/* Right sidebar — desktop only */}
+        <div className="hidden sm:flex w-44 bg-black/30 border-l border-white/8 backdrop-blur-sm flex-col p-3 gap-0.5 overflow-y-auto shrink-0">
 
           <Section label="Vistas" />
           {VIEW_PRESETS.map((v) => (
@@ -314,9 +314,27 @@ export default function STLViewerFull({ file, stlData, onClose }: Props) {
         </div>
       </div>
 
+      {/* ── Mobile bottom toolbar ── */}
+      <div className="flex sm:hidden items-center justify-around px-2 py-1 bg-black/50 border-t border-white/10 backdrop-blur-sm shrink-0">
+        <ToolBtn onClick={resetView}><RotateCcw size={20} /></ToolBtn>
+        <ToolBtn active={wireframe} onClick={() => setWireframe(w => !w)}><Layers size={20} /></ToolBtn>
+        <ToolBtn active={grid} onClick={() => setGrid(g => !g)}><Grid3X3 size={20} /></ToolBtn>
+        <ToolBtn active={autoRotate} onClick={() => setAutoRotate(r => !r)}>
+          {autoRotate ? <Pause size={20} /> : <Play size={20} />}
+        </ToolBtn>
+        <ToolBtn onClick={() => zoom(0.75)}><ZoomIn size={20} /></ToolBtn>
+        <ToolBtn onClick={() => zoom(1.33)}><ZoomOut size={20} /></ToolBtn>
+        <ToolBtn onClick={() => setTheme(th => th === 'dark' ? 'light' : 'dark')}>
+          {theme === 'dark' ? <SunMedium size={20} /> : <Moon size={20} />}
+        </ToolBtn>
+      </div>
+
       {/* ── Bottom hint ── */}
-      <div className="text-center py-1.5 text-[10px] text-slate-600 bg-black/30 border-t border-white/5 shrink-0">
+      <div className="hidden sm:block text-center py-1.5 text-[10px] text-slate-600 bg-black/30 border-t border-white/5 shrink-0">
         Arrastrar → rotar &nbsp;·&nbsp; Scroll → zoom &nbsp;·&nbsp; Click derecho → mover
+      </div>
+      <div className="sm:hidden text-center py-1 text-[10px] text-slate-600 bg-black/30 shrink-0">
+        Arrastra → rotar &nbsp;·&nbsp; Pellizca → zoom
       </div>
     </div>,
     document.body
@@ -362,5 +380,26 @@ function InfoRow({ label, value }: { label: string; value: string }) {
       <span className="text-[10px] text-slate-500">{label}</span>
       <span className="text-[10px] text-slate-200 font-mono">{value}</span>
     </div>
+  );
+}
+
+function ToolBtn({
+  children, onClick, active = false,
+}: {
+  children: React.ReactNode;
+  onClick: () => void;
+  active?: boolean;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className={`p-3 rounded-xl transition-colors ${
+        active
+          ? 'bg-cyan-500/20 text-cyan-300'
+          : 'text-slate-400 hover:text-white active:bg-white/10'
+      }`}
+    >
+      {children}
+    </button>
   );
 }

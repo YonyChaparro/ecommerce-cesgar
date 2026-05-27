@@ -147,12 +147,12 @@ export default function Navbar() {
           })}
 
           <div className="pt-3 mt-3 border-t border-slate-100">
-            <a
+            <Link
               href="/cotizador"
               className="flex items-center justify-center w-full bg-primary-container text-white px-5 py-3 rounded-xl font-headline font-bold text-sm tracking-wide hover:opacity-90 transition-opacity"
             >
               COTIZA AHORA
-            </a>
+            </Link>
           </div>
         </div>
       </DisclosurePanel>

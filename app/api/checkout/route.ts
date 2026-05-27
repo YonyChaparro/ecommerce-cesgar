@@ -234,7 +234,7 @@ export async function POST(req: Request) {
           },
           ...(isProduction && { auto_return: 'approved' }),
           notification_url: `${APP_URL}/api/webhooks/mercadopago`,
-          binary_mode: true,
+          binary_mode: false,
           external_reference: order.id,
           statement_descriptor: 'CESGAR',
           ...(shipping && (() => {
@@ -277,6 +277,16 @@ export async function POST(req: Request) {
     });
 
     const checkoutUrl = isProduction ? result.init_point : result.sandbox_init_point;
+
+    console.log('[checkout] preferencia creada →', {
+      orderId:         order.id,
+      preferenceId:    result.id,
+      checkoutUrl,
+      back_success:    `${APP_URL}/pago/exito`,
+      back_failure:    `${APP_URL}/pago/fallo`,
+      notification_url:`${APP_URL}/api/webhooks/mercadopago`,
+    });
+
     return NextResponse.json({ url: checkoutUrl, order_id: order.id });
   } catch (err) {
     console.error('[checkout]', err);
