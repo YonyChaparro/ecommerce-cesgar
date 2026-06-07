@@ -3,6 +3,7 @@ import Image from 'next/image';
 import Link from 'next/link';
 import Navbar from '../components/Navbar';
 import { SERVICES } from '../data/services';
+import AnimateIn from '../components/AnimateIn';
 
 export const metadata = {
   title: 'Servicios | Cesgar',
@@ -15,6 +16,7 @@ export default function ServiciosPage() {
       <Navbar />
       <main className="pt-16 min-h-screen bg-inverse-surface">
         <div className="max-w-7xl mx-auto px-8 py-20">
+          <AnimateIn variant="fadeUp">
           <div className="mb-14 text-center">
             <div className="inline-block px-4 py-1.5 bg-primary-container/10 text-primary rounded-full text-xs font-bold uppercase tracking-widest font-headline mb-4">
               Cesgar
@@ -26,13 +28,14 @@ export default function ServiciosPage() {
               Desde cotización inmediata hasta fabricación de piezas industriales. Todo lo que necesitas en un solo lugar.
             </p>
           </div>
+          </AnimateIn>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
             {SERVICES.map((s, i) => (
+              <AnimateIn key={s.title} variant="fadeUp" delay={i * 0.1} className={i === 0 ? 'sm:col-span-2' : ''}>
               <Link
-                key={s.title}
                 href={s.href ?? '/cotizador'}
-                className={`group flex flex-col rounded-2xl border border-slate-200 p-6 transition-all duration-300 relative overflow-hidden cursor-pointer bg-white opacity-75 hover:opacity-100 ${i === 0 ? 'sm:col-span-2' : ''}`}
+                className="group flex flex-col rounded-2xl border border-slate-200 p-6 transition-all duration-300 relative overflow-hidden cursor-pointer bg-white h-full"
               >
                 <div className="absolute inset-0 bg-white" />
                 {s.image && (
@@ -60,6 +63,7 @@ export default function ServiciosPage() {
                   </span>
                 </div>
               </Link>
+              </AnimateIn>
             ))}
           </div>
         </div>

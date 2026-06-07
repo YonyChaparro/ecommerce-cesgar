@@ -109,11 +109,11 @@ export default function Footer() {
               </li>
               <li className="flex items-center gap-3 text-slate-300 text-sm">
                 <Phone size={16} className="shrink-0 text-primary-container" />
-                <a href="tel:+57" className="hover:text-white transition-colors">+57 (000) 000-0000</a>
+                <a href="tel:+57" className="hover:text-white transition-colors">+57 (305) 7956352</a>
               </li>
               <li className="flex items-center gap-3 text-slate-300 text-sm">
                 <Mail size={16} className="shrink-0 text-primary-container" />
-                <a href="mailto:info@cesgar.com.co" className="hover:text-white transition-colors">info@cesgar.com.co</a>
+                <a href="mailto:cesangarciar@gmail.com" className="hover:text-white transition-colors">cesangarciar@gmail.com</a>
               </li>
             </ul>
           </div>

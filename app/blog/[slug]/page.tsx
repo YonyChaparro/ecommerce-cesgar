@@ -5,6 +5,7 @@ import { prisma } from '@/lib/prisma';
 import { tiptapToHtml } from '@/lib/tiptap-html';
 import Navbar from '@/app/components/Navbar';
 import { CalendarDays, User, ArrowLeft, Tag } from 'lucide-react';
+import AnimateIn from '@/app/components/AnimateIn';
 
 export const dynamicParams = true;
 

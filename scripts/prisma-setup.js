@@ -17,9 +17,11 @@ function loadEnvFile(filePath) {
     }
   } catch (_) {}
 }
-// Load base first, then local override (matches Next.js behaviour)
-loadEnvFile(path.join(process.cwd(), '.env'));
+// Load .env.local first (lower priority), then .env last (production always wins).
+// This ensures the MySQL URL in .env is never overridden by a local SQLite .env.local
+// on the Hostinger build server.
 loadEnvFile(path.join(process.cwd(), '.env.local'));
+loadEnvFile(path.join(process.cwd(), '.env'));
 
 const url = process.env.DATABASE_URL ?? '';
 const isMySQL = url.startsWith('mysql://');

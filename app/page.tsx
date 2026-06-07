@@ -11,6 +11,7 @@ import ChromaGrid from '@/components/ui/ChromaGrid';
 import { LogoLoop } from '@/components/LogoLoop';
 import { prisma } from '../lib/prisma';
 import { SERVICES } from './data/services';
+import AnimateIn from './components/AnimateIn';
 
 // ─── Static data ───────────────────────────────────────────────────────────────
 
@@ -67,10 +68,15 @@ export default async function Home() {
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
               {SERVICES.map((s, i) => (
-                <Link
+                <AnimateIn
                   key={s.title}
+                  variant="fadeUp"
+                  delay={i * 0.1}
+                  className={i === 0 ? 'sm:col-span-2' : ''}
+                >
+                <Link
                   href={s.href ?? '/cotizador'}
-                  className={`group/service flex flex-col rounded-2xl border border-slate-200 p-6 transition-all duration-300 relative overflow-hidden cursor-pointer bg-white sm:opacity-75 sm:hover:opacity-100 ${i === 0 ? 'sm:col-span-2' : ''}`}
+                  className="group/service flex flex-col rounded-2xl border border-slate-200 p-6 transition-all duration-300 relative overflow-hidden cursor-pointer bg-white h-full"
                 >
                   <div className="absolute inset-0 bg-white" />
                   {s.image && <Image src={s.image} alt="" width={300} height={300} className="absolute right-0 top-0 bottom-0 h-full w-1/2 object-contain opacity-90 pointer-events-none select-none translate-y-10 transition-transform duration-300 group-hover/service:scale-105 group-hover/service:translate-y-4" />}
@@ -90,6 +96,7 @@ export default async function Home() {
                     </span>
                   </div>
                 </Link>
+                </AnimateIn>
               ))}
             </div>
           </div>
@@ -101,7 +108,7 @@ export default async function Home() {
         <section className="bg-white py-24 overflow-hidden">
           <div className="max-w-7xl mx-auto px-8">
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
-              <div className="relative">
+              <AnimateIn variant="slideLeft" className="relative">
                 <div className="absolute -top-12 -left-12 w-64 h-64 bg-primary-container/5 rounded-full blur-3xl" />
                 <div className="relative z-10 w-full h-120 rounded-2xl overflow-hidden">
                   <video
@@ -114,8 +121,8 @@ export default async function Home() {
                   />
                 </div>
                 <div className="absolute -bottom-8 -right-8 w-48 h-48 bg-inverse-surface/5 rounded-full blur-2xl" />
-              </div>
-              <div className="flex flex-col items-start">
+              </AnimateIn>
+              <AnimateIn variant="slideRight" delay={0.15} className="flex flex-col items-start">
                 <div className="mb-4 inline-block px-4 py-1.5 bg-primary-container/10 text-primary rounded-full text-xs font-bold uppercase tracking-widest font-headline">
                   Catálogo Técnico Especializado
                 </div>
@@ -145,7 +152,7 @@ export default async function Home() {
                   VER CATÁLOGO COMPLETO
                   <ArrowRight size={18} />
                 </Link>
-              </div>
+              </AnimateIn>
             </div>
           </div>
         </section>
@@ -153,6 +160,7 @@ export default async function Home() {
         {/* ── Section 4: Shop preview ── */}
         <section className="bg-white py-24">
           <div className="max-w-7xl mx-auto px-8 mb-12">
+            <AnimateIn variant="fadeUp">
             <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4">
               <div>
                 <div className="flex items-center gap-2 text-slate-400 text-xs font-bold uppercase tracking-widest mb-3">
@@ -169,6 +177,7 @@ export default async function Home() {
                 Ver todos los productos <ArrowRight size={14} />
               </Link>
             </div>
+            </AnimateIn>
           </div>
 
           <div className="max-w-7xl mx-auto px-8">
@@ -220,9 +229,11 @@ export default async function Home() {
         {/* ── Section 5: Clients ── */}
         <section className="bg-surface-container-low border-y border-slate-100 py-16">
           <div className="max-w-7xl mx-auto px-8">
+            <AnimateIn variant="fadeIn">
             <p className="text-center text-xs font-bold uppercase tracking-widest text-slate-400 mb-10">
               Empresas e instituciones que confían en nosotros
             </p>
+            </AnimateIn>
           </div>
           <LogoLoop
             fadeOut
@@ -250,6 +261,7 @@ export default async function Home() {
         {/* ── Section 6: Blog grid ── */}
         <section className="bg-zinc-900 py-24">
           <div className="max-w-7xl mx-auto px-8">
+            <AnimateIn variant="fadeUp">
             <div className="text-center mb-16">
               <div className="mb-4 inline-block px-4 py-1.5 bg-primary-container/10 text-primary rounded-full text-xs font-bold uppercase tracking-widest font-headline">
                 Blog
@@ -259,6 +271,7 @@ export default async function Home() {
                 Conocimiento técnico sobre impresión 3D, materiales y fabricación digital.
               </p>
             </div>
+            </AnimateIn>
 
             <ChromaGrid
               items={blogPosts.map((p, i) => ({

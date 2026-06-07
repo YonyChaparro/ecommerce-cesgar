@@ -1,6 +1,8 @@
 'use client';
 
 import CountUp from '@/components/ui/CountUp';
+import SplitText from './SplitText';
+import TextType from './TextType';
 
 const METRICS = [
   { to: 500, suffix: '+', label: 'Proyectos Completados' },
@@ -29,12 +31,36 @@ export default function HeroCarousel() {
       {/* Content */}
       <div className="relative z-10 h-7/12 flex items-center justify-start px-6 md:px-16">
         <div className="max-w-md md:max-w-lg ml-0 md:ml-8 lg:ml-16">
-          <h1 className="text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-4 leading-tight">
-            Precisión Industrial a Tu Alcance
-          </h1>
-          <p className="text-lg md:text-xl text-gray-200 mb-8">
-            Impresión 3D, diseño, escaneo y prototipado de precisión. Todo lo que necesitas para llevar tus ideas a la realidad, en Bogotá.
-          </p>
+          <SplitText
+            tag="h1"
+            text="Precisión Industrial a Tu Alcance"
+            className="text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-4 leading-tight"
+            delay={40}
+            duration={0.8}
+            ease="power3.out"
+            splitType="chars"
+            from={{ opacity: 0, y: 30 }}
+            to={{ opacity: 1, y: 0 }}
+            threshold={0.1}
+            rootMargin="0px"
+            textAlign="left"
+          />
+          <TextType
+            as="p"
+            text={[
+              "Impresión 3D, diseño, escaneo y prototipado de precisión.",
+              "Todo lo que necesitas para llevar tus ideas a la realidad.",
+              "Fabricación industrial de precisión, en Bogotá.",
+            ]}
+            className="text-lg md:text-xl text-gray-200 mb-8"
+            typingSpeed={40}
+            deletingSpeed={20}
+            pauseDuration={2500}
+            showCursor={true}
+            cursorCharacter="|"
+            cursorClassName="text-gray-400"
+            loop={true}
+          />
         </div>
       </div>
 

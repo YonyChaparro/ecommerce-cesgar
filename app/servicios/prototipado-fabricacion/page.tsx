@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic';
 import type { Metadata } from 'next';
 import {
   Hammer, Zap, Package, Car, Cpu, Wrench, FlaskConical,
@@ -6,6 +7,8 @@ import {
 import Image from 'next/image';
 import Link from 'next/link';
 import Navbar from '../../components/Navbar';
+import ServiceContactForm from '../../components/ServiceContactForm';
+import AnimateIn from '../../components/AnimateIn';
 
 export const metadata: Metadata = {
   title: 'Prototipado y Fabricación | Cesgar',
@@ -84,7 +87,7 @@ export default function PrototipadoPage() {
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-            <div>
+            <AnimateIn variant="slideLeft">
               <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-yellow-500/10 text-yellow-400 rounded-full text-xs font-bold uppercase tracking-widest font-headline mb-6">
                 <Hammer size={14} />
                 Prototipado y Fabricación
@@ -110,15 +113,81 @@ export default function PrototipadoPage() {
                   Ver todos los servicios
                 </Link>
               </div>
-            </div>
+            </AnimateIn>
 
-            <div className="relative hidden lg:flex items-center justify-center">
+            <AnimateIn variant="slideRight" delay={0.15} className="relative hidden lg:flex items-center justify-center">
               <div className="w-full aspect-square max-w-md rounded-3xl bg-white/5 border border-white/10 flex items-center justify-center overflow-hidden">
                 <Image src="/PrototipadoYfabricacion.png" alt="Prototipado y fabricación" width={400} height={400} className="w-full h-full object-cover" />
               </div>
               <div className="absolute -bottom-4 -right-4 w-32 h-32 rounded-2xl bg-yellow-500/10 blur-2xl" />
-            </div>
+            </AnimateIn>
           </div>
+        </section>
+
+        {/* ── Formulario de contacto ── */}
+        <section className="py-20" id="cotizar">
+          <AnimateIn variant="fadeUp" className="max-w-2xl mx-auto px-6 sm:px-8">
+            <div className="text-center mb-10">
+              <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-yellow-500/10 text-yellow-400 rounded-full text-xs font-bold uppercase tracking-widest font-headline mb-6">
+                <Hammer size={14} />
+                Cotizar fabricación
+              </div>
+              <h2 className="text-3xl sm:text-4xl font-headline font-bold text-white mb-4">
+                ¿Listo para fabricar tu primera pieza?
+              </h2>
+              <p className="text-slate-400">
+                Cuéntanos la necesidad y te entregamos tiempos, materiales y costos en menos de 24 horas.
+              </p>
+            </div>
+
+            <div className="bg-white/5 border border-white/8 rounded-2xl p-8">
+              <ServiceContactForm
+                service="prototipado-fabricacion"
+                serviceLabel="Prototipado y Fabricación"
+                accent="yellow"
+                extraFields={[
+                  {
+                    name: 'useCase',
+                    label: 'Tipo de fabricación',
+                    type: 'select',
+                    required: true,
+                    options: [
+                      'Prototipo de validación',
+                      'Pieza de uso final',
+                      'Repuesto automotriz',
+                      'Herramienta / jig industrial',
+                      'Serie corta (varias unidades)',
+                      'Otro',
+                    ],
+                  },
+                  {
+                    name: 'material',
+                    label: 'Material preferido',
+                    type: 'select',
+                    options: ['No lo sé, necesito asesoría', 'PLA Industrial', 'PETG', 'ABS / ASA', 'TPU Flexible', 'Nylon PA12', 'Fibra de carbono'],
+                  },
+                  {
+                    name: 'quantity',
+                    label: 'Cantidad de unidades',
+                    placeholder: 'Ej: 1 prototipo, 10 unidades, serie de 50…',
+                    required: true,
+                  },
+                ]}
+              />
+            </div>
+
+            <p className="text-center text-slate-500 text-sm mt-6">
+              También puedes escribirnos directamente por{' '}
+              <Link
+                href="https://wa.me/573057956352"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-yellow-400 hover:underline font-semibold"
+              >
+                WhatsApp
+              </Link>
+            </p>
+          </AnimateIn>
         </section>
 
         {/* ── Features ── */}
@@ -134,10 +203,10 @@ export default function PrototipadoPage() {
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-              {FEATURES.map((f) => (
+              {FEATURES.map((f, i) => (
+                <AnimateIn key={f.title} variant="fadeUp" delay={Math.min(i * 0.08, 0.32)}>
                 <div
-                  key={f.title}
-                  className="bg-white/5 border border-white/8 rounded-2xl p-7 hover:bg-white/8 transition-colors"
+                  className="bg-white/5 border border-white/8 rounded-2xl p-7 hover:bg-white/8 transition-colors h-full"
                 >
                   <div className={`w-12 h-12 rounded-xl flex items-center justify-center mb-5 ${f.color}`}>
                     {f.icon}
@@ -149,6 +218,7 @@ export default function PrototipadoPage() {
                     {f.body}
                   </p>
                 </div>
+                </AnimateIn>
               ))}
 
               {/* CTA card */}
@@ -222,46 +292,22 @@ export default function PrototipadoPage() {
             <div className="relative">
               <div className="hidden md:block absolute top-8 left-[calc(10%+1rem)] right-[calc(10%+1rem)] h-px bg-white/10" />
               <div className="grid grid-cols-1 sm:grid-cols-3 md:grid-cols-5 gap-6">
-                {WORKFLOW.map((w) => (
-                  <div key={w.step} className="flex flex-col items-center text-center relative">
+                {WORKFLOW.map((w, i) => (
+                  <AnimateIn key={w.step} variant="fadeUp" delay={i * 0.1}>
+                  <div className="flex flex-col items-center text-center relative">
                     <div className="w-16 h-16 rounded-full bg-inverse-surface border-2 border-yellow-500/40 flex items-center justify-center mb-4 relative z-10">
                       <span className="font-headline font-bold text-yellow-400 text-sm">{w.step}</span>
                     </div>
                     <p className="font-headline font-bold text-white text-sm mb-1">{w.label}</p>
                     <p className="text-slate-500 text-xs leading-relaxed">{w.desc}</p>
                   </div>
+                  </AnimateIn>
                 ))}
               </div>
             </div>
           </div>
         </section>
 
-        {/* ── Bottom CTA ── */}
-        <section className="py-20">
-          <div className="max-w-3xl mx-auto px-6 sm:px-8 text-center">
-            <h2 className="text-3xl sm:text-4xl font-headline font-bold text-white mb-5">
-              ¿Listo para fabricar tu primera pieza?
-            </h2>
-            <p className="text-slate-400 text-lg mb-8">
-              Sube tu archivo o cuéntanos la necesidad y te entregamos tiempos, materiales y costos en menos de 24 horas.
-            </p>
-            <div className="flex flex-wrap justify-center gap-3">
-              <Link
-                href="https://wa.me/573057956352" target="_blank" rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 bg-primary-container text-white px-7 py-3.5 rounded-full font-headline font-bold text-sm tracking-wide hover:brightness-110 transition-all"
-              >
-                Solicitar cotización
-                <ArrowRight size={15} />
-              </Link>
-              <Link
-                href="/servicios"
-                className="inline-flex items-center gap-2 border border-slate-600 text-slate-300 px-7 py-3.5 rounded-full font-headline font-semibold text-sm hover:border-slate-400 hover:text-white transition-all"
-              >
-                Ver otros servicios
-              </Link>
-            </div>
-          </div>
-        </section>
 
       </main>
     </>

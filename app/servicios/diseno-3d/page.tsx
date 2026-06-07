@@ -1,3 +1,4 @@
+export const dynamic = 'force-dynamic';
 import type { Metadata } from 'next';
 import {
   PenTool, Shapes, ScanLine, Car, Cog, Wrench, Layers, ArrowRight, ChevronRight,
@@ -5,6 +6,8 @@ import {
 import Image from 'next/image';
 import Link from 'next/link';
 import Navbar from '../../components/Navbar';
+import ServiceContactForm from '../../components/ServiceContactForm';
+import AnimateIn from '../../components/AnimateIn';
 
 export const metadata: Metadata = {
   title: 'Diseño 3D | Cesgar',
@@ -74,7 +77,7 @@ export default function Diseno3DPage() {
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
-            <div>
+            <AnimateIn variant="slideLeft">
               <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-purple-500/10 text-purple-400 rounded-full text-xs font-bold uppercase tracking-widest font-headline mb-6">
                 <PenTool size={14} />
                 Diseño 3D
@@ -100,15 +103,81 @@ export default function Diseno3DPage() {
                   Ver Escaneo 3D
                 </Link>
               </div>
-            </div>
+            </AnimateIn>
 
-            <div className="relative hidden lg:flex items-center justify-center">
+            <AnimateIn variant="slideRight" delay={0.15} className="relative hidden lg:flex items-center justify-center">
               <div className="w-full aspect-square max-w-md rounded-3xl bg-white/5 border border-white/10 flex items-center justify-center overflow-hidden">
                 <Image src="/Diseno3DService.png" alt="Diseño 3D" width={400} height={400} className="w-full h-full object-cover" />
               </div>
               <div className="absolute -bottom-4 -right-4 w-32 h-32 rounded-2xl bg-purple-500/10 blur-2xl" />
-            </div>
+            </AnimateIn>
           </div>
+        </section>
+
+        {/* ── Formulario de contacto ── */}
+        <section className="py-20" id="cotizar">
+          <AnimateIn variant="fadeUp" className="max-w-2xl mx-auto px-6 sm:px-8">
+            <div className="text-center mb-10">
+              <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-purple-500/10 text-purple-400 rounded-full text-xs font-bold uppercase tracking-widest font-headline mb-6">
+                <PenTool size={14} />
+                Cotizar diseño
+              </div>
+              <h2 className="text-3xl sm:text-4xl font-headline font-bold text-white mb-4">
+                ¿Tienes una pieza que ya no se consigue?
+              </h2>
+              <p className="text-slate-400">
+                Comparte los detalles de tu proyecto y te entregamos un modelo 3D funcional, listo para fabricar.
+              </p>
+            </div>
+
+            <div className="bg-white/5 border border-white/8 rounded-2xl p-8">
+              <ServiceContactForm
+                service="diseno-3d"
+                serviceLabel="Diseño 3D"
+                accent="purple"
+                extraFields={[
+                  {
+                    name: 'projectType',
+                    label: 'Tipo de proyecto',
+                    type: 'select',
+                    required: true,
+                    options: [
+                      'Repuesto descatalogado',
+                      'Componente mecánico',
+                      'Carcasa / enclosure',
+                      'Upgrade de maquinaria',
+                      'Diseño desde cero',
+                      'Otro',
+                    ],
+                  },
+                  {
+                    name: 'reference',
+                    label: 'Referencia o descripción de la pieza',
+                    placeholder: 'Ej: rejilla de ventilación auto 1985, bomba dosificadora 5 ml…',
+                    required: true,
+                  },
+                  {
+                    name: 'deliverable',
+                    label: '¿Qué necesitas como entregable?',
+                    type: 'select',
+                    options: ['Archivo STL para impresión', 'Archivo STEP / CAD editable', 'Impresión física incluida', 'No lo tengo claro aún'],
+                  },
+                ]}
+              />
+            </div>
+
+            <p className="text-center text-slate-500 text-sm mt-6">
+              También puedes escribirnos directamente por{' '}
+              <Link
+                href="https://wa.me/573057956352"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-purple-400 hover:underline font-semibold"
+              >
+                WhatsApp
+              </Link>
+            </p>
+          </AnimateIn>
         </section>
 
         {/* ── Features ── */}
@@ -124,10 +193,10 @@ export default function Diseno3DPage() {
             </div>
 
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5">
-              {FEATURES.map((f) => (
+              {FEATURES.map((f, i) => (
+                <AnimateIn key={f.title} variant="fadeUp" delay={Math.min(i * 0.08, 0.32)}>
                 <div
-                  key={f.title}
-                  className="bg-white/5 border border-white/8 rounded-2xl p-7 hover:bg-white/8 transition-colors"
+                  className="bg-white/5 border border-white/8 rounded-2xl p-7 hover:bg-white/8 transition-colors h-full"
                 >
                   <div className={`w-12 h-12 rounded-xl flex items-center justify-center mb-5 ${f.color}`}>
                     {f.icon}
@@ -139,6 +208,7 @@ export default function Diseno3DPage() {
                     {f.body}
                   </p>
                 </div>
+                </AnimateIn>
               ))}
 
               {/* CTA card */}
@@ -233,46 +303,22 @@ export default function Diseno3DPage() {
             <div className="relative">
               <div className="hidden md:block absolute top-8 left-[calc(10%+1rem)] right-[calc(10%+1rem)] h-px bg-white/10" />
               <div className="grid grid-cols-1 sm:grid-cols-3 md:grid-cols-5 gap-6">
-                {WORKFLOW.map((w) => (
-                  <div key={w.step} className="flex flex-col items-center text-center relative">
+                {WORKFLOW.map((w, i) => (
+                  <AnimateIn key={w.step} variant="fadeUp" delay={i * 0.1}>
+                  <div className="flex flex-col items-center text-center relative">
                     <div className="w-16 h-16 rounded-full bg-inverse-surface border-2 border-purple-500/40 flex items-center justify-center mb-4 relative z-10">
                       <span className="font-headline font-bold text-purple-400 text-sm">{w.step}</span>
                     </div>
                     <p className="font-headline font-bold text-white text-sm mb-1">{w.label}</p>
                     <p className="text-slate-500 text-xs leading-relaxed">{w.desc}</p>
                   </div>
+                  </AnimateIn>
                 ))}
               </div>
             </div>
           </div>
         </section>
 
-        {/* ── Bottom CTA ── */}
-        <section className="py-20">
-          <div className="max-w-3xl mx-auto px-6 sm:px-8 text-center">
-            <h2 className="text-3xl sm:text-4xl font-headline font-bold text-white mb-5">
-              ¿Tienes una pieza que ya no se consigue?
-            </h2>
-            <p className="text-slate-400 text-lg mb-8">
-              Comparte los detalles de tu proyecto y te entregamos un modelo 3D funcional, listo para fabricar.
-            </p>
-            <div className="flex flex-wrap justify-center gap-3">
-              <Link
-                href="https://wa.me/573057956352" target="_blank" rel="noopener noreferrer"
-                className="inline-flex items-center gap-2 bg-primary-container text-white px-7 py-3.5 rounded-full font-headline font-bold text-sm tracking-wide hover:brightness-110 transition-all"
-              >
-                Solicitar cotización
-                <ArrowRight size={15} />
-              </Link>
-              <Link
-                href="/servicios"
-                className="inline-flex items-center gap-2 border border-slate-600 text-slate-300 px-7 py-3.5 rounded-full font-headline font-semibold text-sm hover:border-slate-400 hover:text-white transition-all"
-              >
-                Ver otros servicios
-              </Link>
-            </div>
-          </div>
-        </section>
 
       </main>
     </>

@@ -6,6 +6,7 @@ import { prisma } from '../../lib/prisma';
 import { ArrowRight, ShieldCheck } from 'lucide-react';
 import StoreFilters from './StoreFilters';
 import ProductCard from '../components/ProductCard';
+import AnimateIn from '../components/AnimateIn';
 
 export default async function TiendaPage({
   searchParams,
@@ -52,12 +53,12 @@ export default async function TiendaPage({
         <div className="max-w-7xl mx-auto px-8 py-12">
 
           {/* Header */}
-          <div className="mb-10">
+          <AnimateIn variant="fadeUp" className="mb-10">
             <h1 className="text-5xl font-headline font-bold text-inverse-surface mb-4">Tienda</h1>
             <p className="text-slate-500 max-w-2xl text-lg border-l-4 border-primary-container pl-6">
               Insumos industriales y electrónicos especializados. Repuestos de alta precisión para maximizar tu productividad.
             </p>
-          </div>
+          </AnimateIn>
 
           {/* Layout: sidebar + grid */}
           <div className="flex flex-col lg:flex-row gap-10">
@@ -87,8 +88,10 @@ export default async function TiendaPage({
               {/* Product Grid */}
               {products.length > 0 ? (
                 <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-3 gap-6 mb-16">
-                  {products.map((p) => (
-                    <ProductCard key={p.id} product={p} />
+                  {products.map((p, i) => (
+                    <AnimateIn key={p.id} variant="fadeUp" delay={Math.min(i * 0.07, 0.35)}>
+                      <ProductCard product={p} />
+                    </AnimateIn>
                   ))}
                 </div>
               ) : (
@@ -101,6 +104,7 @@ export default async function TiendaPage({
           </div>
 
           {/* Trust banner */}
+          <AnimateIn variant="scaleUp">
           <div className="bg-slate-50 border border-slate-200 rounded-3xl p-8 flex flex-col md:flex-row items-center gap-6 max-w-4xl mx-auto shadow-sm mb-8">
             <div className="w-16 h-16 rounded-full bg-primary-container/10 flex items-center justify-center shrink-0">
               <ShieldCheck size={40} className="text-primary-container" />
@@ -112,6 +116,7 @@ export default async function TiendaPage({
               </p>
             </div>
           </div>
+          </AnimateIn>
 
           <div className="flex justify-center">
             <Link href="/" className="inline-flex items-center gap-2 text-primary-container font-bold hover:underline">

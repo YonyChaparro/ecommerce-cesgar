@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { prisma } from '@/lib/prisma';
 import Navbar from '@/app/components/Navbar';
 import { CalendarDays, User, ArrowRight, Tag } from 'lucide-react';
+import AnimateIn from '@/app/components/AnimateIn';
 
 export default async function BlogListPage() {
   const posts = await prisma.blogPost.findMany({
@@ -16,8 +17,8 @@ export default async function BlogListPage() {
       <Navbar />
       <main className="pt-16 min-h-screen bg-white">
         {/* Header */}
-        <section className="bg-[#16234d] py-20 px-8">
-          <div className="max-w-7xl mx-auto">
+        <section className="bg-inverse-surface py-20 px-8">
+          <AnimateIn variant="fadeUp" className="max-w-7xl mx-auto">
             <div className="mb-4 inline-block px-4 py-1.5 bg-white/10 text-white/70 rounded-full text-xs font-bold uppercase tracking-widest font-headline">
               Cesgar Blog
             </div>
@@ -27,7 +28,7 @@ export default async function BlogListPage() {
             <p className="text-slate-300 text-lg max-w-2xl">
               Conocimiento técnico sobre impresión 3D, materiales y fabricación digital.
             </p>
-          </div>
+          </AnimateIn>
         </section>
 
         {/* Posts grid */}
@@ -36,11 +37,11 @@ export default async function BlogListPage() {
             <p className="text-center text-slate-400 py-24">No hay artículos publicados aún.</p>
           ) : (
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-              {posts.map((post) => (
+              {posts.map((post, i) => (
+                <AnimateIn key={post.id} variant="fadeUp" delay={Math.min(i * 0.08, 0.32)}>
                 <Link
-                  key={post.id}
                   href={`/blog/${post.slug}`}
-                  className="group flex flex-col rounded-2xl border border-slate-100 overflow-hidden hover:shadow-xl transition-all duration-300"
+                  className="group flex flex-col rounded-2xl border border-slate-100 overflow-hidden hover:shadow-xl transition-all duration-300 h-full"
                 >
                   {/* Cover */}
                   <div className="aspect-video bg-slate-100 overflow-hidden">
@@ -52,7 +53,7 @@ export default async function BlogListPage() {
                         className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-500"
                       />
                     ) : (
-                      <div className="w-full h-full bg-gradient-to-br from-[#16234d] to-[#4dbdcc] flex items-center justify-center">
+                      <div className="w-full h-full bg-linear-to-br from-inverse-surface to-primary-container flex items-center justify-center">
                         <span className="text-white/30 text-5xl font-headline font-bold">
                           {post.title[0]}
                         </span>
@@ -68,7 +69,7 @@ export default async function BlogListPage() {
                         {post.tags.slice(0, 3).map(({ tag }) => (
                           <span
                             key={tag.id}
-                            className="inline-flex items-center gap-1 px-2 py-0.5 bg-[#4dbdcc]/10 text-[#16234d] rounded text-[10px] font-bold uppercase tracking-widest"
+                            className="inline-flex items-center gap-1 px-2 py-0.5 bg-primary-container/10 text-inverse-surface rounded text-[10px] font-bold uppercase tracking-widest"
                           >
                             <Tag size={9} />
                             {tag.name}
@@ -77,7 +78,7 @@ export default async function BlogListPage() {
                       </div>
                     )}
 
-                    <h2 className="font-headline font-bold text-[#16234d] text-xl leading-snug mb-2 group-hover:text-[#4dbdcc] transition-colors">
+                    <h2 className="font-headline font-bold text-inverse-surface text-xl leading-snug mb-2 group-hover:text-primary-container transition-colors">
                       {post.title}
                     </h2>
 
@@ -110,6 +111,7 @@ export default async function BlogListPage() {
                     </div>
                   </div>
                 </Link>
+                </AnimateIn>
               ))}
             </div>
           )}
