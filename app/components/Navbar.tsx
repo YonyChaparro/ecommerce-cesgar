@@ -8,22 +8,52 @@ import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useCart } from './CartContext';
 
+const CTA_LABELS = [
+  'Cotización Instantánea',
+  'Sin tiempos de espera',
+  'Precio en segundos',
+  'Cotiza sin registrarte',
+  '¡Empieza ahora!',
+];
+
+const CTA_LABELS_SHORT = [
+  '¡Cotizar!',
+  'Sin esperas',
+  'Precio ya',
+  'Sin cuenta',
+  '¡Ahora!',
+];
+
 const NAV_ITEMS = [
-  { label: 'Inicio',    href: '/'          },
-  { label: 'Tienda',   href: '/tienda'     },
-  { label: 'Servicios', href: '/servicios' },
-  { label: 'Blog',     href: '/blog'       },
+  { label: 'Inicio',         href: '/'                },
+  { label: 'Tienda',         href: '/tienda'          },
+  { label: 'Servicios',      href: '/servicios'       },
+  { label: 'Sobre nosotros', href: '/sobre-nosotros'  },
+  { label: 'Blog',           href: '/blog'            },
 ];
 
 export default function Navbar() {
   const { openCart, totalItems } = useCart();
   const pathname = usePathname();
   const [scrolled, setScrolled] = useState(false);
+  const [ctaIndex, setCtaIndex] = useState(0);
+  const [ctaVisible, setCtaVisible] = useState(true);
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 10);
     window.addEventListener('scroll', onScroll, { passive: true });
     return () => window.removeEventListener('scroll', onScroll);
+  }, []);
+
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setCtaVisible(false);
+      setTimeout(() => {
+        setCtaIndex((i) => (i + 1) % CTA_LABELS.length);
+        setCtaVisible(true);
+      }, 250);
+    }, 3000);
+    return () => clearInterval(interval);
   }, []);
 
   const isActive = (href: string) =>
@@ -82,9 +112,14 @@ export default function Navbar() {
           <div className="flex items-center gap-1 ml-auto md:ml-0">
             <Link
               href="/cotizador"
-              className="hidden sm:inline-flex items-center bg-primary-container text-white px-5 py-2.5 rounded-full font-headline font-bold text-sm tracking-wide hover:brightness-110 transition-all whitespace-nowrap mr-1"
+              className="inline-flex items-center justify-center overflow-hidden bg-primary-container text-white w-24 py-2 sm:w-auto sm:px-5 sm:py-2.5 rounded-full font-headline font-bold text-xs sm:text-sm tracking-wide hover:brightness-110 transition-all mr-1"
             >
-              COTIZA AHORA
+              <span className={`transition-opacity duration-250 sm:hidden ${ctaVisible ? 'opacity-100' : 'opacity-0'}`}>
+                {CTA_LABELS_SHORT[ctaIndex]}
+              </span>
+              <span className={`transition-opacity duration-250 hidden sm:inline whitespace-nowrap ${ctaVisible ? 'opacity-100' : 'opacity-0'}`}>
+                {CTA_LABELS[ctaIndex]}
+              </span>
             </Link>
 
             <Link
@@ -146,14 +181,6 @@ export default function Navbar() {
             );
           })}
 
-          <div className="pt-3 mt-3 border-t border-slate-100">
-            <Link
-              href="/cotizador"
-              className="flex items-center justify-center w-full bg-primary-container text-white px-5 py-3 rounded-xl font-headline font-bold text-sm tracking-wide hover:opacity-90 transition-opacity"
-            >
-              COTIZA AHORA
-            </Link>
-          </div>
         </div>
       </DisclosurePanel>
     </Disclosure>

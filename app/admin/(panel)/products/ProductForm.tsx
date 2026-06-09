@@ -1,5 +1,6 @@
 'use client';
-import { useActionState } from 'react';
+import { useActionState, useEffect, useState } from 'react';
+import { CheckCircle2 } from 'lucide-react';
 import type { ProductFormState } from './actions';
 import type { Product } from '@prisma/client';
 import ImageUploader from '@/components/admin/ImageUploader';
@@ -12,6 +13,14 @@ type Props = {
 
 export default function ProductForm({ action, product, submitLabel }: Props) {
   const [state, formAction, pending] = useActionState(action, undefined);
+  const [showSuccess, setShowSuccess] = useState(false);
+
+  useEffect(() => {
+    if (!state?.success) return;
+    setShowSuccess(true);
+    const t = setTimeout(() => setShowSuccess(false), 4000);
+    return () => clearTimeout(t);
+  }, [state]);
 
   const field = (name: string) => state?.errors?.[name]?.[0];
 
@@ -19,9 +28,24 @@ export default function ProductForm({ action, product, submitLabel }: Props) {
     'w-full border border-slate-200 rounded-xl px-4 py-3 text-inverse-surface text-sm outline-none focus:border-primary-container focus:ring-2 focus:ring-primary-container/20 transition';
 
   return (
-    <form action={formAction} className="space-y-5 max-w-2xl">
+    <form
+      action={formAction}
+      onSubmit={(e) => {
+        if (!confirm('¿Guardar los cambios en este producto?')) e.preventDefault();
+      }}
+      className="space-y-5 max-w-2xl"
+    >
+      {/* Error */}
       {state?.message && (
         <p className="text-red-500 text-sm font-medium bg-red-50 px-4 py-3 rounded-xl">{state.message}</p>
+      )}
+
+      {/* Success */}
+      {showSuccess && (
+        <div className="flex items-center gap-3 bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-xl text-sm font-medium">
+          <CheckCircle2 size={16} className="shrink-0" />
+          Producto actualizado correctamente.
+        </div>
       )}
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">

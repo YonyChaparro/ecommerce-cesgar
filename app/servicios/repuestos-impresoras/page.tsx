@@ -13,7 +13,7 @@ import ServiceContactForm from '../../components/ServiceContactForm';
 import AnimateIn from '../../components/AnimateIn';
 
 export const metadata: Metadata = {
-  title: 'Repuestos para Impresoras 3D | Cesgar',
+  title: 'Repuestos para impresoras 3D | Cesgar',
   description:
     'Repuestos, upgrades y piezas fabricadas a medida para equipos de manufactura aditiva. Componentes probados en producción real para que tu impresora opere al máximo rendimiento.',
 };
@@ -87,14 +87,14 @@ export default async function RepuestosPage() {
           <div className="flex items-center gap-2 text-slate-400 text-xs font-bold uppercase tracking-widest mb-6">
             <Link href="/servicios" className="hover:text-primary-container transition-colors">Servicios</Link>
             <ChevronRight size={13} />
-            <span className="text-slate-300">Repuestos para Impresoras</span>
+            <span className="text-slate-300">Repuestos para impresoras</span>
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
             <AnimateIn variant="slideLeft">
               <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-orange-500/10 text-orange-400 rounded-full text-xs font-bold uppercase tracking-widest font-headline mb-6">
                 <Wrench size={14} />
-                Repuestos e Insumos
+                Repuestos e insumos
               </div>
               <h1 className="text-4xl sm:text-5xl md:text-6xl font-headline font-bold text-white leading-tight mb-6">
                 Tu impresora, siempre en su mejor versión
@@ -147,7 +147,7 @@ export default async function RepuestosPage() {
             <div className="bg-white/5 border border-white/8 rounded-2xl p-8">
               <ServiceContactForm
                 service="repuestos-impresoras"
-                serviceLabel="Repuestos para Impresoras"
+                serviceLabel="Repuestos para impresoras"
                 accent="orange"
                 extraFields={[
                   {

@@ -11,7 +11,7 @@ import ServiceContactForm from '../../components/ServiceContactForm';
 import AnimateIn from '../../components/AnimateIn';
 
 export const metadata: Metadata = {
-  title: 'Prototipado y Fabricación | Cesgar',
+  title: 'Prototipado y fabricación | Cesgar',
   description:
     'Manufactura aditiva ágil: prototipado rápido, piezas de uso final, repuestos automotrices y herramentales industriales con materiales técnicos seleccionados.',
 };
@@ -83,14 +83,14 @@ export default function PrototipadoPage() {
           <div className="flex items-center gap-2 text-slate-400 text-xs font-bold uppercase tracking-widest mb-6">
             <Link href="/servicios" className="hover:text-primary-container transition-colors">Servicios</Link>
             <ChevronRight size={13} />
-            <span className="text-slate-300">Prototipado y Fabricación</span>
+            <span className="text-slate-300">Prototipado y fabricación</span>
           </div>
 
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-12 items-center">
             <AnimateIn variant="slideLeft">
               <div className="inline-flex items-center gap-2 px-4 py-1.5 bg-yellow-500/10 text-yellow-400 rounded-full text-xs font-bold uppercase tracking-widest font-headline mb-6">
                 <Hammer size={14} />
-                Prototipado y Fabricación
+                Prototipado y fabricación
               </div>
               <h1 className="text-4xl sm:text-5xl md:text-6xl font-headline font-bold text-white leading-tight mb-6">
                 De la idea al objeto en el menor tiempo posible
@@ -143,7 +143,7 @@ export default function PrototipadoPage() {
             <div className="bg-white/5 border border-white/8 rounded-2xl p-8">
               <ServiceContactForm
                 service="prototipado-fabricacion"
-                serviceLabel="Prototipado y Fabricación"
+                serviceLabel="Prototipado y fabricación"
                 accent="yellow"
                 extraFields={[
                   {

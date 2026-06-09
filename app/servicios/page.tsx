@@ -1,13 +1,20 @@
+import type { Metadata } from 'next';
 import { ArrowRight } from 'lucide-react';
 import Image from 'next/image';
 import Link from 'next/link';
 import Navbar from '../components/Navbar';
+
 import { SERVICES } from '../data/services';
 import AnimateIn from '../components/AnimateIn';
 
-export const metadata = {
-  title: 'Servicios | Cesgar',
-  description: 'Impresión 3D, escaneo 3D, diseño, prototipado y repuestos para impresoras 3D en Bogotá.',
+export const metadata: Metadata = {
+  title: 'Servicios',
+  description: 'Impresión 3D, diseño 3D, escaneo 3D, prototipado y fabricación industrial en Bogotá. Soluciones completas para la industria automotriz y manufactura.',
+  openGraph: {
+    title: 'Servicios | Cesgar',
+    description: 'Impresión 3D, diseño, escaneo y prototipado industrial en Bogotá.',
+    url: 'https://cesgar.com.co/servicios',
+  },
 };
 
 export default function ServiciosPage() {
@@ -22,7 +29,7 @@ export default function ServiciosPage() {
               Cesgar
             </div>
             <h1 className="text-5xl md:text-6xl font-headline font-bold text-white mb-5">
-              Nuestros Servicios
+              Nuestros servicios
             </h1>
             <p className="text-slate-400 text-lg max-w-2xl mx-auto">
               Desde cotización inmediata hasta fabricación de piezas industriales. Todo lo que necesitas en un solo lugar.

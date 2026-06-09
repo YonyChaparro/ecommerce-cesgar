@@ -5,10 +5,10 @@ import SplitText from './SplitText';
 import TextType from './TextType';
 
 const METRICS = [
-  { to: 500, suffix: '+', label: 'Proyectos Completados' },
-  { to: 150, suffix: '+', label: 'Clientes Satisfechos' },
-  { to: 15,  suffix: '+', label: 'Materiales Disponibles' },
-  { to: 48,  suffix: 'h', label: 'Tiempo de Entrega' },
+  { to: 500, prefix: '+', suffix: '',  label: 'Proyectos completados' },
+  { to: 150, prefix: '+', suffix: '',  label: 'Clientes satisfechos' },
+  { to: 15,  prefix: '+', suffix: '',  label: 'Materiales disponibles' },
+  { to: 48,  prefix: '',  suffix: 'h', label: 'Tiempo de entrega' },
 ];
 
 export default function HeroCarousel() {
@@ -33,7 +33,7 @@ export default function HeroCarousel() {
         <div className="max-w-md md:max-w-lg ml-0 md:ml-8 lg:ml-16">
           <SplitText
             tag="h1"
-            text="Precisión Industrial a Tu Alcance"
+            text="Precisión industrial a tu alcance"
             className="text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-4 leading-tight"
             delay={40}
             duration={0.8}
@@ -50,7 +50,7 @@ export default function HeroCarousel() {
             text={[
               "Impresión 3D, diseño, escaneo y prototipado de precisión.",
               "Todo lo que necesitas para llevar tus ideas a la realidad.",
-              "Fabricación industrial de precisión, en Bogotá.",
+              "Fabricación industrial de precisión en Bogotá.",
             ]}
             className="text-lg md:text-xl text-gray-200 mb-8"
             typingSpeed={40}
@@ -74,7 +74,7 @@ export default function HeroCarousel() {
                 className="bg-white/10 backdrop-blur-md border border-white/20 rounded-lg p-1 text-center hover:bg-white/15 transition-all duration-300"
               >
                 <div className="text-2xl md:text-3xl font-bold text-[#4dbdcc] mb-1 tabular-nums">
-                  <CountUp to={metric.to} />{metric.suffix}
+                  {metric.prefix}<CountUp to={metric.to} />{metric.suffix}
                 </div>
                 <div className="text-[10px] sm:text-xs md:text-sm text-gray-200 font-medium break-words">
                   {metric.label}

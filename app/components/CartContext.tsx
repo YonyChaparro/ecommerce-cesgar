@@ -1,5 +1,6 @@
 'use client';
 import { createContext, useContext, useReducer, useEffect } from 'react';
+import type { PrintConfig } from '@/lib/quoter-calc';
 
 export interface CartItem {
   id: string;
@@ -12,6 +13,7 @@ export interface CartItem {
   quantity: number;
   note?: string;
   modelUrl?: string;
+  printConfig?: PrintConfig;
 }
 
 interface CartState {

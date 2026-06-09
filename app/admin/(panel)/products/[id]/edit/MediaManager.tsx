@@ -1,10 +1,11 @@
 'use client';
 
-import { useState, useTransition } from 'react';
+import { useState, useTransition, useEffect, useRef } from 'react';
 import { addMedia, deleteMedia, updateMediaOrder } from './mediaActions';
 import type { ProductMedia } from '@prisma/client';
-import { Trash2, Film, ImageIcon } from 'lucide-react';
+import { Trash2, Film, ImageIcon, CheckCircle2 } from 'lucide-react';
 import ImageUploader from '@/components/admin/ImageUploader';
+import VideoUploader from '@/components/admin/VideoUploader';
 
 type Props = {
   productId: string;
@@ -15,9 +16,18 @@ export default function MediaManager({ productId, media }: Props) {
   const [type, setType] = useState<'image' | 'video'>('image');
   const [alt, setAlt] = useState('');
   const [order, setOrder] = useState(media.length);
-  const [videoUrl, setVideoUrl] = useState('');
   const [error, setError] = useState('');
+  const [successMsg, setSuccessMsg] = useState('');
+  const successTimer = useRef<ReturnType<typeof setTimeout>>(undefined);
   const [isPending, startTransition] = useTransition();
+
+  function showSuccess(msg: string) {
+    setSuccessMsg(msg);
+    clearTimeout(successTimer.current);
+    successTimer.current = setTimeout(() => setSuccessMsg(''), 3500);
+  }
+
+  useEffect(() => () => clearTimeout(successTimer.current), []);
 
   const sorted = [...media].sort((a, b) => a.order - b.order);
 
@@ -34,15 +44,10 @@ export default function MediaManager({ productId, media }: Props) {
       if (result?.error) setError(result.error);
       else {
         setAlt('');
-        setVideoUrl('');
         setOrder(sorted.length + 1);
+        showSuccess(type === 'video' ? 'Video agregado a la galería.' : 'Imagen agregada a la galería.');
       }
     });
-  }
-
-  function handleVideoSubmit(e: React.FormEvent<HTMLFormElement>) {
-    e.preventDefault();
-    save(videoUrl);
   }
 
   return (
@@ -108,32 +113,22 @@ export default function MediaManager({ productId, media }: Props) {
             </div>
           ) : (
             <div className="sm:col-span-2">
-              <form onSubmit={handleVideoSubmit} className="space-y-3">
-                <div>
-                  <label className="block text-xs font-bold text-slate-500 mb-1 uppercase tracking-wide">URL del video *</label>
-                  <input
-                    value={videoUrl}
-                    onChange={(e) => setVideoUrl(e.target.value)}
-                    type="url"
-                    placeholder="https://..."
-                    required
-                    className="w-full border border-slate-200 rounded-lg px-3 py-2.5 text-sm text-inverse-surface bg-white outline-none focus:border-primary-container transition"
-                  />
-                </div>
-                <button
-                  type="submit"
-                  disabled={isPending}
-                  className="bg-inverse-surface hover:bg-primary-container text-white hover:text-inverse-surface font-headline font-bold px-6 py-2.5 rounded-lg text-sm transition-all disabled:opacity-50"
-                >
-                  {isPending ? 'Guardando…' : '+ Agregar video'}
-                </button>
-              </form>
+              <VideoUploader
+                label="Video — se guarda automáticamente al subir"
+                onUpload={(url) => save(url)}
+              />
             </div>
           )}
         </div>
 
         {isPending && type === 'image' && (
           <p className="text-xs text-slate-400">Guardando en galería…</p>
+        )}
+        {successMsg && (
+          <div className="flex items-center gap-2 bg-green-50 border border-green-200 text-green-700 px-3 py-2.5 rounded-xl text-xs font-medium">
+            <CheckCircle2 size={14} className="shrink-0" />
+            {successMsg}
+          </div>
         )}
         {error && <p className="text-red-500 text-xs font-medium">{error}</p>}
       </div>
@@ -145,6 +140,7 @@ export default function MediaManager({ productId, media }: Props) {
 
 function MediaCard({ item, productId }: { item: ProductMedia; productId: string }) {
   const isVideo = item.type === 'video';
+  const [orderSaved, setOrderSaved] = useState(false);
   const deleteAction = deleteMedia.bind(null, item.id, productId);
   const orderAction = updateMediaOrder.bind(null, item.id, productId);
 
@@ -174,7 +170,10 @@ function MediaCard({ item, productId }: { item: ProductMedia; productId: string 
           {item.alt && <p className="text-[10px] text-slate-500 truncate">{item.alt}</p>}
         </div>
 
-        <form action={orderAction} className="flex items-center gap-1">
+        <form
+          action={async (fd) => { await orderAction(fd); setOrderSaved(true); setTimeout(() => setOrderSaved(false), 2500); }}
+          className="flex items-center gap-1"
+        >
           <input
             name="order"
             type="number"
@@ -182,7 +181,12 @@ function MediaCard({ item, productId }: { item: ProductMedia; productId: string 
             min={0}
             className="w-10 border border-slate-200 rounded px-1.5 py-1 text-[10px] text-inverse-surface bg-white outline-none focus:border-primary-container text-center"
           />
-          <button type="submit" className="text-[10px] text-slate-400 hover:text-primary-container font-bold transition-colors">✓</button>
+          <button
+            type="submit"
+            className={`text-[10px] font-bold transition-colors ${orderSaved ? 'text-green-500' : 'text-slate-400 hover:text-primary-container'}`}
+          >
+            {orderSaved ? '✓' : '↵'}
+          </button>
         </form>
       </div>
 

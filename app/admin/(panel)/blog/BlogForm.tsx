@@ -1,6 +1,7 @@
 'use client';
 
-import { useActionState, useRef, useEffect } from 'react';
+import { useActionState, useRef, useEffect, useState } from 'react';
+import { CheckCircle2 } from 'lucide-react';
 import type { BlogFormState } from './actions';
 import TipTapEditor from '@/components/TipTapEditor';
 import ImageUploader from '@/components/admin/ImageUploader';
@@ -25,6 +26,7 @@ function slugify(text: string) {
 
 export default function BlogForm({ action, post, submitLabel }: Props) {
   const [state, formAction, pending] = useActionState(action, undefined);
+  const [showSuccess, setShowSuccess] = useState(false);
   const contentRef = useRef<HTMLInputElement>(null);
   const slugRef = useRef<HTMLInputElement>(null);
   const titleRef = useRef<HTMLInputElement>(null);
@@ -38,6 +40,13 @@ export default function BlogForm({ action, post, submitLabel }: Props) {
     }
   }, [initialContent]);
 
+  useEffect(() => {
+    if (!state?.success) return;
+    setShowSuccess(true);
+    const t = setTimeout(() => setShowSuccess(false), 4000);
+    return () => clearTimeout(t);
+  }, [state]);
+
   function handleTitleChange(e: React.ChangeEvent<HTMLInputElement>) {
     if (slugRef.current && !post) {
       slugRef.current.value = slugify(e.target.value);
@@ -50,11 +59,24 @@ export default function BlogForm({ action, post, submitLabel }: Props) {
     'w-full border border-slate-200 rounded-xl px-4 py-3 text-inverse-surface text-sm outline-none focus:border-primary-container focus:ring-2 focus:ring-primary-container/20 transition';
 
   return (
-    <form action={formAction} className="space-y-5 sm:space-y-6 max-w-4xl">
+    <form
+      action={formAction}
+      onSubmit={(e) => {
+        if (!confirm('¿Guardar los cambios en este artículo?')) e.preventDefault();
+      }}
+      className="space-y-5 sm:space-y-6 max-w-4xl"
+    >
       {state?.message && (
         <p className="text-red-500 text-sm font-medium bg-red-50 px-4 py-3 rounded-xl">
           {state.message}
         </p>
+      )}
+
+      {showSuccess && (
+        <div className="flex items-center gap-3 bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-xl text-sm font-medium">
+          <CheckCircle2 size={16} className="shrink-0" />
+          Artículo actualizado correctamente.
+        </div>
       )}
 
       <div className="grid grid-cols-1 sm:grid-cols-2 gap-5">

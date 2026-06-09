@@ -1,10 +1,33 @@
 export const dynamic = 'force-dynamic';
-import React from 'react';
+import type { Metadata } from 'next';
+import { Suspense } from 'react';
 import Link from 'next/link';
 import Navbar from '../../components/Navbar';
+
+export async function generateMetadata(
+  { params }: { params: Promise<{ slug: string }> }
+): Promise<Metadata> {
+  const { slug } = await params;
+  const product = await prisma.product.findUnique({
+    where: { slug },
+    select: { name: true, description: true, img: true, category: true },
+  });
+  if (!product) return {};
+  return {
+    title: product.name,
+    description: product.description?.slice(0, 155) ?? `${product.name} — ${product.category}. Disponible en la tienda de Cesgar.`,
+    openGraph: {
+      title: `${product.name} | Cesgar`,
+      description: product.description?.slice(0, 155) ?? `${product.name} — ${product.category}.`,
+      url: `https://cesgar.com.co/tienda/${slug}`,
+      images: product.img ? [{ url: product.img, alt: product.name }] : [],
+    },
+  };
+}
 import ProductImageCarousel from '../../components/ProductImageCarousel';
 import AddToCartButton from '../../components/AddToCartButton';
 import ProductCard from '../../components/ProductCard';
+import StoreSearch from '../StoreSearch';
 import { ArrowLeft, ShieldCheck, Truck, Star } from 'lucide-react';
 import { prisma } from '../../../lib/prisma';
 import { cleanWordPressHtml } from '../../../lib/cleanHtml';
@@ -38,6 +61,11 @@ export default async function ProductPage({
       <main className="pt-26 min-h-screen bg-white">
         <div className="max-w-7xl mx-auto px-8 py-12">
           
+          {/* Search bar */}
+          <Suspense fallback={null}>
+            <StoreSearch className="mb-8" />
+          </Suspense>
+
           {/* Breadcrumb */}
           <nav className="flex items-center gap-2 text-sm text-slate-500 mb-8 font-medium">
             <Link href="/tienda" className="hover:text-[#4dbdcc] transition-colors">Tienda</Link>
@@ -55,10 +83,12 @@ export default async function ProductPage({
             {/* Product Images */}
             <ProductImageCarousel
               images={[
-                { url: product.img, alt: product.alt || product.name },
-                ...product.media
-                  .filter((m) => m.type === 'image')
-                  .map((m) => ({ url: m.url, alt: m.alt || product.name })),
+                { url: product.img, alt: product.alt || product.name, type: 'image' },
+                ...product.media.map((m) => ({
+                  url: m.url,
+                  alt: m.alt || product.name,
+                  type: m.type as 'image' | 'video',
+                })),
               ]}
             />
 

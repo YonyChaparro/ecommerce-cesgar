@@ -1,7 +1,30 @@
 export const dynamic = 'force-dynamic';
+import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { prisma } from '@/lib/prisma';
+
+export async function generateMetadata(
+  { params }: { params: Promise<{ slug: string }> }
+): Promise<Metadata> {
+  const { slug } = await params;
+  const post = await prisma.blogPost.findUnique({
+    where: { slug },
+    select: { title: true, excerpt: true, coverImage: true },
+  });
+  if (!post) return {};
+  return {
+    title: post.title,
+    description: post.excerpt ?? undefined,
+    openGraph: {
+      title: `${post.title} | Cesgar`,
+      description: post.excerpt ?? undefined,
+      url: `https://cesgar.com.co/blog/${slug}`,
+      type: 'article',
+      images: post.coverImage ? [{ url: post.coverImage, alt: post.title }] : [],
+    },
+  };
+}
 import { tiptapToHtml } from '@/lib/tiptap-html';
 import Navbar from '@/app/components/Navbar';
 import { CalendarDays, User, ArrowLeft, Tag } from 'lucide-react';

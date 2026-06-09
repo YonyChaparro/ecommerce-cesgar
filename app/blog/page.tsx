@@ -1,5 +1,16 @@
 export const dynamic = 'force-dynamic';
+import type { Metadata } from 'next';
 import Link from 'next/link';
+
+export const metadata: Metadata = {
+  title: 'Blog',
+  description: 'Artículos sobre impresión 3D, materiales, tecnología y casos de uso industriales. Aprende con el equipo de Cesgar.',
+  openGraph: {
+    title: 'Blog | Cesgar',
+    description: 'Artículos sobre impresión 3D, materiales y tecnología industrial.',
+    url: 'https://cesgar.com.co/blog',
+  },
+};
 import { prisma } from '@/lib/prisma';
 import Navbar from '@/app/components/Navbar';
 import { CalendarDays, User, ArrowRight, Tag } from 'lucide-react';

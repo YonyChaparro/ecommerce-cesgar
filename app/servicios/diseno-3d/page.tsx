@@ -100,7 +100,7 @@ export default function Diseno3DPage() {
                   href="/servicios/escaneo-3d"
                   className="inline-flex items-center gap-2 border border-slate-600 text-slate-300 px-6 py-3 rounded-full font-headline font-semibold text-sm hover:border-slate-400 hover:text-white transition-all"
                 >
-                  Ver Escaneo 3D
+                  Ver escaneo 3D
                 </Link>
               </div>
             </AnimateIn>
@@ -244,7 +244,7 @@ export default function Diseno3DPage() {
                 Un servicio que trabaja en equipo
               </h2>
               <p className="text-slate-400 max-w-xl mx-auto">
-                El Diseño 3D potencia y es potenciado por el resto de capacidades de Cesgar.
+                El diseño 3D potencia y es potenciado por el resto de capacidades de Cesgar.
               </p>
             </div>
 

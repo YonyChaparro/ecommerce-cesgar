@@ -19,6 +19,7 @@ const Schema = z.object({
 export type BlogFormState = {
   errors?: Record<string, string[]>;
   message?: string;
+  success?: boolean;
 } | undefined;
 
 async function getAuthorId() {
@@ -132,7 +133,7 @@ export async function updatePost(id: string, prev: BlogFormState, formData: Form
     return { message: 'Error al actualizar el artículo' };
   }
 
-  redirect('/admin/blog');
+  return { success: true };
 }
 
 export async function deletePost(id: string) {

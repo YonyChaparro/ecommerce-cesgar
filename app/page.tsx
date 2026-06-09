@@ -1,7 +1,19 @@
 export const dynamic = 'force-dynamic';
+import type { Metadata } from 'next';
 import {
   Settings2, Cpu, ArrowRight, ChevronRight,
 } from 'lucide-react';
+
+export const metadata: Metadata = {
+  title: 'Cesgar | Impresión 3D Industrial en Bogotá',
+  description: 'Impresión 3D industrial bajo demanda en Bogotá. Fabricamos repuestos, prototipos y piezas técnicas con FDM y resina. Cotiza en segundos.',
+  openGraph: {
+    title: 'Cesgar | Impresión 3D Industrial en Bogotá',
+    description: 'Fabricamos repuestos, prototipos y piezas técnicas con FDM y resina. Cotiza en segundos.',
+    url: 'https://cesgar.com.co',
+    type: 'website',
+  },
+};
 import Image from 'next/image';
 import Link from 'next/link';
 import HeroCarousel from './components/HeroCarousel';
@@ -124,7 +136,7 @@ export default async function Home() {
               </AnimateIn>
               <AnimateIn variant="slideRight" delay={0.15} className="flex flex-col items-start">
                 <div className="mb-4 inline-block px-4 py-1.5 bg-primary-container/10 text-primary rounded-full text-xs font-bold uppercase tracking-widest font-headline">
-                  Catálogo Técnico Especializado
+                  Catálogo técnico especializado
                 </div>
                 <h2 className="text-4xl md:text-5xl font-headline font-bold text-inverse-surface mb-6 leading-tight">
                   Explora nuestra tienda técnica
@@ -136,7 +148,7 @@ export default async function Home() {
                   <div className="flex items-start gap-3">
                     <Settings2 size={22} className="text-primary-container shrink-0 mt-0.5" />
                     <div>
-                      <div className="font-bold text-inverse-surface text-sm font-headline">Partes Mecánicas</div>
+                      <div className="font-bold text-inverse-surface text-sm font-headline">Partes mecánicas</div>
                       <div className="text-xs text-slate-500">Correas, poleas y extrusores</div>
                     </div>
                   </div>

@@ -22,6 +22,7 @@ function slugify(name: string) {
 export type ProductFormState = {
   errors?: Record<string, string[]>;
   message?: string;
+  success?: boolean;
 } | undefined;
 
 export async function createProduct(
@@ -93,7 +94,7 @@ export async function updateProduct(
 
   revalidatePath('/admin/products');
   revalidatePath(`/admin/products/${id}/edit`);
-  return undefined;
+  return { success: true };
 }
 
 export async function deleteProduct(id: string) {

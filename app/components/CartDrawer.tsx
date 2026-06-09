@@ -11,23 +11,26 @@ export default function CartDrawer() {
   return (
     <AnimatePresence>
       {isOpen && (
-        <Dialog static open={isOpen} onClose={closeCart} className="relative z-50">
+        <Dialog static open={isOpen} onClose={closeCart} className="relative z-100">
 
-          {/* Backdrop */}
+          {/* Backdrop — click cierra el carrito */}
           <motion.div
-            className="fixed inset-0 bg-black/40 backdrop-blur-sm"
+            className="fixed inset-0 bg-black/40 backdrop-blur-sm cursor-pointer"
             initial={{ opacity: 0 }}
             animate={{ opacity: 1 }}
             exit={{ opacity: 0 }}
             transition={{ duration: 0.2 }}
+            onClick={closeCart}
+            aria-hidden="true"
           />
 
-          <div className="fixed inset-0 overflow-hidden">
+          <div className="fixed inset-0 overflow-hidden" onClick={closeCart}>
             <div className="absolute inset-0 overflow-hidden flex justify-end">
 
               {/* Panel */}
               <motion.div
                 className="w-full max-w-md flex flex-col bg-white shadow-2xl h-full"
+                onClick={(e) => e.stopPropagation()}
                 initial={{ x: '100%' }}
                 animate={{ x: 0 }}
                 exit={{ x: '100%' }}

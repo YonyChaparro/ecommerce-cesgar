@@ -53,7 +53,7 @@ export default function StoreFilters({ categories, priceMin, priceMax }: Props) 
     router.push('/tienda');
   }
 
-  const hasFilters = activeCategory || paramMin || paramMax;
+  const hasFilters = activeCategory || paramMin || paramMax || searchParams.get('q');
 
   return (
     <aside className="w-full lg:w-64 shrink-0">

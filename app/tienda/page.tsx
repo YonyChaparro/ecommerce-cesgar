@@ -1,19 +1,30 @@
 export const dynamic = 'force-dynamic';
+import type { Metadata } from 'next';
 import Navbar from '../components/Navbar';
-import Link from 'next/link';
+
+export const metadata: Metadata = {
+  title: 'Tienda',
+  description: 'Repuestos, insumos y componentes especializados para impresión 3D e industria. Filamentos, resinas, piezas técnicas y más con envío a todo Colombia.',
+  openGraph: {
+    title: 'Tienda | Cesgar',
+    description: 'Repuestos, insumos y componentes especializados para impresión 3D e industria.',
+    url: 'https://cesgar.com.co/tienda',
+  },
+};
 import { Suspense } from 'react';
 import { prisma } from '../../lib/prisma';
-import { ArrowRight, ShieldCheck } from 'lucide-react';
+import { ShieldCheck } from 'lucide-react';
 import StoreFilters from './StoreFilters';
+import StoreSearch from './StoreSearch';
 import ProductCard from '../components/ProductCard';
 import AnimateIn from '../components/AnimateIn';
 
 export default async function TiendaPage({
   searchParams,
 }: {
-  searchParams: Promise<{ categoria?: string; precioMin?: string; precioMax?: string }>;
+  searchParams: Promise<{ categoria?: string; precioMin?: string; precioMax?: string; q?: string }>;
 }) {
-  const { categoria, precioMin, precioMax } = await searchParams;
+  const { categoria, precioMin, precioMax, q } = await searchParams;
 
   const minPrice = precioMin ? parseInt(precioMin, 10) : undefined;
   const maxPrice = precioMax ? parseInt(precioMax, 10) : undefined;
@@ -22,6 +33,13 @@ export default async function TiendaPage({
     prisma.product.findMany({
       where: {
         ...(categoria ? { category: categoria } : {}),
+        ...(q ? {
+          OR: [
+            { name: { contains: q } },
+            { category: { contains: q } },
+            { shortDescription: { contains: q } },
+          ],
+        } : {}),
         ...((minPrice !== undefined || maxPrice !== undefined) ? {
           price: {
             ...(minPrice !== undefined ? { gte: minPrice } : {}),
@@ -60,6 +78,11 @@ export default async function TiendaPage({
             </p>
           </AnimateIn>
 
+          {/* Search bar */}
+          <Suspense fallback={null}>
+            <StoreSearch className="mb-8" />
+          </Suspense>
+
           {/* Layout: sidebar + grid */}
           <div className="flex flex-col lg:flex-row gap-10">
 
@@ -78,7 +101,10 @@ export default async function TiendaPage({
               {/* Section label */}
               <div className="mb-6 flex justify-between items-end">
                 <h2 className="text-xl font-headline font-bold text-inverse-surface">
-                  {categoria ?? 'Todos los productos'}
+                  {q
+                    ? <>Resultados para <span className="text-primary-container">&ldquo;{q}&rdquo;</span></>
+                    : (categoria ?? 'Todos los productos')
+                  }
                 </h2>
                 <span className="text-slate-400 text-sm">
                   {products.length} resultado{products.length !== 1 ? 's' : ''}
@@ -104,8 +130,8 @@ export default async function TiendaPage({
           </div>
 
           {/* Trust banner */}
-          <AnimateIn variant="scaleUp">
-          <div className="bg-slate-50 border border-slate-200 rounded-3xl p-8 flex flex-col md:flex-row items-center gap-6 max-w-4xl mx-auto shadow-sm mb-8">
+          <AnimateIn variant="scaleUp" className="my-12">
+          <div className="bg-slate-50 border border-slate-200 rounded-3xl p-8 flex flex-col md:flex-row items-center gap-6 max-w-4xl mx-auto shadow-sm">
             <div className="w-16 h-16 rounded-full bg-primary-container/10 flex items-center justify-center shrink-0">
               <ShieldCheck size={40} className="text-primary-container" />
             </div>
@@ -117,12 +143,6 @@ export default async function TiendaPage({
             </div>
           </div>
           </AnimateIn>
-
-          <div className="flex justify-center">
-            <Link href="/" className="inline-flex items-center gap-2 text-primary-container font-bold hover:underline">
-              <ArrowRight size={16} className="rotate-180" /> Volver al inicio
-            </Link>
-          </div>
 
         </div>
       </main>

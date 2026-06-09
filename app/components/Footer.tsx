@@ -18,10 +18,10 @@ const links = {
     { label: 'Mantenimiento', href: '#' },
   ],
   empresa: [
-    { label: 'Inicio', href: '/' },
-    { label: 'Proyectos', href: '#' },
-    { label: 'Recursos', href: '#' },
-    { label: 'Cotizar', href: '#' },
+    { label: 'Inicio',         href: '/'                },
+    { label: 'Sobre nosotros', href: '/sobre-nosotros'  },
+    { label: 'Recursos',       href: '#'                },
+    { label: 'Cotizar',        href: '/cotizador'       },
   ],
 };
 
@@ -62,10 +62,10 @@ export default function Footer() {
               Insumos, repuestos y servicios de impresión 3D industrial. Precisión y calidad para tus proyectos en Colombia.
             </p>
             <div className="flex gap-3">
-              <a href="#" aria-label="Instagram" className="w-9 h-9 rounded-full bg-white/10 hover:bg-primary-container flex items-center justify-center transition-colors">
+              <a href="https://www.instagram.com/cesgar_co/" target="_blank" rel="noopener noreferrer" aria-label="Instagram" className="w-9 h-9 rounded-full bg-white/10 hover:bg-primary-container flex items-center justify-center transition-colors">
                 <IconInstagram />
               </a>
-              <a href="#" aria-label="Facebook" className="w-9 h-9 rounded-full bg-white/10 hover:bg-primary-container flex items-center justify-center transition-colors">
+              <a href="https://www.facebook.com/profile.php?id=61553397902949&locale=es_LA" target="_blank" rel="noopener noreferrer" aria-label="Facebook" className="w-9 h-9 rounded-full bg-white/10 hover:bg-primary-container flex items-center justify-center transition-colors">
                 <IconFacebook />
               </a>
             </div>

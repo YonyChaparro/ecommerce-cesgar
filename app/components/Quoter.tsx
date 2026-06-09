@@ -6,6 +6,7 @@ import dynamic from 'next/dynamic';
 import { Zap, CloudUpload, X, Loader2, Plus, Layers, Scale, Clock, ShoppingCart, Maximize2 } from 'lucide-react';
 import { useCart } from '@/app/components/CartContext';
 import { type QuoterPricing, DEFAULT_QUOTER_PRICING } from '@/lib/quoter-types';
+import { calcCost } from '@/lib/quoter-calc';
 // DEFAULT_QUOTER_PRICING is used as the default prop value below
 
 const STLViewer = dynamic(() => import('@/components/STLViewer'), { ssr: false, loading: () => (
@@ -135,61 +136,19 @@ function isHollow(stl: STLData | null): boolean {
 }
 
 function calculateItemCosts(model: QuoterModel, pricing: QuoterPricing) {
-  if (!model.stl) return { cost: 0, weightG: 0, timeH: 0 };
-
-  const tech = model.config.printingTech as 'fdm' | 'resina';
-  const materialId = model.config.materialType;
-  const layerHeight = model.config.layerHeight;
-  const infill = model.config.infillDensity;
-  const quantity = model.config.quantity;
-
-  const mats = pricing.materiales[tech] ?? [];
-  const matObj = mats.find(m => m.id === materialId) || mats[0];
-  const { tarifas } = pricing;
-
-  const factor = model.config.factorEscalado ?? 1;
-  const isObjHollow = isHollow(model.stl);
-  const volCm3 = (model.stl.volumeMm3 / 1000) * Math.pow(factor, 3);
-
-  let pesoGramos = volCm3 * matObj.densidad;
-  if (!isObjHollow && tech !== 'resina') {
-    pesoGramos *= parseInt(infill) / 100;
-  }
-
-  let costoMaterial = pesoGramos * matObj.precioGramo;
-  const multiplicadorCalidad = (tarifas.multiplicadorCalidad[tech] ?? {})[layerHeight] ?? 1.0;
-  costoMaterial *= multiplicadorCalidad;
-
-  if (!isObjHollow && tech !== 'resina') {
-    costoMaterial *= tarifas.multiplicadorRelleno[infill] ?? 1.0;
-  }
-
-  const baseTimePerCm3 = tech === 'fdm' ? 0.15 : 0.08;
-  let tiempoHoras = volCm3 * baseTimePerCm3;
-  if (parseFloat(layerHeight) < 0.1) tiempoHoras *= 1.5;
-  if (parseFloat(layerHeight) < 0.05) tiempoHoras *= 2.0;
-
-  const costoTiempo = tiempoHoras * tarifas.precioHora;
-  const costoPost = model.config.postProcessing ? tarifas.postProcesado : 0;
-
-  let descuentoCantidad = 1.0;
-  for (const discount of tarifas.multiplicadorCantidad) {
-    if (quantity >= discount.min) {
-      descuentoCantidad = discount.mult;
-      break;
-    }
-  }
-
-  const costoEscalado = factor !== 1 ? (tarifas.costoEscalado ?? 0) : 0;
-  const subtotalUnitario = tarifas.costoSetup + costoMaterial + costoTiempo + costoPost + costoEscalado;
-  const total = subtotalUnitario * quantity * Math.min(1.0, descuentoCantidad);
-
-  return {
-    cost: Math.round(total),
-    weightG: pesoGramos * quantity,
-    timeH: tiempoHoras * quantity,
-    unitPrice: subtotalUnitario
-  };
+  if (!model.stl) return { cost: 0, weightG: 0, timeH: 0, unitPrice: 0 };
+  const result = calcCost({
+    tech: model.config.printingTech as 'fdm' | 'resina',
+    materialId: model.config.materialType,
+    layerHeight: model.config.layerHeight,
+    infillDensity: model.config.infillDensity,
+    factorEscalado: model.config.factorEscalado ?? 1,
+    postProcessing: model.config.postProcessing,
+    meshVolCm3: model.stl.volumeMm3 / 1000,
+    bboxVolCm3: model.stl.boundingBoxVolumeCm3,
+    quantity: model.config.quantity,
+  }, pricing);
+  return { cost: result.total, weightG: result.weightG, timeH: result.timeH, unitPrice: result.unitPrice };
 }
 
 function getAvailableColors(tech: string, material: string) {
@@ -541,6 +500,17 @@ export default function Quoter({ pricing = DEFAULT_QUOTER_PRICING }: { pricing?:
           category: 'Impresión 3D',
           note,
           modelUrl,
+          printConfig: m.stl ? {
+            tech: m.config.printingTech as 'fdm' | 'resina',
+            materialId: m.config.materialType,
+            layerHeight: m.config.layerHeight,
+            infillDensity: m.config.infillDensity,
+            factorEscalado: m.config.factorEscalado ?? 1,
+            postProcessing: m.config.postProcessing,
+            meshVolCm3: m.stl.volumeMm3 / 1000,
+            bboxVolCm3: m.stl.boundingBoxVolumeCm3,
+            quantity: m.config.quantity,
+          } : undefined,
         }, m.config.quantity);
       }
       openCart();
