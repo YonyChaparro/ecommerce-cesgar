@@ -28,18 +28,14 @@ export function calcCost(config: PrintConfig, pricing: QuoterPricing): CostResul
 
   const effectiveVolCm3 = Math.min(meshVolCm3, bboxVolCm3) * Math.pow(factorEscalado, 3);
 
-  let pesoGramos: number;
-  if (tech === 'resina') {
-    pesoGramos = effectiveVolCm3 * matObj.densidad;
-  } else {
-    pesoGramos = effectiveVolCm3 * (parseInt(infillDensity) / 100) * matObj.densidad;
-  }
+  // Peso: densidad fija (base PLA 1.0 g/cm³) aplicada igual para FDM y resina
+  // con el mismo factor de relleno → el peso no varía al cambiar de material
+  const pesoGramos = effectiveVolCm3 * (parseInt(infillDensity) / 100) * 1.0;
 
-  let costoMaterial = pesoGramos * matObj.precioGramo;
+  // Precio: basado en volumen (precioCm3 independiente de la densidad del material)
+  let costoMaterial = effectiveVolCm3 * matObj.precioCm3;
   costoMaterial *= (tarifas.multiplicadorCalidad[tech] ?? {})[layerHeight] ?? 1.0;
-  if (tech !== 'resina') {
-    costoMaterial *= tarifas.multiplicadorRelleno[infillDensity] ?? 1.0;
-  }
+  costoMaterial *= tarifas.multiplicadorRelleno[infillDensity] ?? 1.0;
 
   const baseTimePerCm3 = tech === 'fdm' ? 0.15 : 0.08;
   let tiempoHoras = effectiveVolCm3 * baseTimePerCm3;
@@ -48,14 +44,14 @@ export function calcCost(config: PrintConfig, pricing: QuoterPricing): CostResul
 
   const costoTiempo = tiempoHoras * tarifas.precioHora;
   const costoPost = postProcessing ? tarifas.postProcesado : 0;
-  const costoEscalado = factorEscalado !== 1 ? (tarifas.costoEscalado ?? 0) : 0;
 
   let descuentoCantidad = 1.0;
   for (const d of tarifas.multiplicadorCantidad) {
     if (quantity >= d.min) { descuentoCantidad = d.mult; break; }
   }
 
-  const unitPrice = tarifas.costoSetup + costoMaterial + costoTiempo + costoPost + costoEscalado;
+  // Sin recargo por tamaño/escalado: el factor solo entra vía el volumen efectivo
+  const unitPrice = tarifas.costoSetup + costoMaterial + costoTiempo + costoPost;
   const total = Math.round(unitPrice * quantity * Math.min(1.0, descuentoCantidad));
 
   return {

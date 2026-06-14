@@ -45,6 +45,12 @@ const COLORES: Record<string, Record<string, any[]>> = {
 };
 
 
+// Áreas máximas de impresión en mm — deben coincidir con las opciones del select de tecnología
+const BUILD_VOLUMES: Record<string, { dims: [number, number, number]; label: string }> = {
+  fdm:    { dims: [300, 300, 450], label: '30×30×45 cm' },
+  resina: { dims: [250, 120, 210], label: '25×12×21 cm' },
+};
+
 // ─── Types and Parser ────────────────────────────────────────────────────────
 
 interface STLData {
@@ -128,12 +134,23 @@ function parseSTL(buffer: ArrayBuffer): STLData {
 
 // ─── Price Calculation based on cotizador.html ────────────────────────────────
 
-function isHollow(stl: STLData | null): boolean {
-  if (!stl) return false;
+type GeomType = 'solid' | 'hollow' | 'thin';
+
+function detectGeometry(stl: STLData | null): GeomType {
+  if (!stl) return 'solid';
   const volumeCm3 = stl.volumeMm3 / 1000;
-  const relacion = volumeCm3 / Math.max(stl.boundingBoxVolumeCm3, 0.1);
-  return relacion < 0.2;
+  const ratio = volumeCm3 / Math.max(stl.boundingBoxVolumeCm3, 0.1);
+  if (ratio < 0.2) return 'hollow';
+  const dims = [stl.dimensions.x, stl.dimensions.y, stl.dimensions.z].sort((a, b) => a - b);
+  if (dims[2] > 0 && dims[0] / dims[2] < 0.08) return 'thin';
+  return 'solid';
 }
+
+const GEOM_LABEL: Record<GeomType, string> = {
+  hollow: '🫧 Pieza Hueca / Carcasa',
+  thin:   '📄 Lámina / Tapa',
+  solid:  '⬤ Pieza Sólida',
+};
 
 function calculateItemCosts(model: QuoterModel, pricing: QuoterPricing) {
   if (!model.stl) return { cost: 0, weightG: 0, timeH: 0, unitPrice: 0 };
@@ -149,6 +166,20 @@ function calculateItemCosts(model: QuoterModel, pricing: QuoterPricing) {
     quantity: model.config.quantity,
   }, pricing);
   return { cost: result.total, weightG: result.weightG, timeH: result.timeH, unitPrice: result.unitPrice };
+}
+
+// La pieza puede rotarse sobre la cama, así que se comparan los ejes ordenados
+// de menor a mayor en lugar de X/Y/Z literales
+function checkBuildFit(stl: STLData | null, tech: string, factorEscalado: number) {
+  if (!stl) return null;
+  const build = BUILD_VOLUMES[tech] ?? BUILD_VOLUMES.fdm;
+  const modelDims = [stl.dimensions.x, stl.dimensions.y, stl.dimensions.z].sort((a, b) => a - b);
+  const buildDims = [...build.dims].sort((a, b) => a - b);
+  const fits = modelDims.every((d, i) => d * factorEscalado <= buildDims[i]);
+  // Mayor factor de escalado con el que la pieza cabe (floor para que aplicarlo siempre quepa)
+  const rawMax = Math.min(...buildDims.map((b, i) => b / modelDims[i]));
+  const maxFactor = Math.max(0.01, Math.floor(rawMax * 100) / 100);
+  return { fits, maxFactor, buildLabel: build.label };
 }
 
 function getAvailableColors(tech: string, material: string) {
@@ -197,7 +228,7 @@ function ConfigurationModal({
 
     if (key === 'printingTech') {
       const techMats = (pricing.materiales[val as 'fdm' | 'resina'] ?? []).filter(m => !m.disabled);
-      newConf.materialType = techMats[0]?.id ?? '';
+      newConf.materialType = (val === 'fdm' ? techMats.find(m => m.id === 'pla') ?? techMats[0] : techMats[0])?.id ?? '';
       newConf.layerHeight = val === 'fdm' ? '0.2' : '0.05';
       const cList = getAvailableColors(val as string, newConf.materialType);
       newConf.printColor = cList[0].id;
@@ -250,15 +281,23 @@ function ConfigurationModal({
               <div className="text-slate-400 text-sm space-y-1 mb-6">
                 <p>Dimensiones:</p>
                 <div className="flex gap-2 justify-center font-mono text-[10px] sm:text-xs flex-wrap">
-                  <span className="bg-slate-800 px-2 py-1 rounded whitespace-nowrap">X: {(model.stl.dimensions.x * c.factorEscalado).toFixed(1)}</span>
-                  <span className="bg-slate-800 px-2 py-1 rounded whitespace-nowrap">Y: {(model.stl.dimensions.y * c.factorEscalado).toFixed(1)}</span>
-                  <span className="bg-slate-800 px-2 py-1 rounded whitespace-nowrap">Z: {(model.stl.dimensions.z * c.factorEscalado).toFixed(1)}</span>
+                  {(['x', 'y', 'z'] as const).map(axis => {
+                    const mm = model.stl!.dimensions[axis] * c.factorEscalado;
+                    const cm = mm / 10;
+                    return (
+                      <span key={axis} className="bg-slate-800 px-2 py-1 rounded whitespace-nowrap flex flex-col items-center gap-0.5">
+                        <span className="text-white font-bold">{axis.toUpperCase()}</span>
+                        <span>{mm.toFixed(1)} mm</span>
+                        <span className="text-slate-500">{cm.toFixed(2)} cm</span>
+                      </span>
+                    );
+                  })}
                 </div>
                 {c.factorEscalado !== 1 && (
                   <p className="text-[10px] text-slate-500 mt-1">Original × {c.factorEscalado}</p>
                 )}
                 <p className="mt-4 text-cyan-400 font-bold bg-cyan-950/30 px-3 py-1 rounded-full border border-cyan-900/50 inline-block text-xs sm:text-sm">
-                  {isHollow(model.stl) ? '🫧 Pieza Hueca' : '⬤ Pieza Sólida'}
+                  {GEOM_LABEL[detectGeometry(model.stl)]}
                 </p>
               </div>
             ) : (
@@ -341,22 +380,33 @@ function ConfigurationModal({
             </div>
 
             {/* Infill */}
-            <div className={`${c.printingTech !== 'fdm' ? 'opacity-50 pointer-events-none' : ''}`}>
-              <label className="block text-[11px] font-bold text-cyan-400 uppercase mb-2 tracking-wider">🏗️ Relleno</label>
-              <select 
-                value={c.infillDensity} 
-                onChange={e => hc('infillDensity', e.target.value)}
-                disabled={c.printingTech !== 'fdm'}
-                className="w-full bg-slate-900/50 text-white text-sm rounded-xl px-4 py-3 border border-slate-600 focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none transition-colors"
-              >
-                <option value="15">15% (Ligero)</option>
-                <option value="20">20% (Estándar)</option>
-                <option value="40">40% (Resistente)</option>
-                <option value="60">60% (Fuerte)</option>
-                <option value="80">80% (Muy fuerte)</option>
-                <option value="100">100% (Sólido)</option>
-              </select>
-            </div>
+            {(() => {
+              const infillLocked = detectGeometry(model.stl) !== 'solid';
+              return (
+                <div className={infillLocked ? 'opacity-50 pointer-events-none' : ''}>
+                  <label className="block text-[11px] font-bold text-cyan-400 uppercase mb-2 tracking-wider">🏗️ Relleno</label>
+                  <select
+                    value={c.infillDensity}
+                    onChange={e => hc('infillDensity', e.target.value)}
+                    disabled={infillLocked}
+                    className="w-full bg-slate-900/50 text-white text-sm rounded-xl px-4 py-3 border border-slate-600 focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none transition-colors"
+                  >
+                    <option value="15">15% (Ligero)</option>
+                    <option value="20">20% (Estándar)</option>
+                    <option value="40">40% (Resistente)</option>
+                    <option value="60">60% (Fuerte)</option>
+                    <option value="80">80% (Muy fuerte)</option>
+                    <option value="100">100% (Sólido)</option>
+                  </select>
+                  {infillLocked && (
+                    <p className="text-[10px] text-amber-400 mt-1.5">
+                      Geometría hueca o laminar — relleno fijo, no modifica la estructura real.
+                    </p>
+                  )}
+                </div>
+              );
+            })()}
+
 
             {/* Color */}
             <div>
@@ -415,6 +465,27 @@ function ConfigurationModal({
                   </span>
                 )}
               </p>
+              {(() => {
+                const fit = checkBuildFit(model.stl, c.printingTech, c.factorEscalado);
+                if (!fit || fit.fits) return null;
+                return (
+                  <div className="mt-3 bg-amber-950/30 border border-amber-700/40 rounded-xl px-4 py-3 flex flex-col sm:flex-row sm:items-center gap-3">
+                    <p className="flex-1 text-xs text-amber-300 leading-relaxed">
+                      ⚠️ Con escala ×{c.factorEscalado} la pieza mide{' '}
+                      {(model.stl!.dimensions.x * c.factorEscalado).toFixed(0)}×{(model.stl!.dimensions.y * c.factorEscalado).toFixed(0)}×{(model.stl!.dimensions.z * c.factorEscalado).toFixed(0)} mm
+                      {' '}y excede el área de impresión {c.printingTech === 'fdm' ? 'FDM' : 'de resina'} ({fit.buildLabel}).
+                      Reduce la escala a ×{fit.maxFactor} o menos.
+                    </p>
+                    <button
+                      type="button"
+                      onClick={() => hc('factorEscalado', fit.maxFactor)}
+                      className="shrink-0 bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-600/50 px-4 py-2 rounded-lg text-xs font-bold transition-colors cursor-pointer whitespace-nowrap"
+                    >
+                      Ajustar a ×{fit.maxFactor}
+                    </button>
+                  </div>
+                );
+              })()}
             </div>
 
             {/* Post prep */}
@@ -471,7 +542,7 @@ export default function Quoter({ pricing = DEFAULT_QUOTER_PRICING }: { pricing?:
           matObj.nombre,
           colorObj?.nombre,
           `${m.config.layerHeight}mm`,
-          m.config.printingTech === 'fdm' ? `${m.config.infillDensity}% relleno` : null,
+          `${m.config.infillDensity}% relleno`,
           sf !== 1 ? `Escala ×${sf}` : null,
           dims,
           `~${(weightG / m.config.quantity).toFixed(1)}g/u`,
@@ -543,7 +614,7 @@ export default function Quoter({ pricing = DEFAULT_QUOTER_PRICING }: { pricing?:
         stl: null,
         config: {
           printingTech: 'fdm',
-          materialType: (pricing.materiales.fdm.find(m => !m.disabled) ?? pricing.materiales.fdm[0])?.id ?? 'pla',
+          materialType: (pricing.materiales.fdm.find(m => m.id === 'pla' && !m.disabled) ?? pricing.materiales.fdm.find(m => !m.disabled) ?? pricing.materiales.fdm[0])?.id ?? 'pla',
           layerHeight: '0.2',
           infillDensity: '40',
           printColor: 'blue',
@@ -656,7 +727,7 @@ export default function Quoter({ pricing = DEFAULT_QUOTER_PRICING }: { pricing?:
             const qualityObj = getAvailableQualities(model.config.printingTech).find(q => q.val === model.config.layerHeight);
             
             return (
-              <div key={model.id} className="bg-slate-700/30 hover:bg-slate-700/60 rounded-xl p-5 border border-slate-600/50 transition-colors group">
+              <div key={model.id} onClick={() => setConfiguringModelId(model.id)} className="bg-slate-700/30 hover:bg-slate-700/60 rounded-xl p-5 border border-slate-600/50 transition-colors group cursor-pointer">
                 <div className="flex flex-col md:flex-row items-start gap-4">
                   <div className="w-10 h-10 rounded-lg bg-cyan-500/20 text-primary-container flex items-center justify-center font-bold text-lg shrink-0">
                     {index + 1}
@@ -666,8 +737,8 @@ export default function Quoter({ pricing = DEFAULT_QUOTER_PRICING }: { pricing?:
                     <div className="flex items-start justify-between">
                        <h4 className="text-white font-bold text-lg mb-2 truncate max-w-[80%]">{model.file.name}</h4>
                        <div className="flex gap-2 md:hidden shrink-0">
-                          <button onClick={() => setConfiguringModelId(model.id)} className="bg-slate-600 hover:bg-primary-container hover:text-slate-900 text-white p-3 rounded-lg"><Zap size={18} /></button>
-                          <button onClick={() => removeModel(model.id)} className="bg-slate-800 hover:bg-red-500/20 text-slate-400 hover:text-red-400 p-3 rounded-lg cursor-pointer"><X size={18} /></button>
+                          <button onClick={(e) => { e.stopPropagation(); setConfiguringModelId(model.id); }} className="bg-slate-600 hover:bg-primary-container hover:text-slate-900 text-white p-3 rounded-lg"><Zap size={18} /></button>
+                          <button onClick={(e) => { e.stopPropagation(); removeModel(model.id); }} className="bg-slate-800 hover:bg-red-500/20 text-slate-400 hover:text-red-400 p-3 rounded-lg cursor-pointer"><X size={18} /></button>
                        </div>
                     </div>
                     
@@ -681,11 +752,9 @@ export default function Quoter({ pricing = DEFAULT_QUOTER_PRICING }: { pricing?:
                       <span className="text-[10px] bg-slate-800 text-slate-300 px-2 py-1 rounded border border-slate-600 font-medium flex items-center gap-1 uppercase tracking-wider whitespace-nowrap">
                         📏 {qualityObj?.text.split(' ')[0]} {qualityObj?.text.includes('Borrador') ? '(Borrador)' : qualityObj?.text.includes('Rápido') ? '(Rápido)' : ''}
                       </span>
-                      {model.config.printingTech === 'fdm' && (
-                        <span className="text-[10px] bg-slate-800 text-slate-300 px-2 py-1 rounded border border-slate-600 font-medium flex items-center gap-1 uppercase tracking-wider whitespace-nowrap">
-                          🏗️ REL {model.config.infillDensity}%
-                        </span>
-                      )}
+                      <span className="text-[10px] bg-slate-800 text-slate-300 px-2 py-1 rounded border border-slate-600 font-medium flex items-center gap-1 uppercase tracking-wider whitespace-nowrap">
+                        🏗️ REL {model.config.infillDensity}%
+                      </span>
                       <span className="text-[10px] bg-slate-800 text-slate-300 px-2 py-1 rounded border border-slate-600 font-medium flex items-center gap-1 uppercase tracking-wider whitespace-nowrap truncate max-w-30">
                         🎨 {printColorObj?.nombre}
                       </span>
@@ -694,6 +763,15 @@ export default function Quoter({ pricing = DEFAULT_QUOTER_PRICING }: { pricing?:
                           ⚖️ ×{model.config.factorEscalado}
                         </span>
                       )}
+                      {(() => {
+                        const fit = checkBuildFit(model.stl, model.config.printingTech, model.config.factorEscalado ?? 1);
+                        if (!fit || fit.fits) return null;
+                        return (
+                          <span className="text-[10px] bg-amber-950/40 text-amber-300 px-2 py-1 rounded border border-amber-700/60 font-bold flex items-center gap-1 uppercase tracking-wider whitespace-nowrap">
+                            ⚠️ Excede área de impresión
+                          </span>
+                        );
+                      })()}
                     </div>
                   </div>
                   
@@ -709,14 +787,7 @@ export default function Quoter({ pricing = DEFAULT_QUOTER_PRICING }: { pricing?:
                      
                      <div className="hidden md:flex gap-2 shrink-0">
                        <button
-                          onClick={() => setConfiguringModelId(model.id)}
-                          className="bg-slate-700 border border-slate-600 hover:bg-primary-container hover:text-slate-900 text-white p-2.5 rounded-xl transition-colors shadow-sm cursor-pointer"
-                          title="Configurar Impresión"
-                       >
-                         <Zap size={18} />
-                       </button>
-                       <button
-                          onClick={() => removeModel(model.id)}
+                          onClick={(e) => { e.stopPropagation(); removeModel(model.id); }}
                           className="bg-slate-800 hover:bg-red-500/20 text-slate-400 hover:text-red-400 border border-slate-700 hover:border-red-500/30 p-2.5 rounded-xl transition-colors cursor-pointer"
                           title="Eliminar"
                        >

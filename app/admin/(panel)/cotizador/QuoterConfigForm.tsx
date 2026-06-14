@@ -68,13 +68,13 @@ export default function QuoterConfigForm({ initial }: { initial: QuoterPricing }
 
   // ── helpers ──────────────────────────────────────────────────────────────────
 
-  const setTarifa = (key: 'costoSetup' | 'precioHora' | 'postProcesado' | 'costoEscalado', val: number) =>
+  const setTarifa = (key: 'costoSetup' | 'precioHora' | 'postProcesado', val: number) =>
     setPricing((p) => ({ ...p, tarifas: { ...p.tarifas, [key]: val } }));
 
   const setMaterial = (
     tech: 'fdm' | 'resina',
     idx: number,
-    field: 'precioGramo' | 'densidad',
+    field: 'precioCm3' | 'densidad',
     val: number,
   ) =>
     setPricing((p) => ({
@@ -220,13 +220,12 @@ export default function QuoterConfigForm({ initial }: { initial: QuoterPricing }
 
       {/* ── Tarifas Base ──────────────────────────────────────────────────────── */}
       <Card title="Tarifas Base ($ COP)">
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
           {(
             [
               ['costoSetup',    'Costo de Setup',     'Por orden — preparación de archivo y máquina'],
               ['precioHora',    'Precio por Hora',    'Costo de tiempo de impresión ($/h)'],
               ['postProcesado', 'Post-Procesado',     'Costo adicional de limpieza y lijado'],
-              ['costoEscalado', 'Costo por Escalado', 'Cargo extra por pieza cuando el factor ≠ 1.0'],
             ] as const
           ).map(([key, label, hint]) => (
             <div key={key}>
@@ -250,7 +249,7 @@ export default function QuoterConfigForm({ initial }: { initial: QuoterPricing }
             <thead>
               <tr className="border-b border-slate-100">
                 <Th>Material</Th>
-                <Th>Precio / gramo ($)</Th>
+                <Th>Precio / cm³ ($)</Th>
                 <Th>Densidad (g/cm³)</Th>
                 <Th>Descripción</Th>
                 <Th>Bloqueado</Th>
@@ -267,8 +266,8 @@ export default function QuoterConfigForm({ initial }: { initial: QuoterPricing }
                   </Td>
                   <Td className="w-36">
                     <Num
-                      value={mat.precioGramo}
-                      onChange={(v) => setMaterial('fdm', idx, 'precioGramo', v)}
+                      value={mat.precioCm3}
+                      onChange={(v) => setMaterial('fdm', idx, 'precioCm3', v)}
                     />
                   </Td>
                   <Td className="w-36">
@@ -294,6 +293,9 @@ export default function QuoterConfigForm({ initial }: { initial: QuoterPricing }
             </tbody>
           </table>
         </div>
+        <p className="text-[11px] text-slate-400 mt-3">
+          El precio se cobra por volumen del modelo (cm³). La densidad solo se usa para estimar el peso mostrado al cliente.
+        </p>
       </Card>
 
       {/* ── Materiales Resina ─────────────────────────────────────────────────── */}
@@ -303,7 +305,7 @@ export default function QuoterConfigForm({ initial }: { initial: QuoterPricing }
             <thead>
               <tr className="border-b border-slate-100">
                 <Th>Material</Th>
-                <Th>Precio / gramo ($)</Th>
+                <Th>Precio / cm³ ($)</Th>
                 <Th>Densidad (g/cm³)</Th>
                 <Th>Descripción</Th>
                 <Th>Bloqueado</Th>
@@ -320,8 +322,8 @@ export default function QuoterConfigForm({ initial }: { initial: QuoterPricing }
                   </Td>
                   <Td className="w-36">
                     <Num
-                      value={mat.precioGramo}
-                      onChange={(v) => setMaterial('resina', idx, 'precioGramo', v)}
+                      value={mat.precioCm3}
+                      onChange={(v) => setMaterial('resina', idx, 'precioCm3', v)}
                     />
                   </Td>
                   <Td className="w-36">
@@ -347,6 +349,9 @@ export default function QuoterConfigForm({ initial }: { initial: QuoterPricing }
             </tbody>
           </table>
         </div>
+        <p className="text-[11px] text-slate-400 mt-3">
+          El precio se cobra por volumen del modelo (cm³). La densidad solo se usa para estimar el peso mostrado al cliente.
+        </p>
       </Card>
 
       {/* ── Multiplicadores de Calidad ────────────────────────────────────────── */}
@@ -404,7 +409,7 @@ export default function QuoterConfigForm({ initial }: { initial: QuoterPricing }
 
       {/* ── Multiplicador de Relleno ──────────────────────────────────────────── */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <Card title="Relleno FDM — Multiplicadores">
+        <Card title="Relleno (FDM y Resina) — Multiplicadores">
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-slate-100">
