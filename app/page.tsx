@@ -42,10 +42,23 @@ const CARD_STYLES = [
 export default async function Home() {
   let products: any[] = [];
   let blogPosts: any[] = [];
+  let projects: any[] = [];
   try {
-    [products, blogPosts] = await Promise.all([
+    [products, blogPosts, projects] = await Promise.all([
       prisma.product.findMany({ orderBy: { createdAt: 'desc' } }),
       prisma.blogPost.findMany({
+        where: { status: 'published' },
+        orderBy: { publishedAt: 'desc' },
+        select: {
+          slug: true,
+          title: true,
+          excerpt: true,
+          coverImage: true,
+          publishedAt: true,
+          tags: { include: { tag: true }, take: 1 },
+        },
+      }),
+      prisma.project.findMany({
         where: { status: 'published' },
         orderBy: { publishedAt: 'desc' },
         select: {
@@ -270,23 +283,23 @@ export default async function Home() {
           />
         </section>
 
-        {/* ── Section 6: Blog grid ── */}
+        {/* ── Section 6: Projects grid ── */}
         <section className="bg-zinc-900 py-24">
           <div className="max-w-7xl mx-auto px-8">
             <AnimateIn variant="fadeUp">
             <div className="text-center mb-16">
               <div className="mb-4 inline-block px-4 py-1.5 bg-primary-container/10 text-primary rounded-full text-xs font-bold uppercase tracking-widest font-headline">
-                Blog
+                Proyectos
               </div>
-              <h2 className="text-4xl md:text-5xl font-headline font-bold text-white mb-6">Recursos y artículos</h2>
+              <h2 className="text-4xl md:text-5xl font-headline font-bold text-white mb-6">Proyectos realizados</h2>
               <p className="text-zinc-400 text-lg max-w-2xl mx-auto">
-                Conocimiento técnico sobre impresión 3D, materiales y fabricación digital.
+                Casos reales de clientes resueltos con impresión 3D, escaneo e ingeniería a medida.
               </p>
             </div>
             </AnimateIn>
 
             <ChromaGrid
-              items={blogPosts.map((p, i) => ({
+              items={projects.map((p, i) => ({
                 image: p.coverImage ?? '',
                 title: p.title,
                 subtitle: p.excerpt ?? '',
@@ -295,7 +308,7 @@ export default async function Home() {
                   ? new Date(p.publishedAt).toLocaleDateString('es-CO', { day: 'numeric', month: 'short', year: 'numeric' })
                   : undefined,
                 ...CARD_STYLES[i % CARD_STYLES.length],
-                url: `/blog/${p.slug}`,
+                url: `/proyectos/${p.slug}`,
               }))}
             />
           </div>

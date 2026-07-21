@@ -1,0 +1,163 @@
+import Link from 'next/link';
+import { prisma } from '@/lib/prisma';
+import { Plus, Pencil } from 'lucide-react';
+import DeleteButton from './DeleteButton';
+
+export default async function AdminProjectsPage() {
+  const projects = await prisma.project.findMany({
+    orderBy: { createdAt: 'desc' },
+    include: { author: true, tags: { include: { tag: true } } },
+  });
+
+  return (
+    <div className="p-4 sm:p-6 md:p-8">
+      <div className="flex items-center justify-between mb-6 md:mb-8">
+        <div>
+          <h1 className="text-xl sm:text-2xl font-headline font-bold text-inverse-surface">Proyectos</h1>
+          <p className="text-slate-500 text-sm mt-1">
+            {projects.length} proyecto{projects.length !== 1 ? 's' : ''}
+          </p>
+        </div>
+        <Link
+          href="/admin/proyectos/new"
+          className="flex items-center gap-2 bg-inverse-surface hover:bg-primary-container text-white hover:text-inverse-surface font-headline font-bold px-4 py-2 sm:px-5 sm:py-2.5 rounded-xl transition-all text-sm"
+        >
+          <Plus size={16} />
+          <span className="hidden sm:inline">Nuevo proyecto</span>
+          <span className="sm:hidden">Nuevo</span>
+        </Link>
+      </div>
+
+      {/* Móvil: cards */}
+      <div className="sm:hidden space-y-3">
+        {projects.map((project) => (
+          <div key={project.id} className="bg-white rounded-xl border border-slate-100 p-3 flex items-center gap-3 shadow-sm">
+            {project.coverImage
+              ? (
+                // eslint-disable-next-line @next/next/no-img-element
+                <img
+                  src={project.coverImage}
+                  alt={project.title}
+                  className="w-12 h-12 rounded-lg object-cover bg-slate-100 shrink-0"
+                />
+              ) : (
+                <div className="w-12 h-12 rounded-lg bg-slate-100 shrink-0" />
+              )
+            }
+            <div className="flex-1 min-w-0">
+              <p className="font-medium text-inverse-surface truncate text-sm">{project.title}</p>
+              <p className="text-[10px] text-slate-400 truncate font-mono mt-0.5">/{project.slug}</p>
+              <div className="flex items-center gap-2 mt-1.5">
+                <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${project.status === 'published' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>
+                  {project.status === 'published' ? 'Publicado' : 'Borrador'}
+                </span>
+                <span className="text-xs text-slate-400">{project.author.name}</span>
+              </div>
+            </div>
+            <div className="flex items-center gap-1 shrink-0">
+              <Link
+                href={`/admin/proyectos/${project.id}/edit`}
+                className="p-2 text-slate-400 hover:text-inverse-surface hover:bg-slate-100 rounded-lg transition-colors"
+              >
+                <Pencil size={15} />
+              </Link>
+              <DeleteButton id={project.id} />
+            </div>
+          </div>
+        ))}
+        {projects.length === 0 && (
+          <p className="text-center text-slate-400 py-12 text-sm">
+            No hay proyectos todavía.{' '}
+            <Link href="/admin/proyectos/new" className="text-primary-container font-medium hover:underline">Crear el primero</Link>
+          </p>
+        )}
+      </div>
+
+      {/* Tablet/Desktop: tabla */}
+      <div className="hidden sm:block bg-white rounded-2xl border border-slate-100 overflow-hidden shadow-sm">
+        <table className="w-full text-sm">
+          <thead>
+            <tr className="border-b border-slate-100 bg-[#f8fafc]">
+              <th className="text-left px-4 sm:px-5 py-3 text-xs font-bold uppercase tracking-widest text-slate-400">
+                Proyecto
+              </th>
+              <th className="text-left px-5 py-3 text-xs font-bold uppercase tracking-widest text-slate-400 hidden md:table-cell">
+                Autor
+              </th>
+              <th className="text-left px-5 py-3 text-xs font-bold uppercase tracking-widest text-slate-400 hidden lg:table-cell">
+                Etiquetas
+              </th>
+              <th className="text-left px-4 sm:px-5 py-3 text-xs font-bold uppercase tracking-widest text-slate-400">
+                Estado
+              </th>
+              <th className="px-4 sm:px-5 py-3" />
+            </tr>
+          </thead>
+          <tbody>
+            {projects.map((project) => (
+              <tr key={project.id} className="border-b border-slate-50 hover:bg-[#f8fafc] transition-colors">
+                <td className="px-4 sm:px-5 py-4">
+                  <div className="flex items-center gap-3">
+                    {project.coverImage && (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={project.coverImage}
+                        alt={project.title}
+                        className="w-10 h-10 rounded-lg object-cover bg-slate-100 shrink-0"
+                      />
+                    )}
+                    <div className="min-w-0">
+                      <p className="font-medium text-inverse-surface truncate max-w-44 sm:max-w-64 md:max-w-72">
+                        {project.title}
+                      </p>
+                      <p className="text-xs text-slate-400 mt-0.5 truncate max-w-44 sm:max-w-64 md:max-w-72">/{project.slug}</p>
+                    </div>
+                  </div>
+                </td>
+                <td className="px-5 py-4 text-slate-500 hidden md:table-cell">
+                  {project.author.name}
+                </td>
+                <td className="px-5 py-4 hidden lg:table-cell">
+                  <div className="flex flex-wrap gap-1">
+                    {project.tags.map(({ tag }) => (
+                      <span key={tag.id} className="px-2 py-0.5 bg-slate-100 text-slate-500 rounded text-xs">
+                        {tag.name}
+                      </span>
+                    ))}
+                  </div>
+                </td>
+                <td className="px-4 sm:px-5 py-4">
+                  <span className={`px-2.5 py-1 rounded-full text-xs font-bold ${project.status === 'published' ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>
+                    {project.status === 'published' ? 'Publicado' : 'Borrador'}
+                  </span>
+                </td>
+                <td className="px-4 sm:px-5 py-4">
+                  <div className="flex items-center justify-end gap-1">
+                    <Link
+                      href={`/admin/proyectos/${project.id}/edit`}
+                      className="p-2 text-slate-400 hover:text-inverse-surface hover:bg-slate-100 rounded-lg transition-colors"
+                      title="Editar"
+                    >
+                      <Pencil size={15} />
+                    </Link>
+                    <DeleteButton id={project.id} />
+                  </div>
+                </td>
+              </tr>
+            ))}
+            {projects.length === 0 && (
+              <tr>
+                <td colSpan={5} className="px-5 py-12 text-center text-slate-400 text-sm">
+                  No hay proyectos todavía.{' '}
+                  <Link href="/admin/proyectos/new" className="text-primary-container font-medium hover:underline">
+                    Crear el primero
+                  </Link>
+                </td>
+              </tr>
+            )}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  );
+}

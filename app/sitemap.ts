@@ -4,9 +4,13 @@ import { prisma } from '@/lib/prisma';
 const BASE = 'https://cesgar.com.co';
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const [products, posts] = await Promise.all([
+  const [products, posts, projects] = await Promise.all([
     prisma.product.findMany({ select: { slug: true, updatedAt: true } }),
     prisma.blogPost.findMany({
+      where: { status: 'published' },
+      select: { slug: true, updatedAt: true },
+    }),
+    prisma.project.findMany({
       where: { status: 'published' },
       select: { slug: true, updatedAt: true },
     }),
@@ -23,6 +27,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${BASE}/servicios/escaneo-3d`,          priority: 0.7, changeFrequency: 'monthly' },
     { url: `${BASE}/sobre-nosotros`,                 priority: 0.6, changeFrequency: 'monthly' },
     { url: `${BASE}/blog`,                          priority: 0.6, changeFrequency: 'weekly'  },
+    { url: `${BASE}/proyectos`,                     priority: 0.6, changeFrequency: 'weekly'  },
   ];
 
   const productRoutes: MetadataRoute.Sitemap = products.map((p) => ({
@@ -39,5 +44,12 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     changeFrequency: 'monthly',
   }));
 
-  return [...staticRoutes, ...productRoutes, ...blogRoutes];
+  const projectRoutes: MetadataRoute.Sitemap = projects.map((p) => ({
+    url: `${BASE}/proyectos/${p.slug}`,
+    lastModified: p.updatedAt,
+    priority: 0.5,
+    changeFrequency: 'monthly',
+  }));
+
+  return [...staticRoutes, ...productRoutes, ...blogRoutes, ...projectRoutes];
 }

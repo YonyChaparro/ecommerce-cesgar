@@ -48,6 +48,7 @@ model User {
   name         String
   role         String     @default("EDITOR")
   posts        BlogPost[]
+  projects     Project[]
   createdAt    DateTime   @default(now())
   updatedAt    DateTime   @updatedAt
 }
@@ -83,6 +84,39 @@ model BlogPostTag {
   tag    BlogTag  @relation(fields: [tagId], references: [id], onDelete: Cascade)
 
   @@id([postId, tagId])
+}
+
+// status: "draft" | "published"
+model Project {
+  id          String           @id @default(cuid())
+  title       String
+  slug        String           @unique
+  excerpt     String?
+  coverImage  String?
+  content     String           // TipTap JSON serialized as string
+  status      String           @default("draft")
+  publishedAt DateTime?
+  authorId    String
+  author      User             @relation(fields: [authorId], references: [id])
+  tags        ProjectTagLink[]
+  createdAt   DateTime         @default(now())
+  updatedAt   DateTime         @updatedAt
+}
+
+model ProjectTag {
+  id       String           @id @default(cuid())
+  name     String           @unique
+  slug     String           @unique
+  projects ProjectTagLink[]
+}
+
+model ProjectTagLink {
+  projectId String
+  tagId     String
+  project   Project    @relation(fields: [projectId], references: [id], onDelete: Cascade)
+  tag       ProjectTag @relation(fields: [tagId], references: [id], onDelete: Cascade)
+
+  @@id([projectId, tagId])
 }
 
 // status: "pending" | "approved" | "rejected" | "in_process" | "cancelled"
