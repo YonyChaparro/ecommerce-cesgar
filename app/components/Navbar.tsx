@@ -29,6 +29,7 @@ const NAV_ITEMS = [
   { label: 'Tienda',         href: '/tienda'          },
   { label: 'Servicios',      href: '/servicios'       },
   { label: 'Sobre nosotros', href: '/sobre-nosotros'  },
+  { label: 'Proyectos',      href: '/proyectos'       },
   { label: 'Blog',           href: '/blog'            },
 ];
 
@@ -62,10 +63,10 @@ export default function Navbar() {
   return (
     <Disclosure
       as="header"
-      className={`fixed top-0 w-full z-50 transition-all duration-300 ${
+      className={`fixed top-0 w-full z-50 bg-white transition-all duration-300 ${
         scrolled
-          ? 'bg-white/92 backdrop-blur-md shadow-sm shadow-slate-200/60 border-b border-slate-100'
-          : 'bg-white/70 backdrop-blur-sm'
+          ? 'shadow-sm shadow-slate-200/60 border-b border-slate-100'
+          : ''
       }`}
     >
       <div className="mx-auto max-w-screen-2xl px-6 sm:px-8">
@@ -82,7 +83,7 @@ export default function Navbar() {
           </Link>
 
           {/* Desktop nav links */}
-          <nav className="hidden md:flex items-center gap-0.5 flex-1" aria-label="Principal">
+          <nav className="hidden md:flex items-center justify-center gap-0.5 flex-1" aria-label="Principal">
             {NAV_ITEMS.map((item) => {
               const active = isActive(item.href);
               return (
@@ -117,8 +118,20 @@ export default function Navbar() {
               <span className={`transition-opacity duration-250 sm:hidden ${ctaVisible ? 'opacity-100' : 'opacity-0'}`}>
                 {CTA_LABELS_SHORT[ctaIndex]}
               </span>
-              <span className={`transition-opacity duration-250 hidden sm:inline whitespace-nowrap ${ctaVisible ? 'opacity-100' : 'opacity-0'}`}>
-                {CTA_LABELS[ctaIndex]}
+              {/* Todas las etiquetas apiladas en la misma celda: el ancho del
+                  botón lo fija la más larga y deja de saltar al rotar */}
+              <span className="hidden sm:grid">
+                {CTA_LABELS.map((label, i) => (
+                  <span
+                    key={label}
+                    aria-hidden={i !== ctaIndex}
+                    className={`col-start-1 row-start-1 whitespace-nowrap text-center transition-opacity duration-250 ${
+                      i === ctaIndex && ctaVisible ? 'opacity-100' : 'opacity-0'
+                    }`}
+                  >
+                    {label}
+                  </span>
+                ))}
               </span>
             </Link>
 
@@ -155,7 +168,7 @@ export default function Navbar() {
       </div>
 
       {/* Mobile panel */}
-      <DisclosurePanel className="md:hidden border-t border-slate-100 bg-white/95 backdrop-blur-md">
+      <DisclosurePanel className="md:hidden border-t border-slate-100 bg-white">
         <div className="px-4 pt-3 pb-5 space-y-1">
           {NAV_ITEMS.map((item) => {
             const active = isActive(item.href);

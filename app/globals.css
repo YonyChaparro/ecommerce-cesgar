@@ -321,9 +321,11 @@
   color: #16234d;
 }
 .blog-content img {
+  display: block;
   max-width: 100%;
+  height: auto;
+  margin: 1.75rem auto;
   border-radius: 0.75rem;
-  margin: 1.5rem 0;
 }
 .blog-content iframe {
   width: 100%;
