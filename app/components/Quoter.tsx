@@ -7,6 +7,7 @@ import { Zap, CloudUpload, X, Loader2, Plus, Layers, Scale, Clock, ShoppingCart,
 import { useCart } from '@/app/components/CartContext';
 import { type QuoterPricing, DEFAULT_QUOTER_PRICING } from '@/lib/quoter-types';
 import { calcCost } from '@/lib/quoter-calc';
+import { parseSTL, type STLData } from '@/lib/stl-parse';
 // DEFAULT_QUOTER_PRICING is used as the default prop value below
 
 const STLViewer = dynamic(() => import('@/components/STLViewer'), { ssr: false, loading: () => (
@@ -45,19 +46,12 @@ const COLORES: Record<string, Record<string, any[]>> = {
 };
 
 
-// Áreas máximas de impresión en mm — deben coincidir con las opciones del select de tecnología
-const BUILD_VOLUMES: Record<string, { dims: [number, number, number]; label: string }> = {
-  fdm:    { dims: [300, 300, 450], label: '30×30×45 cm' },
-  resina: { dims: [250, 120, 210], label: '25×12×21 cm' },
-};
+// El tamaño del modelo no se limita. Por encima de esta arista la pieza no sale
+// de una sola impresión y hay que fraccionarla, pero dónde se corta y cómo se
+// ensambla lo define la empresa con el cliente — el cotizador solo lo advierte.
+const MAX_SINGLE_PIECE_MM = 300; // 30 cm por eje
 
-// ─── Types and Parser ────────────────────────────────────────────────────────
-
-interface STLData {
-  volumeMm3: number;
-  dimensions: { x: number; y: number; z: number };
-  boundingBoxVolumeCm3: number;
-}
+// ─── Types ───────────────────────────────────────────────────────────────────
 
 interface QuoterModel {
   id: string;
@@ -72,63 +66,6 @@ interface QuoterModel {
     quantity: number;
     postProcessing: boolean;
     factorEscalado: number;
-  };
-}
-
-function parseSTL(buffer: ArrayBuffer): STLData {
-  const view = new DataView(buffer);
-  
-  if (buffer.byteLength < 84) {
-    return { volumeMm3: 1000, dimensions: { x: 20, y: 20, z: 20 }, boundingBoxVolumeCm3: 8 };
-  }
-
-  const triangleCount = view.getUint32(80, true);
-  const expectedSize = 84 + triangleCount * 50;
-  const isBinary = expectedSize === buffer.byteLength && triangleCount > 0;
-
-  if (!isBinary) {
-    const approxTriangles = Math.max(10, (buffer.byteLength - 80) / 150);
-    const approxVol = approxTriangles * 5;
-    return { volumeMm3: approxVol, dimensions: { x: 30, y: 30, z: 30 }, boundingBoxVolumeCm3: 27 };
-  }
-
-  let minX = Infinity, minY = Infinity, minZ = Infinity;
-  let maxX = -Infinity, maxY = -Infinity, maxZ = -Infinity;
-  let signedVolume = 0;
-
-  for (let i = 0; i < triangleCount; i++) {
-    const off = 84 + i * 50;
-    const p = [
-      [view.getFloat32(off + 12, true), view.getFloat32(off + 16, true), view.getFloat32(off + 20, true)],
-      [view.getFloat32(off + 24, true), view.getFloat32(off + 28, true), view.getFloat32(off + 32, true)],
-      [view.getFloat32(off + 36, true), view.getFloat32(off + 40, true), view.getFloat32(off + 44, true)]
-    ];
-
-    for (let j = 0; j < 3; j++) {
-      minX = Math.min(minX, p[j][0]); maxX = Math.max(maxX, p[j][0]);
-      minY = Math.min(minY, p[j][1]); maxY = Math.max(maxY, p[j][1]);
-      minZ = Math.min(minZ, p[j][2]); maxZ = Math.max(maxZ, p[j][2]);
-    }
-
-    signedVolume +=
-      (p[0][0] * (p[1][1] * p[2][2] - p[2][1] * p[1][2]) -
-       p[0][1] * (p[1][0] * p[2][2] - p[2][0] * p[1][2]) +
-       p[0][2] * (p[1][0] * p[2][1] - p[2][0] * p[1][1])) / 6;
-  }
-
-  const dimX = Math.max(0.1, maxX - minX);
-  const dimY = Math.max(0.1, maxY - minY);
-  const dimZ = Math.max(0.1, maxZ - minZ);
-  const volumeMm3 = Math.max(0.1, Math.abs(signedVolume));
-
-  return {
-    volumeMm3,
-    dimensions: {
-      x: Math.round(dimX * 10) / 10,
-      y: Math.round(dimY * 10) / 10,
-      z: Math.round(dimZ * 10) / 10,
-    },
-    boundingBoxVolumeCm3: (dimX * dimY * dimZ) / 1000,
   };
 }
 
@@ -168,18 +105,23 @@ function calculateItemCosts(model: QuoterModel, pricing: QuoterPricing) {
   return { cost: result.total, weightG: result.weightG, timeH: result.timeH, unitPrice: result.unitPrice };
 }
 
-// La pieza puede rotarse sobre la cama, así que se comparan los ejes ordenados
-// de menor a mayor en lugar de X/Y/Z literales
-function checkBuildFit(stl: STLData | null, tech: string, factorEscalado: number) {
+/** Dimensiones ya escaladas y qué ejes pasan de la arista imprimible de una pieza. */
+function checkOversize(stl: STLData | null, factorEscalado: number) {
   if (!stl) return null;
-  const build = BUILD_VOLUMES[tech] ?? BUILD_VOLUMES.fdm;
-  const modelDims = [stl.dimensions.x, stl.dimensions.y, stl.dimensions.z].sort((a, b) => a - b);
-  const buildDims = [...build.dims].sort((a, b) => a - b);
-  const fits = modelDims.every((d, i) => d * factorEscalado <= buildDims[i]);
-  // Mayor factor de escalado con el que la pieza cabe (floor para que aplicarlo siempre quepa)
-  const rawMax = Math.min(...buildDims.map((b, i) => b / modelDims[i]));
-  const maxFactor = Math.max(0.01, Math.floor(rawMax * 100) / 100);
-  return { fits, maxFactor, buildLabel: build.label };
+  const axes = ['X', 'Y', 'Z'] as const;
+  const dims = (['x', 'y', 'z'] as const).map((a) => stl.dimensions[a] * factorEscalado);
+  const over = axes.filter((_, i) => dims[i] > MAX_SINGLE_PIECE_MM);
+  return { oversize: over.length > 0, dims, over };
+}
+
+// Modelos que el cotizador automático no debe tarifar. Una malla sin medir se
+// acotaría contra su caja envolvente (o sea, se cobraría maciza); una pieza de
+// más de 30 cm hay que fraccionarla, y ese reparto trae setups y ensamblaje que
+// la fórmula no contempla. Ambas van a cotización personalizada.
+function needsManualQuote(m: QuoterModel): boolean {
+  if (!m.stl) return false;
+  if (m.stl.volumeUnreliable) return true;
+  return checkOversize(m.stl, m.config.factorEscalado ?? 1)?.oversize ?? false;
 }
 
 function getAvailableColors(tech: string, material: string) {
@@ -299,6 +241,12 @@ function ConfigurationModal({
                 <p className="mt-4 text-cyan-400 font-bold bg-cyan-950/30 px-3 py-1 rounded-full border border-cyan-900/50 inline-block text-xs sm:text-sm">
                   {GEOM_LABEL[detectGeometry(model.stl)]}
                 </p>
+                {model.stl.volumeUnreliable && (
+                  <p className="mt-3 text-[11px] text-amber-300 bg-amber-950/30 border border-amber-700/40 rounded-xl px-3 py-2 leading-relaxed text-left">
+                    ⚠️ No pudimos medir el volumen de esta malla con fiabilidad — puede estar abierta o tener caras invertidas.
+                    Para no cobrarte de más, este archivo no se cotiza en automático: envíalo por la cotización personalizada de abajo.
+                  </p>
+                )}
               </div>
             ) : (
               <div className="flex flex-col items-center gap-2 mb-6">
@@ -466,23 +414,17 @@ function ConfigurationModal({
                 )}
               </p>
               {(() => {
-                const fit = checkBuildFit(model.stl, c.printingTech, c.factorEscalado);
-                if (!fit || fit.fits) return null;
+                const size = checkOversize(model.stl, c.factorEscalado);
+                if (!size?.oversize) return null;
                 return (
-                  <div className="mt-3 bg-amber-950/30 border border-amber-700/40 rounded-xl px-4 py-3 flex flex-col sm:flex-row sm:items-center gap-3">
-                    <p className="flex-1 text-xs text-amber-300 leading-relaxed">
-                      ⚠️ Con escala ×{c.factorEscalado} la pieza mide{' '}
-                      {(model.stl!.dimensions.x * c.factorEscalado).toFixed(0)}×{(model.stl!.dimensions.y * c.factorEscalado).toFixed(0)}×{(model.stl!.dimensions.z * c.factorEscalado).toFixed(0)} mm
-                      {' '}y excede el área de impresión {c.printingTech === 'fdm' ? 'FDM' : 'de resina'} ({fit.buildLabel}).
-                      Reduce la escala a ×{fit.maxFactor} o menos.
+                  <div className="mt-3 bg-amber-950/30 border border-amber-700/40 rounded-xl px-4 py-3">
+                    <p className="text-xs text-amber-300 leading-relaxed">
+                      📐 La pieza mide {size.dims.map((d) => d.toFixed(0)).join('×')} mm
+                      {c.factorEscalado !== 1 && ` con escala ×${c.factorEscalado}`} y supera los 30×30×30 cm
+                      que salen de una sola impresión ({size.over.length > 1 ? 'ejes' : 'eje'} {size.over.join(' y ')}).
+                      Se imprime igual, fraccionada y ensamblada, pero el corte hay que definirlo contigo:
+                      por eso no entra al carrito — envíalo por la cotización personalizada de abajo.
                     </p>
-                    <button
-                      type="button"
-                      onClick={() => hc('factorEscalado', fit.maxFactor)}
-                      className="shrink-0 bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-600/50 px-4 py-2 rounded-lg text-xs font-bold transition-colors cursor-pointer whitespace-nowrap"
-                    >
-                      Ajustar a ×{fit.maxFactor}
-                    </button>
                   </div>
                 );
               })()}
@@ -523,6 +465,7 @@ export default function Quoter({ pricing = DEFAULT_QUOTER_PRICING }: { pricing?:
   const addMoreInputRef = useRef<HTMLInputElement>(null);
 
   const addToCart = useCallback(async () => {
+    if (models.some(needsManualQuote)) return;
     setUploadLoading(true);
     try {
       const existingIds = new Set(cartItems.map((i) => i.id));
@@ -764,11 +707,11 @@ export default function Quoter({ pricing = DEFAULT_QUOTER_PRICING }: { pricing?:
                         </span>
                       )}
                       {(() => {
-                        const fit = checkBuildFit(model.stl, model.config.printingTech, model.config.factorEscalado ?? 1);
-                        if (!fit || fit.fits) return null;
+                        const size = checkOversize(model.stl, model.config.factorEscalado ?? 1);
+                        if (!size?.oversize) return null;
                         return (
                           <span className="text-[10px] bg-amber-950/40 text-amber-300 px-2 py-1 rounded border border-amber-700/60 font-bold flex items-center gap-1 uppercase tracking-wider whitespace-nowrap">
-                            ⚠️ Excede área de impresión
+                            📐 Requiere impresión fraccionada
                           </span>
                         );
                       })()}
@@ -854,6 +797,24 @@ export default function Quoter({ pricing = DEFAULT_QUOTER_PRICING }: { pricing?:
             </button>
           </div>
 
+          {(() => {
+            const blocked = models.filter(needsManualQuote);
+            if (blocked.length === 0) return null;
+            const one = blocked.length === 1;
+            return (
+              <div className="mt-3 bg-amber-950/30 border border-amber-700/40 rounded-xl px-4 py-3">
+                <p className="text-xs text-amber-300 leading-relaxed">
+                  {one ? '1 modelo necesita' : `${blocked.length} modelos necesitan`} revisión manual, así que
+                  {one ? ' no entra' : ' no entran'} al carrito.{' '}
+                  <a href="#cotizacion-personalizada" className="underline font-bold hover:text-amber-200">
+                    Envíalo{one ? '' : 's'} por cotización personalizada
+                  </a>{' '}
+                  y lo evaluamos contigo.
+                </p>
+              </div>
+            );
+          })()}
+
           {/* Price + action */}
           <div className="flex items-center justify-between gap-3 pt-3 border-t border-slate-700/50">
             <div>
@@ -865,7 +826,7 @@ export default function Quoter({ pricing = DEFAULT_QUOTER_PRICING }: { pricing?:
             </div>
             <button
               onClick={addToCart}
-              disabled={uploadLoading}
+              disabled={uploadLoading || models.some(needsManualQuote)}
               className="bg-primary-container hover:bg-cyan-400 disabled:opacity-60 disabled:cursor-not-allowed text-slate-900 px-4 py-3 rounded-xl font-bold text-sm transition-all shadow-[0_0_20px_rgba(77,189,204,0.15)] flex items-center gap-2 whitespace-nowrap shrink-0 cursor-pointer"
             >
               {uploadLoading ? (
