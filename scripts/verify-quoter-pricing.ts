@@ -9,6 +9,7 @@
 import { calcCost, type PrintConfig } from '../lib/quoter-calc';
 import { DEFAULT_QUOTER_PRICING } from '../lib/quoter-types';
 import { parseSTL } from '../lib/stl-parse';
+import { buildVerifiedConfig, MAX_SCALE, MIN_SCALE } from '../lib/quoter-rules';
 
 // ─── Generación de STL binario ───────────────────────────────────────────────
 type V3 = [number, number, number];
@@ -191,6 +192,47 @@ for (const [qty, mult] of [[1, 1.0], [2, 0.95], [5, 0.85], [10, 0.80], [20, 0.75
   const real = price(solidCube, { quantity: qty }).total;
   check(`${String(qty).padStart(2)} u → ×${mult.toFixed(2)}`, Math.abs(real - esperado) <= 2,
     `${cop(real)} vs esperado ${cop(esperado)}`);
+}
+
+// ─── Reglas que aplica el servidor antes de tarifar ─────────────────────────────
+const OK_CHOICES = { tech: 'fdm', materialId: 'pla', layerHeight: '0.2', infillDensity: '40', factorEscalado: 1 };
+const build = (over: Record<string, unknown>, stl = solidCube) =>
+  buildVerifiedConfig({ ...OK_CHOICES, ...over }, stl, DEFAULT_QUOTER_PRICING, 1);
+
+console.log('\n=== T12: la geometría del config la pone el servidor ===');
+const okCfg = build({});
+check('meshVolCm3 sale del STL medido, no del cliente',
+  'config' in okCfg && Math.abs(okCfg.config.meshVolCm3 - solidCube.volumeMm3 / 1000) < 1e-9,
+  'config' in okCfg ? `${okCfg.config.meshVolCm3.toFixed(3)} cm³` : `rechazado: ${okCfg.error}`);
+
+console.log('\n=== T13: pieza de más de 30 cm rechazada (escala ×8 sobre 40 mm = 320 mm) ===');
+const big = build({ factorEscalado: 8 }, solidCube40);
+check('rechazada con motivo', 'error' in big, 'error' in big ? big.error : 'ACEPTADA');
+
+console.log('\n=== T14: el relleno de una pieza hueca se fija, no lo elige el cliente ===');
+const hollowCfg = build({ infillDensity: '15' }, hollowCube);
+check('relleno forzado a 40% (multiplicador 1.0)',
+  'config' in hollowCfg && hollowCfg.config.infillDensity === '40',
+  'config' in hollowCfg ? `infill = ${hollowCfg.config.infillDensity}` : `rechazado: ${hollowCfg.error}`);
+check('en una pieza sólida sí se respeta la elección',
+  'config' in build({ infillDensity: '15' }) && (build({ infillDensity: '15' }) as { config: { infillDensity: string } }).config.infillDensity === '15',
+  'infill = 15');
+
+console.log('\n=== T15: escala fuera de rango ===');
+for (const scale of [MIN_SCALE / 2, MAX_SCALE + 1, NaN, -1]) {
+  check(`escala ${scale} rechazada`, 'error' in build({ factorEscalado: scale }), `×${scale}`);
+}
+
+console.log('\n=== T16: opciones que no existen en la tabla de tarifas ===');
+for (const [label, over] of [
+  ['tecnología', { tech: 'laser' }],
+  ['material',   { materialId: 'oro' }],
+  ['capa',       { layerHeight: '0.0001' }],
+  ['relleno',    { infillDensity: '3' }],
+] as const) {
+  const r = build(over);
+  check(`${label} inventad${label === 'capa' || label === 'tecnología' ? 'a' : 'o'} rechazad${label === 'capa' || label === 'tecnología' ? 'a' : 'o'}`,
+    'error' in r, 'error' in r ? r.error : 'ACEPTADA — calcCost aplicaría ×1.0 en silencio');
 }
 
 console.log(`\n${failures === 0 ? '[32mTodo OK[0m' : `[31m${failures} verificación(es) fallaron[0m`}\n`);

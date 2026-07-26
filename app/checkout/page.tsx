@@ -103,7 +103,7 @@ export default function CheckoutPage() {
             id: i.id,
             quantity: i.quantity,
             ...(i.id.startsWith('cotizador-')
-              ? { name: i.name, price: i.price, note: i.note ?? i.alt ?? '', modelUrl: i.modelUrl }
+              ? { name: i.name, price: i.price, note: i.note ?? i.alt ?? '', modelUrl: i.modelUrl, printConfig: i.printConfig }
               : {}),
           })),
           shipping: {

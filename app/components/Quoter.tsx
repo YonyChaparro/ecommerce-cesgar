@@ -8,6 +8,7 @@ import { useCart } from '@/app/components/CartContext';
 import { type QuoterPricing, DEFAULT_QUOTER_PRICING } from '@/lib/quoter-types';
 import { calcCost } from '@/lib/quoter-calc';
 import { parseSTL, type STLData } from '@/lib/stl-parse';
+import { detectGeometry, checkOversize, MAX_SINGLE_PIECE_MM, type GeomType } from '@/lib/quoter-rules';
 // DEFAULT_QUOTER_PRICING is used as the default prop value below
 
 const STLViewer = dynamic(() => import('@/components/STLViewer'), { ssr: false, loading: () => (
@@ -46,10 +47,6 @@ const COLORES: Record<string, Record<string, any[]>> = {
 };
 
 
-// El tamaño del modelo no se limita. Por encima de esta arista la pieza no sale
-// de una sola impresión y hay que fraccionarla, pero dónde se corta y cómo se
-// ensambla lo define la empresa con el cliente — el cotizador solo lo advierte.
-const MAX_SINGLE_PIECE_MM = 300; // 30 cm por eje
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -71,18 +68,6 @@ interface QuoterModel {
 
 // ─── Price Calculation based on cotizador.html ────────────────────────────────
 
-type GeomType = 'solid' | 'hollow' | 'thin';
-
-function detectGeometry(stl: STLData | null): GeomType {
-  if (!stl) return 'solid';
-  const volumeCm3 = stl.volumeMm3 / 1000;
-  const ratio = volumeCm3 / Math.max(stl.boundingBoxVolumeCm3, 0.1);
-  if (ratio < 0.2) return 'hollow';
-  const dims = [stl.dimensions.x, stl.dimensions.y, stl.dimensions.z].sort((a, b) => a - b);
-  if (dims[2] > 0 && dims[0] / dims[2] < 0.08) return 'thin';
-  return 'solid';
-}
-
 const GEOM_LABEL: Record<GeomType, string> = {
   hollow: '🫧 Pieza Hueca / Carcasa',
   thin:   '📄 Lámina / Tapa',
@@ -103,15 +88,6 @@ function calculateItemCosts(model: QuoterModel, pricing: QuoterPricing) {
     quantity: model.config.quantity,
   }, pricing);
   return { cost: result.total, weightG: result.weightG, timeH: result.timeH, unitPrice: result.unitPrice };
-}
-
-/** Dimensiones ya escaladas y qué ejes pasan de la arista imprimible de una pieza. */
-function checkOversize(stl: STLData | null, factorEscalado: number) {
-  if (!stl) return null;
-  const axes = ['X', 'Y', 'Z'] as const;
-  const dims = (['x', 'y', 'z'] as const).map((a) => stl.dimensions[a] * factorEscalado);
-  const over = axes.filter((_, i) => dims[i] > MAX_SINGLE_PIECE_MM);
-  return { oversize: over.length > 0, dims, over };
 }
 
 // Modelos que el cotizador automático no debe tarifar. Una malla sin medir se
@@ -420,7 +396,7 @@ function ConfigurationModal({
                   <div className="mt-3 bg-amber-950/30 border border-amber-700/40 rounded-xl px-4 py-3">
                     <p className="text-xs text-amber-300 leading-relaxed">
                       📐 La pieza mide {size.dims.map((d) => d.toFixed(0)).join('×')} mm
-                      {c.factorEscalado !== 1 && ` con escala ×${c.factorEscalado}`} y supera los 30×30×30 cm
+                      {c.factorEscalado !== 1 && ` con escala ×${c.factorEscalado}`} y supera los {MAX_SINGLE_PIECE_MM / 10}×{MAX_SINGLE_PIECE_MM / 10}×{MAX_SINGLE_PIECE_MM / 10} cm
                       que salen de una sola impresión ({size.over.length > 1 ? 'ejes' : 'eje'} {size.over.join(' y ')}).
                       Se imprime igual, fraccionada y ensamblada, pero el corte hay que definirlo contigo:
                       por eso no entra al carrito — envíalo por la cotización personalizada de abajo.
@@ -460,12 +436,14 @@ export default function Quoter({ pricing = DEFAULT_QUOTER_PRICING }: { pricing?:
   const [configuringModelId, setConfiguringModelId] = useState<string | null>(null);
   const { addItem, openCart, items: cartItems } = useCart();
   const [uploadLoading, setUploadLoading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
 
   const primaryInputRef = useRef<HTMLInputElement>(null);
   const addMoreInputRef = useRef<HTMLInputElement>(null);
 
   const addToCart = useCallback(async () => {
     if (models.some(needsManualQuote)) return;
+    setUploadError(null);
     setUploadLoading(true);
     try {
       const existingIds = new Set(cartItems.map((i) => i.id));
@@ -501,7 +479,14 @@ export default function Quoter({ pricing = DEFAULT_QUOTER_PRICING }: { pricing?:
           const res = await fetch('/api/stl-upload', { method: 'POST', body: fd });
           if (res.ok) modelUrl = (await res.json()).url;
         } catch {
-          // Upload failure is non-blocking — order proceeds without download link
+          // se resuelve justo abajo
+        }
+        // El checkout vuelve a medir el STL desde el servidor para confirmar el
+        // precio. Sin archivo subido no hay nada que medir y el pedido se
+        // rechazaría allí, así que se para aquí con un mensaje claro.
+        if (!modelUrl) {
+          setUploadError(`No pudimos subir "${m.file.name}". Sin el archivo no podemos confirmar el precio — inténtalo de nuevo.`);
+          return;
         }
 
         addItem({
@@ -814,6 +799,12 @@ export default function Quoter({ pricing = DEFAULT_QUOTER_PRICING }: { pricing?:
               </div>
             );
           })()}
+
+          {uploadError && (
+            <div className="mt-3 bg-red-950/30 border border-red-700/40 rounded-xl px-4 py-3">
+              <p className="text-xs text-red-300 leading-relaxed">⚠️ {uploadError}</p>
+            </div>
+          )}
 
           {/* Price + action */}
           <div className="flex items-center justify-between gap-3 pt-3 border-t border-slate-700/50">

@@ -1,9 +1,15 @@
 import { NextResponse } from 'next/server';
 import { getPreference } from '@/lib/mercadopago';
 import { prisma } from '@/lib/prisma';
+import { getQuoterPricing } from '@/lib/quoter-config';
+import { verifyQuoterItems } from '@/lib/quoter-verify';
+import type { RawPrintChoices } from '@/lib/quoter-rules';
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000';
 const isProduction = process.env.NODE_ENV === 'production';
+// Cada modelo implica descargar y medir su STL, así que el límite general de 100
+// ítems es demasiado holgado para estos.
+const MAX_COTIZADOR_ITEMS = 20;
 
 function truncate(s: string, max = 250): string {
   return s.length > max ? `${s.slice(0, max - 1)}…` : s;
@@ -29,9 +35,11 @@ interface CartItemInput {
   quantity: number;
   // Cotizador-only fields
   name?: string;
+  /** Lo que el navegador cree que vale. Solo se usa para registrar intentos de manipulación. */
   price?: number;
   note?: string;
   modelUrl?: string;
+  printConfig?: RawPrintChoices;
 }
 
 interface ShippingInput {
@@ -120,28 +128,66 @@ export async function POST(req: Request) {
     }
 
     // ── Validate cotizador items ──────────────────────────────────────────────
-    for (const item of cotizadorItems) {
-      if (!item.name?.trim()) {
+    // El precio de una impresión cuelga entero del volumen de la malla, y ese dato
+    // lo medía el navegador. Se descarga el STL que se subió, se mide de nuevo y se
+    // retarifa con los precios guardados por el admin: lo que mande el cliente como
+    // precio o como geometría se descarta.
+    const cotizadorValidated: MPItem[] = [];
+
+    if (cotizadorItems.length > 0) {
+      if (cotizadorItems.length > MAX_COTIZADOR_ITEMS) {
+        return NextResponse.json(
+          { error: `Máximo ${MAX_COTIZADOR_ITEMS} modelos 3D por pedido` },
+          { status: 400 },
+        );
+      }
+      if (cotizadorItems.some((i) => !i.name?.trim())) {
         return NextResponse.json({ error: 'Ítem de cotizador sin nombre' }, { status: 400 });
       }
-      if (!Number.isInteger(item.price) || (item.price ?? 0) <= 0) {
-        return NextResponse.json({
-          error: `Precio inválido para el modelo "${item.name}"`,
-        }, { status: 400 });
-      }
-    }
 
-    const cotizadorValidated = cotizadorItems.map((item) => ({
-      id: item.id,
-      title: truncate(item.name!),
-      quantity: item.quantity,
-      unit_price: item.price!,
-      picture_url: `${APP_URL}/3d-print.svg`,
-      currency_id: 'COP',
-      // Internal fields — not sent to MP
-      slug: 'cotizador',
-      category: 'Impresión 3D',
-    }));
+      const pricing = await getQuoterPricing();
+      const verified = await verifyQuoterItems(
+        cotizadorItems.map((i) => ({
+          modelUrl: i.modelUrl,
+          printConfig: i.printConfig,
+          quantity: i.quantity,
+        })),
+        pricing,
+      );
+
+      const failedAt = verified.findIndex((v) => !v.ok);
+      if (failedAt !== -1) {
+        const failed = cotizadorItems[failedAt];
+        const reason = (verified[failedAt] as { ok: false; reason: string }).reason;
+        console.warn('[checkout] ítem de cotizador rechazado', {
+          name: failed.name, clientPrice: failed.price, reason,
+        });
+        return NextResponse.json(
+          { error: `No pudimos verificar "${failed.name}": ${reason}. Vuelve a cotizarlo.` },
+          { status: 422 },
+        );
+      }
+
+      cotizadorItems.forEach((item, i) => {
+        const { unitPrice } = verified[i] as { ok: true; unitPrice: number };
+        if (item.price !== undefined && Math.abs(item.price - unitPrice) > 1) {
+          console.warn('[checkout] precio del cotizador corregido', {
+            name: item.name, clientPrice: item.price, serverPrice: unitPrice,
+          });
+        }
+        cotizadorValidated.push({
+          id: item.id,
+          title: truncate(item.name!),
+          quantity: item.quantity,
+          unit_price: unitPrice,
+          picture_url: `${APP_URL}/3d-print.svg`,
+          currency_id: 'COP',
+          // Internal fields — not sent to MP
+          slug: 'cotizador',
+          category: 'Impresión 3D',
+        });
+      });
+    }
 
     const allMPItems = [
       ...dbValidated.map(({ id, title, quantity, unit_price, picture_url, currency_id, category }) => ({
@@ -207,10 +253,10 @@ export async function POST(req: Request) {
               price:     i.unit_price,
               quantity:  i.quantity,
             })),
-            ...cotizadorItems.map((i) => ({
+            ...cotizadorItems.map((i, idx) => ({
               itemType: 'cotizador',
               name:     i.name!,
-              price:    i.price!,
+              price:    cotizadorValidated[idx].unit_price,
               quantity: i.quantity,
               note:     i.note,
               modelUrl: i.modelUrl,
