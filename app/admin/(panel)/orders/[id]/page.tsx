@@ -167,12 +167,37 @@ export default async function OrderDetailPage({ params }: { params: Promise<{ id
             </section>
           )}
 
-          {/* Total */}
-          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm px-4 sm:px-6 py-4 flex justify-between items-center">
-            <span className="font-headline font-bold text-slate-500">Total pagado</span>
-            <span className="font-headline font-bold text-xl text-inverse-surface">
-              ${order.total.toLocaleString('es-CO')}
-            </span>
+          {/* Totales — las órdenes previas al cobro de envío no tienen desglose */}
+          <div className="bg-white rounded-2xl border border-slate-100 shadow-sm px-4 sm:px-6 py-4 space-y-2">
+            {order.subtotal > 0 && (
+              <>
+                <div className="flex justify-between items-center text-sm text-slate-500">
+                  <span>Subtotal</span>
+                  <span className="font-bold text-inverse-surface">
+                    ${order.subtotal.toLocaleString('es-CO')}
+                  </span>
+                </div>
+                <div className="flex justify-between items-center text-sm text-slate-500 pb-2 border-b border-slate-100">
+                  <span>
+                    Envío
+                    {order.shippingMethod === 'recogida' && (
+                      <span className="text-xs text-slate-400"> · recoge en punto</span>
+                    )}
+                  </span>
+                  <span className="font-bold text-inverse-surface">
+                    {order.shippingCost > 0
+                      ? `$${order.shippingCost.toLocaleString('es-CO')}`
+                      : 'Sin costo'}
+                  </span>
+                </div>
+              </>
+            )}
+            <div className="flex justify-between items-center">
+              <span className="font-headline font-bold text-slate-500">Total pagado</span>
+              <span className="font-headline font-bold text-xl text-inverse-surface">
+                ${order.total.toLocaleString('es-CO')}
+              </span>
+            </div>
           </div>
 
           {/* IDs técnicos */}

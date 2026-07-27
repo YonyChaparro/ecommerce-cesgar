@@ -49,6 +49,24 @@ function buildHtml(order: OrderWithItems): string {
       </tr>`)
     .join('');
 
+  // Subtotal y envío. Las órdenes anteriores al cobro de envío tienen
+  // subtotal 0: en esas no hay nada que desglosar, solo el total.
+  const subtotal = order.subtotal || 0;
+  const envio    = order.shippingCost || 0;
+  const recoge   = order.shippingMethod === 'recogida';
+  const fila = (etiqueta: string, valor: string) => `
+    <tr>
+      <td style="padding:6px 16px;font-size:13px;color:#64748b;text-align:right;">${etiqueta}</td>
+      <td style="padding:6px 16px;font-size:13px;font-weight:700;color:#1e293b;text-align:right;white-space:nowrap;width:130px;">${valor}</td>
+    </tr>`;
+
+  const desgloseFilas = subtotal > 0
+    ? `<table width="100%" cellpadding="0" cellspacing="0" style="margin-top:8px;">
+         ${fila('Subtotal', formatCOP(subtotal))}
+         ${fila(recoge ? 'Envío (recoge en punto)' : 'Envío', envio > 0 ? formatCOP(envio) : 'Sin costo')}
+       </table>`
+    : '';
+
   const shippingBlock = (order.shippingName || order.shippingAddress)
     ? `
     <table width="100%" cellpadding="0" cellspacing="0" style="margin-top:24px;">
@@ -127,7 +145,8 @@ function buildHtml(order: OrderWithItems): string {
             </tbody>
           </table>
 
-          <!-- Total -->
+          <!-- Totales -->
+          ${desgloseFilas}
           <table width="100%" cellpadding="0" cellspacing="0" style="margin-top:12px;">
             <tr>
               <td style="padding:14px 16px;background:#16234d;border-radius:12px;text-align:right;">

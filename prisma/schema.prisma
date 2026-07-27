@@ -127,6 +127,9 @@ model Order {
   paymentId            String?
   status               String      @default("pending")
   type                 String      @default("product")
+  subtotal             Int         @default(0)
+  shippingCost         Int         @default(0)
+  shippingMethod       String?     @default("domicilio")
   total                Int
   shippingName         String?
   shippingEmail        String?

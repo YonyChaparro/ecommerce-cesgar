@@ -3,9 +3,11 @@
 import { useState, useEffect, useMemo } from 'react';
 import { useRouter } from 'next/navigation';
 import Link from 'next/link';
-import { ArrowLeft, LockKeyhole, Box, MapPin, User, Home, Info, FileText } from 'lucide-react';
+import { ArrowLeft, LockKeyhole, Box, MapPin, User, Home, Info, FileText, Truck } from 'lucide-react';
 import { useCart } from '@/app/components/CartContext';
 import { COLOMBIA } from '@/app/data/colombia';
+import { calcShipping, type MetodoEntrega } from '@/lib/shipping-calc';
+import { type ShippingConfig, DEFAULT_SHIPPING_CONFIG } from '@/lib/shipping-types';
 
 const DOC_TYPES = [
   { value: 'CC', label: 'Cédula de Ciudadanía' },
@@ -51,15 +53,41 @@ export default function CheckoutPage() {
   const [errors, setErrors] = useState<Partial<Record<keyof ShippingForm, string>>>({});
   const [loading, setLoading] = useState(false);
   const [serverError, setServerError] = useState<string | null>(null);
+  const [shippingConfig, setShippingConfig] = useState<ShippingConfig>(DEFAULT_SHIPPING_CONFIG);
+  const [metodo, setMetodo] = useState<MetodoEntrega>('domicilio');
 
   useEffect(() => {
     if (items.length === 0) router.replace('/carrito');
   }, [items.length, router]);
 
+  // Tarifas de envío. Si la petición falla se queda con los valores por defecto,
+  // que vienen apagados: se muestra "A confirmar" y no se cobra envío.
+  useEffect(() => {
+    let cancelado = false;
+    fetch('/api/shipping-config')
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => { if (!cancelado && data) setShippingConfig(data as ShippingConfig); })
+      .catch(() => {});
+    return () => { cancelado = true; };
+  }, []);
+
   const cities = useMemo(
     () => COLOMBIA.find((d) => d.name === form.department)?.cities ?? [],
     [form.department],
   );
+
+  // La misma función que usa /api/checkout para cobrar.
+  const envio = useMemo(
+    () => calcShipping(
+      { metodo, departamento: form.department, ciudad: form.city },
+      totalPrice,
+      shippingConfig,
+    ),
+    [metodo, form.department, form.city, totalPrice, shippingConfig],
+  );
+
+  const recogiendo = metodo === 'recogida' && shippingConfig.recogida.habilitada;
+  const totalConEnvio = totalPrice + envio.costo;
 
   function setField(key: keyof ShippingForm, value: string) {
     setForm((prev) => ({
@@ -80,9 +108,12 @@ export default function CheckoutPage() {
     else if (!/^[\d\-A-Za-z]{4,20}$/.test(form.docNumber.trim())) e.docNumber = 'Número inválido';
     if (!form.phone.trim()) e.phone = 'Requerido';
     else if (!/^\d{7,10}$/.test(form.phone.replace(/[\s-]/g, ''))) e.phone = 'Número inválido (7–10 dígitos)';
-    if (!form.address.trim()) e.address = 'Requerido';
-    if (!form.department) e.department = 'Selecciona un departamento';
-    if (!form.city) e.city = 'Selecciona una ciudad';
+    // Recogiendo en punto no hay a dónde enviar: la dirección deja de exigirse.
+    if (!recogiendo) {
+      if (!form.address.trim()) e.address = 'Requerido';
+      if (!form.department) e.department = 'Selecciona un departamento';
+      if (!form.city) e.city = 'Selecciona una ciudad';
+    }
     setErrors(e);
     return Object.keys(e).length === 0;
   }
@@ -106,6 +137,10 @@ export default function CheckoutPage() {
               ? { name: i.name, price: i.price, note: i.note ?? i.alt ?? '', modelUrl: i.modelUrl, printConfig: i.printConfig }
               : {}),
           })),
+          deliveryMethod: metodo,
+          // Lo que el cliente tiene en pantalla. El servidor cobra lo suyo; esto
+          // solo sirve para que avise si las tarifas cambiaron mientras tanto.
+          shippingCostShown: envio.costo,
           shipping: {
             name: form.name.trim(),
             email: form.email.trim(),
@@ -124,6 +159,19 @@ export default function CheckoutPage() {
       });
 
       const data = await res.json();
+
+      if (res.status === 409 && data.breakdown) {
+        // Las tarifas cambiaron entre que se pintó el resumen y se pulsó pagar.
+        // Se refresca la configuración para que el resumen muestre lo nuevo y el
+        // cliente decida con el total correcto delante.
+        const fresca = await fetch('/api/shipping-config').then((r) => (r.ok ? r.json() : null)).catch(() => null);
+        if (fresca) setShippingConfig(fresca as ShippingConfig);
+        setServerError(
+          `${data.error} Nuevo envío: $${data.breakdown.shippingCost.toLocaleString('es-CO')} · ` +
+          `Total: $${data.breakdown.total.toLocaleString('es-CO')}`,
+        );
+        return;
+      }
 
       if (!res.ok) {
         setServerError(data.error ?? 'Error al procesar el pago');
@@ -170,6 +218,41 @@ export default function CheckoutPage() {
 
             {/* ── FORMULARIO ── */}
             <div className="lg:col-span-3 space-y-5">
+
+              {/* Método de entrega — solo si el admin habilitó la recogida */}
+              {shippingConfig.recogida.habilitada && (
+                <section className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100">
+                  <div className="flex items-center gap-2 mb-5">
+                    <Truck size={15} className="text-slate-400" />
+                    <h2 className="font-headline font-bold text-inverse-surface">Método de entrega</h2>
+                  </div>
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                    {([
+                      { valor: 'domicilio' as const, titulo: 'Envío a domicilio', pie: 'Se calcula según el destino' },
+                      { valor: 'recogida' as const,  titulo: shippingConfig.recogida.etiqueta, pie: 'Sin costo de envío' },
+                    ]).map((op) => (
+                      <button
+                        key={op.valor}
+                        type="button"
+                        onClick={() => setMetodo(op.valor)}
+                        className={`text-left px-4 py-3 rounded-xl border transition-all ${
+                          metodo === op.valor
+                            ? 'border-primary-container bg-primary-container/5 ring-2 ring-primary-container/30'
+                            : 'border-slate-200 hover:border-slate-300'
+                        }`}
+                      >
+                        <span className="block text-sm font-bold text-inverse-surface">{op.titulo}</span>
+                        <span className="block text-xs text-slate-400 mt-0.5">{op.pie}</span>
+                      </button>
+                    ))}
+                  </div>
+                  {recogiendo && shippingConfig.recogida.direccion && (
+                    <p className="text-xs text-slate-500 mt-4 bg-slate-50 rounded-lg px-3 py-2">
+                      Recoges en: <span className="font-bold">{shippingConfig.recogida.direccion}</span>
+                    </p>
+                  )}
+                </section>
+              )}
 
               {/* Datos del destinatario */}
               <section className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100">
@@ -254,7 +337,8 @@ export default function CheckoutPage() {
                 </div>
               </section>
 
-              {/* Dirección de entrega */}
+              {/* Dirección de entrega — no aplica si recoge en punto */}
+              {!recogiendo && (
               <section className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100">
                 <div className="flex items-center gap-2 mb-5">
                   <Home size={15} className="text-slate-400" />
@@ -301,8 +385,10 @@ export default function CheckoutPage() {
                   </div>
                 </div>
               </section>
+              )}
 
               {/* Ubicación geográfica */}
+              {!recogiendo && (
               <section className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100">
                 <div className="flex items-center gap-2 mb-5">
                   <MapPin size={15} className="text-slate-400" />
@@ -359,6 +445,7 @@ export default function CheckoutPage() {
                   </div>
                 </div>
               </section>
+              )}
 
               {/* Instrucciones */}
               <section className="bg-white rounded-2xl p-6 shadow-sm border border-slate-100">
@@ -432,17 +519,39 @@ export default function CheckoutPage() {
                       ${totalPrice.toLocaleString('es-CO')}
                     </span>
                   </div>
-                  <div className="flex justify-between text-sm text-slate-500">
-                    <span>Envío</span>
-                    <span className="text-xs italic">A confirmar</span>
+                  <div className="flex justify-between text-sm text-slate-500 gap-3">
+                    <span className="shrink-0">Envío</span>
+                    {envio.indeterminado ? (
+                      <span className="text-xs italic text-right">{envio.etiqueta}</span>
+                    ) : envio.costo === 0 ? (
+                      <span className="font-bold text-emerald-600">
+                        {envio.gratisPorMonto ? 'Gratis' : envio.etiqueta}
+                      </span>
+                    ) : (
+                      <span className="text-right">
+                        <span className="font-bold text-inverse-surface">
+                          ${envio.costo.toLocaleString('es-CO')}
+                        </span>
+                        <span className="block text-[11px] text-slate-400 leading-tight">{envio.etiqueta}</span>
+                      </span>
+                    )}
                   </div>
+                  {shippingConfig.habilitado
+                    && shippingConfig.envioGratisDesde > 0
+                    && !envio.gratisPorMonto
+                    && !recogiendo && (
+                    <p className="text-[11px] text-slate-400 leading-tight pt-1">
+                      Te faltan ${(shippingConfig.envioGratisDesde - totalPrice).toLocaleString('es-CO')} para
+                      el envío gratis.
+                    </p>
+                  )}
                 </div>
 
                 <div className="border-t border-slate-100 pt-4 mb-6">
                   <div className="flex justify-between items-center">
                     <span className="font-headline font-bold text-slate-500">Total</span>
                     <span className="font-headline font-bold text-xl text-inverse-surface">
-                      ${totalPrice.toLocaleString('es-CO')}
+                      ${totalConEnvio.toLocaleString('es-CO')}
                     </span>
                   </div>
                 </div>
@@ -455,7 +564,9 @@ export default function CheckoutPage() {
 
                 <button
                   type="submit"
-                  disabled={loading}
+                  // Con el envío activo no se deja pagar hasta que haya un
+                  // destino y, por tanto, un total definitivo en pantalla.
+                  disabled={loading || (shippingConfig.habilitado && envio.indeterminado)}
                   className="w-full py-4 bg-[#009ee3] hover:bg-[#007eb5] disabled:opacity-60 text-white rounded-xl font-headline font-bold text-sm transition-colors flex items-center justify-center gap-2"
                 >
                   {loading ? (

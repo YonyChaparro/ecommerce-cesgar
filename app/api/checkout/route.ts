@@ -4,6 +4,8 @@ import { prisma } from '@/lib/prisma';
 import { getQuoterPricing } from '@/lib/quoter-config';
 import { verifyQuoterItems } from '@/lib/quoter-verify';
 import type { RawPrintChoices } from '@/lib/quoter-rules';
+import { getShippingConfig } from '@/lib/shipping-config';
+import { calcShipping, type MetodoEntrega } from '@/lib/shipping-calc';
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000';
 const isProduction = process.env.NODE_ENV === 'production';
@@ -62,6 +64,10 @@ export async function POST(req: Request) {
     const body = await req.json();
     const items: CartItemInput[] = body?.items;
     const shipping: ShippingInput | undefined = body?.shipping;
+    const deliveryMethod: MetodoEntrega = body?.deliveryMethod === 'recogida' ? 'recogida' : 'domicilio';
+    /** Lo que el checkout tenía en pantalla. Solo se usa para detectar desfases. */
+    const shippingCostShown: number | undefined =
+      typeof body?.shippingCostShown === 'number' ? body.shippingCostShown : undefined;
 
     // ── Basic input validation ────────────────────────────────────────────────
     if (!Array.isArray(items) || items.length === 0) {
@@ -169,6 +175,7 @@ export async function POST(req: Request) {
       }
 
       cotizadorItems.forEach((item, i) => {
+        // unitPrice ya trae el descuento por cantidad: MP cobra unit_price × quantity.
         const { unitPrice } = verified[i] as { ok: true; unitPrice: number };
         if (item.price !== undefined && Math.abs(item.price - unitPrice) > 1) {
           console.warn('[checkout] precio del cotizador corregido', {
@@ -212,11 +219,60 @@ export async function POST(req: Request) {
       })),
     ];
 
-    const total = allMPItems.reduce((s, i) => s + i.unit_price * i.quantity, 0);
+    const subtotal = allMPItems.reduce((s, i) => s + i.unit_price * i.quantity, 0);
 
-    if (total <= 0) {
+    if (subtotal <= 0) {
       return NextResponse.json({ error: 'El total del pedido es inválido' }, { status: 400 });
     }
+
+    // ── Envío ─────────────────────────────────────────────────────────────────
+    // El costo lo calcula el servidor con su propia configuración. Lo que el
+    // navegador dice que mostró (shippingCostShown) jamás se usa para cobrar.
+    const shippingConfig = await getShippingConfig();
+
+    // Recoger en punto solo vale si el admin la tiene habilitada; si no, se
+    // exige dirección como en cualquier domicilio.
+    const metodo: MetodoEntrega =
+      deliveryMethod === 'recogida' && shippingConfig.recogida.habilitada ? 'recogida' : 'domicilio';
+
+    if (deliveryMethod === 'recogida' && metodo !== 'recogida') {
+      return NextResponse.json(
+        { error: 'La recogida en punto no está disponible en este momento' },
+        { status: 400 },
+      );
+    }
+
+    // Sin dirección no hay a dónde enviar ni con qué tarifar.
+    if (metodo === 'domicilio' && shippingConfig.habilitado && (!shipping?.department || !shipping?.city)) {
+      return NextResponse.json(
+        { error: 'Faltan el departamento y la ciudad de entrega' },
+        { status: 400 },
+      );
+    }
+
+    const envio = calcShipping(
+      { metodo, departamento: shipping?.department, ciudad: shipping?.city },
+      subtotal,
+      shippingConfig,
+    );
+
+    // El cliente vio una cifra y el servidor calcula otra: pasa si un
+    // administrador cambia las tarifas mientras alguien llena el formulario.
+    // Cobrar de más sin avisar sería peor que pedir que confirme el nuevo total.
+    if (shippingCostShown !== undefined && shippingCostShown !== envio.costo) {
+      console.warn('[checkout] costo de envío desfasado', {
+        mostrado: shippingCostShown, calculado: envio.costo, destino: shipping?.city,
+      });
+      return NextResponse.json(
+        {
+          error: 'El costo de envío cambió. Revisa el nuevo total antes de continuar.',
+          breakdown: { subtotal, shippingCost: envio.costo, total: subtotal + envio.costo, label: envio.etiqueta },
+        },
+        { status: 409 },
+      );
+    }
+
+    const total = subtotal + envio.costo;
 
     const orderType =
       dbValidated.length > 0 && cotizadorItems.length > 0 ? 'mixed'      :
@@ -227,6 +283,9 @@ export async function POST(req: Request) {
       data: {
         status: 'pending',
         type: orderType,
+        subtotal,
+        shippingCost: envio.costo,
+        shippingMethod: metodo,
         total,
         ...(shipping && {
           shippingName:         shipping.name,
@@ -270,9 +329,42 @@ export async function POST(req: Request) {
     // If MP fails here, the order is orphaned → delete it and return 502.
     let result;
     try {
+      // El envío puede viajar de dos formas, según `modoPasarela`:
+      //  · 'shipments' (por defecto) → campo nativo de MP. `items` sigue
+      //    cuadrando uno a uno con los OrderItem, que es lo que conviene si
+      //    algún día hay que conciliar.
+      //  · 'item' → una línea más en el carrito de MP, para cuando la
+      //    facturación necesita el envío como producto.
+      // En los dos casos el monto cobrado es subtotal + envío.
+      const comoItem = shippingConfig.modoPasarela === 'item' && envio.costo > 0;
+      const itemsParaMP = comoItem
+        ? [...allMPItems, {
+            id: 'envio',
+            title: `Envío — ${envio.etiqueta}`,
+            description: 'Costo de envío',
+            category_id: 'services',
+            quantity: 1,
+            unit_price: envio.costo,
+            picture_url: `${APP_URL}/3d-print.svg`,
+            currency_id: 'COP',
+          }]
+        : allMPItems;
+
       result = await getPreference().create({
         body: {
-          items: allMPItems,
+          items: itemsParaMP,
+          ...(!comoItem && envio.costo > 0 && {
+            shipments: {
+              mode: 'not_specified',
+              cost: envio.costo,
+              ...(shipping && {
+                receiver_address: {
+                  zip_code:    shipping.postalCode ?? '',
+                  street_name: [shipping.address, shipping.neighborhood].filter(Boolean).join(', '),
+                },
+              }),
+            },
+          }),
           back_urls: {
             success: `${APP_URL}/pago/exito`,
             failure: `${APP_URL}/pago/fallo`,
@@ -328,12 +420,20 @@ export async function POST(req: Request) {
       orderId:         order.id,
       preferenceId:    result.id,
       checkoutUrl,
+      subtotal,
+      envio:           envio.costo,
+      metodo,
+      total,
       back_success:    `${APP_URL}/pago/exito`,
       back_failure:    `${APP_URL}/pago/fallo`,
       notification_url:`${APP_URL}/api/webhooks/mercadopago`,
     });
 
-    return NextResponse.json({ url: checkoutUrl, order_id: order.id });
+    return NextResponse.json({
+      url: checkoutUrl,
+      order_id: order.id,
+      breakdown: { subtotal, shippingCost: envio.costo, total, label: envio.etiqueta },
+    });
   } catch (err) {
     console.error('[checkout]', err);
     return NextResponse.json({ error: 'Error al procesar el pago' }, { status: 500 });

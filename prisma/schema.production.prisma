@@ -1,5 +1,10 @@
 // Schema de PRODUCCIÓN — MySQL (Hostinger Business Hosting)
 // Usado automáticamente cuando DATABASE_URL empieza con mysql://
+//
+// OJO: en MySQL un `String` de Prisma es VARCHAR(191). SQLite (local) no tiene
+// ese límite, así que un valor largo se ve bien en local y se trunca en
+// producción sin avisar. Toda columna que guarde una URL de Cloudinary lleva
+// @db.Text por eso.
 
 generator client {
   provider      = "prisma-client-js"
@@ -17,7 +22,7 @@ model Product {
   slug             String         @unique
   category         String
   price            Int
-  img              String
+  img              String         @db.Text
   alt              String?
   shortDescription String?        @db.Text
   description      String?        @db.LongText
@@ -33,7 +38,7 @@ model ProductMedia {
   productId String
   product   Product  @relation(fields: [productId], references: [id], onDelete: Cascade)
   type      String   // "image" | "video"
-  url       String
+  url       String   @db.Text
   alt       String?
   order     Int      @default(0)
   createdAt DateTime @default(now())
@@ -58,7 +63,7 @@ model BlogPost {
   title       String
   slug        String        @unique
   excerpt     String?       @db.Text
-  coverImage  String?
+  coverImage  String?       @db.Text
   content     String        @db.LongText // TipTap JSON serialized as string
   status      String        @default("draft")
   publishedAt DateTime?
@@ -91,7 +96,7 @@ model Project {
   title       String
   slug        String           @unique
   excerpt     String?          @db.Text
-  coverImage  String?
+  coverImage  String?          @db.Text
   content     String           @db.LongText // TipTap JSON serialized as string
   status      String           @default("draft")
   publishedAt DateTime?
@@ -126,6 +131,9 @@ model Order {
   paymentId            String?
   status               String      @default("pending")
   type                 String      @default("product")
+  subtotal             Int         @default(0)
+  shippingCost         Int         @default(0)
+  shippingMethod       String?     @default("domicilio")
   total                Int
   shippingName         String?
   shippingEmail        String?
@@ -157,7 +165,7 @@ model OrderItem {
   price     Int
   quantity  Int
   note      String? @db.Text
-  modelUrl  String?
+  modelUrl  String? @db.Text
 }
 
 // Generic key/value store for app configuration

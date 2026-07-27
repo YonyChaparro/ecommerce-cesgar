@@ -4,11 +4,13 @@
   "private": true,
   "scripts": {
     "dev": "next dev",
-    "build": "node scripts/prisma-setup.js --push && next build",
+    "build": "node scripts/verificar-schemas.mjs && node scripts/prisma-setup.js --push && next build",
+    "verify:schemas": "node scripts/verificar-schemas.mjs",
     "start": "next start",
     "postinstall": "node scripts/prisma-setup.js",
     "lint": "eslint",
-    "verify:cotizador": "ts-node --compiler-options '{\"module\":\"CommonJS\",\"target\":\"ES2020\",\"moduleResolution\":\"node\",\"esModuleInterop\":true,\"skipLibCheck\":true,\"lib\":[\"ES2020\",\"DOM\"]}' scripts/verify-quoter-pricing.ts"
+    "verify:cotizador": "ts-node --compiler-options '{\"module\":\"CommonJS\",\"target\":\"ES2020\",\"moduleResolution\":\"node\",\"esModuleInterop\":true,\"skipLibCheck\":true,\"lib\":[\"ES2020\",\"DOM\"]}' scripts/verify-quoter-pricing.ts",
+    "verify:envios": "ts-node --compiler-options '{\"module\":\"CommonJS\",\"target\":\"ES2020\",\"moduleResolution\":\"node\",\"esModuleInterop\":true,\"skipLibCheck\":true,\"lib\":[\"ES2020\",\"DOM\"]}' scripts/verify-shipping.ts"
   },
   "dependencies": {
     "@gsap/react": "^2.1.2",
