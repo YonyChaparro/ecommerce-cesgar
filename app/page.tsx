@@ -22,6 +22,7 @@ import BlogSection from './components/BlogSection';
 import ChromaGrid from '@/components/ui/ChromaGrid';
 import { LogoLoop } from '@/components/LogoLoop';
 import { prisma } from '../lib/prisma';
+import { resolverPortada } from '@/lib/cover-image';
 import { SERVICES } from './data/services';
 import AnimateIn from './components/AnimateIn';
 
@@ -54,10 +55,16 @@ export default async function Home() {
           title: true,
           excerpt: true,
           coverImage: true,
+          content: true,
           publishedAt: true,
           tags: { include: { tag: true }, take: 1 },
         },
-      }),
+        // La portada se resuelve aquí, en el servidor, y `content` se descarta:
+        // BlogSection es un componente de cliente y no debe cargar con el JSON.
+      }).then((posts) => posts.map(({ content, ...post }) => ({
+        ...post,
+        coverImage: resolverPortada(post.coverImage, content),
+      }))),
       prisma.project.findMany({
         where: { status: 'published' },
         orderBy: { publishedAt: 'desc' },

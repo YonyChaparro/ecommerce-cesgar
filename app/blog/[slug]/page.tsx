@@ -3,6 +3,7 @@ import type { Metadata } from 'next';
 import { notFound } from 'next/navigation';
 import Link from 'next/link';
 import { prisma } from '@/lib/prisma';
+import { resolverPortada } from '@/lib/cover-image';
 
 export async function generateMetadata(
   { params }: { params: Promise<{ slug: string }> }
@@ -10,9 +11,10 @@ export async function generateMetadata(
   const { slug } = await params;
   const post = await prisma.blogPost.findUnique({
     where: { slug },
-    select: { title: true, excerpt: true, coverImage: true },
+    select: { title: true, excerpt: true, coverImage: true, content: true },
   });
   if (!post) return {};
+  const portada = resolverPortada(post.coverImage, post.content);
   return {
     title: post.title,
     description: post.excerpt ?? undefined,
@@ -21,7 +23,7 @@ export async function generateMetadata(
       description: post.excerpt ?? undefined,
       url: `https://cesgar.com.co/blog/${slug}`,
       type: 'article',
-      images: post.coverImage ? [{ url: post.coverImage, alt: post.title }] : [],
+      images: portada ? [{ url: portada, alt: post.title }] : [],
     },
   };
 }
@@ -55,17 +57,18 @@ export default async function BlogPostPage({ params }: { params: Promise<{ slug:
   if (!post) notFound();
 
   const html = tiptapToHtml(post.content);
+  const portada = resolverPortada(post.coverImage, post.content);
 
   return (
     <>
       <Navbar />
       <main className="pt-16 min-h-screen bg-white">
         {/* Cover */}
-        {post.coverImage && (
+        {portada && (
           <div className="w-full h-72 md:h-96 overflow-hidden">
             {/* eslint-disable-next-line @next/next/no-img-element */}
             <img
-              src={post.coverImage}
+              src={portada}
               alt={post.title}
               className="w-full h-full object-cover"
             />
