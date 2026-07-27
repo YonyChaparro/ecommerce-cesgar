@@ -188,10 +188,29 @@ check('precio unitario = setup + material + tiempo según la tabla de tarifas',
 
 console.log('\n=== T11: descuento por cantidad (el orden de los tramos importa) ===');
 for (const [qty, mult] of [[1, 1.0], [2, 0.95], [5, 0.85], [10, 0.80], [20, 0.75], [50, 0.70]] as const) {
+  const r = price(solidCube, { quantity: qty });
+  // El descuento se aplica sobre la unidad y luego se multiplica, así que el total
+  // puede desviarse del ideal hasta medio peso por unidad. Es a propósito: es la
+  // única forma de que MercadoPago (unit_price × quantity) cobre esta misma cifra.
   const esperado = Math.round(p1.unitPrice * qty * mult);
-  const real = price(solidCube, { quantity: qty }).total;
-  check(`${String(qty).padStart(2)} u → ×${mult.toFixed(2)}`, Math.abs(real - esperado) <= 2,
-    `${cop(real)} vs esperado ${cop(esperado)}`);
+  check(`${String(qty).padStart(2)} u → ×${mult.toFixed(2)}`,
+    Math.abs(r.total - esperado) <= Math.ceil(qty / 2) + 1,
+    `${cop(r.total)} vs esperado ${cop(esperado)}`);
+  check(`${String(qty).padStart(2)} u → total = unitario cobrado × cantidad`,
+    r.total === r.billableUnit * qty,
+    `${cop(r.billableUnit)} × ${qty} = ${cop(r.total)}`);
+}
+
+// El carrito muestra `billableUnit` y /api/checkout manda ese mismo número como
+// unit_price. Antes el checkout usaba `unitPrice` (sin descuento) y cobraba hasta
+// un 42,8% de más que lo que el cliente había visto en el carrito.
+console.log('\n=== T11b: el carrito y la pasarela cobran lo mismo ===');
+for (const qty of [1, 2, 10, 50]) {
+  const r = price(solidCube, { quantity: qty });
+  const sinDescuento = r.unitPrice * qty;
+  check(`${String(qty).padStart(2)} u: MercadoPago cobra el total con descuento`,
+    r.billableUnit * qty === r.total && r.billableUnit <= r.unitPrice,
+    `MP ${cop(r.billableUnit * qty)} = carrito ${cop(r.total)} (sin descuento serían ${cop(sinDescuento)})`);
 }
 
 // ─── Reglas que aplica el servidor antes de tarifar ─────────────────────────────
@@ -234,6 +253,37 @@ for (const [label, over] of [
   check(`${label} inventad${label === 'capa' || label === 'tecnología' ? 'a' : 'o'} rechazad${label === 'capa' || label === 'tecnología' ? 'a' : 'o'}`,
     'error' in r, 'error' in r ? r.error : 'ACEPTADA — calcCost aplicaría ×1.0 en silencio');
 }
+
+// ─── Lo que el admin configura tiene que llegar al precio y al pago ─────────────
+console.log('\n=== T17: material bloqueado por el admin ("Sin stock") ===');
+const conBloqueado = {
+  ...DEFAULT_QUOTER_PRICING,
+  materiales: {
+    ...DEFAULT_QUOTER_PRICING.materiales,
+    fdm: DEFAULT_QUOTER_PRICING.materiales.fdm.map(m => m.id === 'pla' ? { ...m, disabled: true } : m),
+  },
+};
+const bloqueado = buildVerifiedConfig(OK_CHOICES, solidCube, conBloqueado, 1);
+check('el servidor rechaza un material sin stock', 'error' in bloqueado,
+  'error' in bloqueado ? bloqueado.error : 'ACEPTADO — se podría pagar un material retirado');
+check('y tampoco se tarifa con su precio',
+  calcCost({ ...BASE, meshVolCm3: 8, bboxVolCm3: 8 }, conBloqueado).unitPrice !== p1.unitPrice,
+  'cae al primer material disponible, que es el que la UI muestra');
+
+console.log('\n=== T18: la densidad del admin mueve el peso estimado, no el precio ===');
+const conDensidad = {
+  ...DEFAULT_QUOTER_PRICING,
+  materiales: {
+    ...DEFAULT_QUOTER_PRICING.materiales,
+    fdm: DEFAULT_QUOTER_PRICING.materiales.fdm.map(m => m.id === 'pla' ? { ...m, densidad: 2 } : m),
+  },
+};
+const denso = calcCost({ ...BASE, meshVolCm3: 8, bboxVolCm3: 8 }, conDensidad);
+check('duplicar la densidad duplica el peso mostrado',
+  Math.abs(denso.weightG - p1.weightG * 2) < 0.05,
+  `${p1.weightG} g → ${denso.weightG} g`);
+check('el precio no se mueve (se cobra por volumen)', denso.total === p1.total,
+  `${cop(p1.total)} vs ${cop(denso.total)}`);
 
 console.log(`\n${failures === 0 ? '[32mTodo OK[0m' : `[31m${failures} verificación(es) fallaron[0m`}\n`);
 process.exit(failures === 0 ? 0 : 1);

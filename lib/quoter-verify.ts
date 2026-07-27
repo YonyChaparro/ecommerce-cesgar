@@ -58,6 +58,7 @@ export interface QuoterItemInput {
 }
 
 export type VerifiedItem =
+  /** `unitPrice` ya trae el descuento por cantidad repartido: es lo que se cobra. */
   | { ok: true; unitPrice: number; total: number }
   | { ok: false; reason: string };
 
@@ -79,10 +80,10 @@ export async function verifyQuoterItem(
   const built = buildVerifiedConfig(input.printConfig, stl, pricing, input.quantity);
   if ('error' in built) return { ok: false, reason: built.error };
 
-  const { unitPrice, total } = calcCost(built.config, pricing);
-  if (!(unitPrice > 0) || !(total > 0)) return { ok: false, reason: 'el precio calculado no es válido' };
+  const { billableUnit, total } = calcCost(built.config, pricing);
+  if (!(billableUnit > 0) || !(total > 0)) return { ok: false, reason: 'el precio calculado no es válido' };
 
-  return { ok: true, unitPrice, total };
+  return { ok: true, unitPrice: billableUnit, total };
 }
 
 /** Verifica en paralelo con concurrencia acotada, conservando el orden de entrada. */

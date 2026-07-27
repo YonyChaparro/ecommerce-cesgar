@@ -65,8 +65,11 @@ export function buildVerifiedConfig(
   const tech = raw.tech === 'fdm' || raw.tech === 'resina' ? raw.tech : null;
   if (!tech) return { error: 'tecnología de impresión inválida' };
 
+  // Se exige que el material exista Y que el admin no lo tenga bloqueado: la UI
+  // filtra los agotados, pero una pestaña vieja o un carrito guardado en
+  // localStorage antes del bloqueo llegarían aquí con el material retirado.
   const materialId = String(raw.materialId ?? '');
-  if (!(pricing.materiales[tech] ?? []).some((m) => m.id === materialId)) {
+  if (!(pricing.materiales[tech] ?? []).some((m) => m.id === materialId && !m.disabled)) {
     return { error: 'material no disponible' };
   }
 

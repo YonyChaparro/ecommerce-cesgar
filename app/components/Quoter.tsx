@@ -75,7 +75,7 @@ const GEOM_LABEL: Record<GeomType, string> = {
 };
 
 function calculateItemCosts(model: QuoterModel, pricing: QuoterPricing) {
-  if (!model.stl) return { cost: 0, weightG: 0, timeH: 0, unitPrice: 0 };
+  if (!model.stl) return { cost: 0, weightG: 0, timeH: 0, unitPrice: 0, billableUnit: 0 };
   const result = calcCost({
     tech: model.config.printingTech as 'fdm' | 'resina',
     materialId: model.config.materialType,
@@ -87,7 +87,7 @@ function calculateItemCosts(model: QuoterModel, pricing: QuoterPricing) {
     bboxVolCm3: model.stl.boundingBoxVolumeCm3,
     quantity: model.config.quantity,
   }, pricing);
-  return { cost: result.total, weightG: result.weightG, timeH: result.timeH, unitPrice: result.unitPrice };
+  return { cost: result.total, weightG: result.weightG, timeH: result.timeH, unitPrice: result.unitPrice, billableUnit: result.billableUnit };
 }
 
 // Modelos que el cotizador automático no debe tarifar. Una malla sin medir se
@@ -450,7 +450,7 @@ export default function Quoter({ pricing = DEFAULT_QUOTER_PRICING }: { pricing?:
       for (const m of models) {
         const cartId = `cotizador-${m.id}`;
         if (existingIds.has(cartId)) continue;
-        const { cost, weightG, timeH } = calculateItemCosts(m, pricing) as { cost: number; unitPrice?: number; weightG: number; timeH: number };
+        const { billableUnit, weightG, timeH } = calculateItemCosts(m, pricing);
         const techMats = pricing.materiales[m.config.printingTech as 'fdm' | 'resina'] ?? [];
         const matObj = techMats.find(mat => mat.id === m.config.materialType) || techMats[0];
         const colorObj = getAvailableColors(m.config.printingTech, m.config.materialType).find(c => c.id === m.config.printColor);
@@ -470,7 +470,9 @@ export default function Quoter({ pricing = DEFAULT_QUOTER_PRICING }: { pricing?:
           `~${(timeH / m.config.quantity).toFixed(1)}h/u`,
           m.config.postProcessing ? 'Post-proc.' : 'Sin post-proc.',
         ].filter(Boolean).join(' · ');
-        const effectiveUnitPrice = Math.max(1, Math.round(cost / m.config.quantity));
+        // El mismo precio unitario que recalcula /api/checkout: lleva el descuento
+        // por cantidad dentro, porque MercadoPago cobra unit_price × quantity.
+        const effectiveUnitPrice = billableUnit;
 
         let modelUrl: string | undefined;
         try {
