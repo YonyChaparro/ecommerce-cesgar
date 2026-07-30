@@ -27,6 +27,15 @@ export interface CostResult {
   timeH: number;
 }
 
+/**
+ * Volumen de material que se tarifa: la malla acotada a su propia caja envolvente
+ * —una medición inflada nunca cobra más que la caja— y ya escalada al cubo.
+ * Vive aparte para que lo que la UI enseña sea literalmente lo que se cobra.
+ */
+export function effectiveVolumeCm3(meshVolCm3: number, bboxVolCm3: number, factorEscalado: number): number {
+  return Math.min(meshVolCm3, bboxVolCm3) * Math.pow(factorEscalado, 3);
+}
+
 export function calcCost(config: PrintConfig, pricing: QuoterPricing): CostResult {
   const { tech, materialId, layerHeight, infillDensity, factorEscalado, postProcessing, meshVolCm3, bboxVolCm3, quantity } = config;
 
@@ -38,7 +47,7 @@ export function calcCost(config: PrintConfig, pricing: QuoterPricing): CostResul
   const matObj = disponibles.find(m => m.id === materialId) ?? disponibles[0] ?? mats[0];
   const { tarifas } = pricing;
 
-  const effectiveVolCm3 = Math.min(meshVolCm3, bboxVolCm3) * Math.pow(factorEscalado, 3);
+  const effectiveVolCm3 = effectiveVolumeCm3(meshVolCm3, bboxVolCm3, factorEscalado);
 
   // Peso estimado — solo informativo, el precio va por volumen. Usa la densidad que
   // el admin configura por material, que es lo que el panel promete que hace.

@@ -6,7 +6,7 @@ import dynamic from 'next/dynamic';
 import { Zap, CloudUpload, X, Loader2, Plus, Layers, Scale, Clock, ShoppingCart, Maximize2 } from 'lucide-react';
 import { useCart } from '@/app/components/CartContext';
 import { type QuoterPricing, DEFAULT_QUOTER_PRICING } from '@/lib/quoter-types';
-import { calcCost } from '@/lib/quoter-calc';
+import { calcCost, effectiveVolumeCm3 } from '@/lib/quoter-calc';
 import { parseSTL, type STLData } from '@/lib/stl-parse';
 import { detectGeometry, checkOversize, MAX_SINGLE_PIECE_MM, type GeomType } from '@/lib/quoter-rules';
 // DEFAULT_QUOTER_PRICING is used as the default prop value below
@@ -141,6 +141,14 @@ function ConfigurationModal({
 
   const { cost, timeH, weightG } = calculateItemCosts(model, pricing);
 
+  // El mismo volumen con el que se tarifa, para que el resumen no enseñe una cifra
+  // distinta de la que entra al precio.
+  const volCm3 = model.stl
+    ? effectiveVolumeCm3(model.stl.volumeMm3 / 1000, model.stl.boundingBoxVolumeCm3, c.factorEscalado)
+    : 0;
+  const bboxCm3 = model.stl ? model.stl.boundingBoxVolumeCm3 * Math.pow(c.factorEscalado, 3) : 0;
+  const ocupacion = bboxCm3 > 0 ? (volCm3 / bboxCm3) * 100 : 0;
+
   const hc = (key: string, val: any) => {
     const newConf = { ...c, [key]: val };
 
@@ -212,8 +220,23 @@ function ConfigurationModal({
                   })}
                 </div>
                 {c.factorEscalado !== 1 && (
-                  <p className="text-[10px] text-slate-500 mt-1">Original × {c.factorEscalado}</p>
+                  <p className="text-[10px] text-slate-500 mt-1">
+                    Original × {c.factorEscalado} · Volumen × {Math.pow(c.factorEscalado, 3).toFixed(2)}
+                  </p>
                 )}
+                <p className="mt-3">Volumen:</p>
+                <div className="flex gap-2 justify-center font-mono text-[10px] sm:text-xs flex-wrap">
+                  <span className="bg-slate-800 px-2 py-1 rounded whitespace-nowrap flex flex-col items-center gap-0.5">
+                    <span className="text-white font-bold">MATERIAL</span>
+                    <span>{volCm3.toFixed(2)} cm³</span>
+                    <span className="text-slate-500">{Math.round(volCm3 * 1000).toLocaleString('es-CO')} mm³</span>
+                  </span>
+                  <span className="bg-slate-800 px-2 py-1 rounded whitespace-nowrap flex flex-col items-center gap-0.5">
+                    <span className="text-white font-bold">CAJA</span>
+                    <span>{bboxCm3.toFixed(2)} cm³</span>
+                    <span className="text-slate-500">{ocupacion.toFixed(0)}% ocupado</span>
+                  </span>
+                </div>
                 <p className="mt-4 text-cyan-400 font-bold bg-cyan-950/30 px-3 py-1 rounded-full border border-cyan-900/50 inline-block text-xs sm:text-sm">
                   {GEOM_LABEL[detectGeometry(model.stl)]}
                 </p>
