@@ -230,8 +230,8 @@ check('rechazada con motivo', 'error' in big, 'error' in big ? big.error : 'ACEP
 
 console.log('\n=== T14: el relleno de una pieza hueca se fija, no lo elige el cliente ===');
 const hollowCfg = build({ infillDensity: '15' }, hollowCube);
-check('relleno forzado a 40% (multiplicador 1.0)',
-  'config' in hollowCfg && hollowCfg.config.infillDensity === '40',
+check('relleno forzado a 100% — las paredes se imprimen macizas',
+  'config' in hollowCfg && hollowCfg.config.infillDensity === '100',
   'config' in hollowCfg ? `infill = ${hollowCfg.config.infillDensity}` : `rechazado: ${hollowCfg.error}`);
 check('en una pieza sólida sí se respeta la elección',
   'config' in build({ infillDensity: '15' }) && (build({ infillDensity: '15' }) as { config: { infillDensity: string } }).config.infillDensity === '15',

@@ -8,7 +8,7 @@ import { useCart } from '@/app/components/CartContext';
 import { type QuoterPricing, DEFAULT_QUOTER_PRICING } from '@/lib/quoter-types';
 import { calcCost, effectiveVolumeCm3 } from '@/lib/quoter-calc';
 import { parseSTL, type STLData } from '@/lib/stl-parse';
-import { detectGeometry, checkOversize, MAX_SINGLE_PIECE_MM, type GeomType } from '@/lib/quoter-rules';
+import { detectGeometry, effectiveInfill, checkOversize, MAX_SINGLE_PIECE_MM, type GeomType } from '@/lib/quoter-rules';
 // DEFAULT_QUOTER_PRICING is used as the default prop value below
 
 const STLViewer = dynamic(() => import('@/components/STLViewer'), { ssr: false, loading: () => (
@@ -80,7 +80,7 @@ function calculateItemCosts(model: QuoterModel, pricing: QuoterPricing) {
     tech: model.config.printingTech as 'fdm' | 'resina',
     materialId: model.config.materialType,
     layerHeight: model.config.layerHeight,
-    infillDensity: model.config.infillDensity,
+    infillDensity: effectiveInfill(model.stl, model.config.infillDensity),
     factorEscalado: model.config.factorEscalado ?? 1,
     postProcessing: model.config.postProcessing,
     meshVolCm3: model.stl.volumeMm3 / 1000,
@@ -329,11 +329,14 @@ function ConfigurationModal({
             {/* Infill */}
             {(() => {
               const infillLocked = detectGeometry(model.stl) !== 'solid';
+              // El selector enseña el relleno con el que se cotiza, no el que quedó
+              // guardado: si no, el precio saldría de un valor que no está a la vista.
+              const infill = effectiveInfill(model.stl, c.infillDensity);
               return (
                 <div className={infillLocked ? 'opacity-50 pointer-events-none' : ''}>
                   <label className="block text-[11px] font-bold text-cyan-400 uppercase mb-2 tracking-wider">🏗️ Relleno</label>
                   <select
-                    value={c.infillDensity}
+                    value={infill}
                     onChange={e => hc('infillDensity', e.target.value)}
                     disabled={infillLocked}
                     className="w-full bg-slate-900/50 text-white text-sm rounded-xl px-4 py-3 border border-slate-600 focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none transition-colors"
@@ -347,7 +350,8 @@ function ConfigurationModal({
                   </select>
                   {infillLocked && (
                     <p className="text-[10px] text-amber-400 mt-1.5">
-                      Geometría hueca o laminar — relleno fijo, no modifica la estructura real.
+                      Geometría hueca o laminar — el volumen medido ya son solo las paredes,
+                      y esas se imprimen macizas: relleno fijo al 100%.
                     </p>
                   )}
                 </div>
@@ -478,6 +482,7 @@ export default function Quoter({ pricing = DEFAULT_QUOTER_PRICING }: { pricing?:
         const matObj = techMats.find(mat => mat.id === m.config.materialType) || techMats[0];
         const colorObj = getAvailableColors(m.config.printingTech, m.config.materialType).find(c => c.id === m.config.printColor);
         const sf = m.config.factorEscalado ?? 1;
+        const infill = effectiveInfill(m.stl, m.config.infillDensity);
         const dims = m.stl
           ? `${(m.stl.dimensions.x * sf).toFixed(1)}×${(m.stl.dimensions.y * sf).toFixed(1)}×${(m.stl.dimensions.z * sf).toFixed(1)}mm`
           : null;
@@ -486,7 +491,7 @@ export default function Quoter({ pricing = DEFAULT_QUOTER_PRICING }: { pricing?:
           matObj.nombre,
           colorObj?.nombre,
           `${m.config.layerHeight}mm`,
-          `${m.config.infillDensity}% relleno`,
+          `${infill}% relleno`,
           sf !== 1 ? `Escala ×${sf}` : null,
           dims,
           `~${(weightG / m.config.quantity).toFixed(1)}g/u`,
@@ -528,7 +533,7 @@ export default function Quoter({ pricing = DEFAULT_QUOTER_PRICING }: { pricing?:
             tech: m.config.printingTech as 'fdm' | 'resina',
             materialId: m.config.materialType,
             layerHeight: m.config.layerHeight,
-            infillDensity: m.config.infillDensity,
+            infillDensity: infill,
             factorEscalado: m.config.factorEscalado ?? 1,
             postProcessing: m.config.postProcessing,
             meshVolCm3: m.stl.volumeMm3 / 1000,
@@ -706,7 +711,7 @@ export default function Quoter({ pricing = DEFAULT_QUOTER_PRICING }: { pricing?:
                         📏 {qualityObj?.text.split(' ')[0]} {qualityObj?.text.includes('Borrador') ? '(Borrador)' : qualityObj?.text.includes('Rápido') ? '(Rápido)' : ''}
                       </span>
                       <span className="text-[10px] bg-slate-800 text-slate-300 px-2 py-1 rounded border border-slate-600 font-medium flex items-center gap-1 uppercase tracking-wider whitespace-nowrap">
-                        🏗️ REL {model.config.infillDensity}%
+                        🏗️ REL {effectiveInfill(model.stl, model.config.infillDensity)}%
                       </span>
                       <span className="text-[10px] bg-slate-800 text-slate-300 px-2 py-1 rounded border border-slate-600 font-medium flex items-center gap-1 uppercase tracking-wider whitespace-nowrap truncate max-w-30">
                         🎨 {printColorObj?.nombre}

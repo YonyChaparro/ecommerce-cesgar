@@ -15,9 +15,11 @@ export const MAX_SINGLE_PIECE_MM = 300;
 export const MIN_SCALE = 0.1;
 export const MAX_SCALE = 10;
 
-// Relleno cuyo multiplicador es 1.0. Se impone a las geometrías que no llevan
-// relleno real para que elegirlo no mueva el precio en ninguna dirección.
-export const NEUTRAL_INFILL = '40';
+// Relleno que se impone cuando la geometría no admite elegirlo. El volumen medido
+// de una pieza hueca o laminar ya es solo el material de sus paredes, y esas paredes
+// salen macizas: tarifarlas en el tramo del 40% cobra menos de la mitad del material
+// que de verdad llevan.
+export const LOCKED_INFILL = '100';
 
 export type GeomType = 'solid' | 'hollow' | 'thin';
 
@@ -28,6 +30,15 @@ export function detectGeometry(stl: STLData | null): GeomType {
   const dims = [stl.dimensions.x, stl.dimensions.y, stl.dimensions.z].sort((a, b) => a - b);
   if (dims[2] > 0 && dims[0] / dims[2] < 0.08) return 'thin';
   return 'solid';
+}
+
+/**
+ * El relleno con el que se tarifa de verdad: en una pieza sólida manda el cliente,
+ * en una hueca o laminar no hay relleno que elegir y se fija al tramo macizo.
+ * La UI y el servidor llaman a esta misma función para no cotizar cosas distintas.
+ */
+export function effectiveInfill(stl: STLData | null, chosen: string): string {
+  return detectGeometry(stl) === 'solid' ? chosen : LOCKED_INFILL;
 }
 
 /** Dimensiones ya escaladas y qué ejes pasan de la arista imprimible de una pieza. */
@@ -84,9 +95,8 @@ export function buildVerifiedConfig(
   }
 
   // Una pieza hueca o laminar no lleva relleno real, y la UI bloquea el selector.
-  // El servidor lo fija igual: si no, bastaría mandar '15' para un 20% de rebaja.
-  const geom = detectGeometry(stl);
-  const infillDensity = geom === 'solid' ? String(raw.infillDensity ?? '') : NEUTRAL_INFILL;
+  // El servidor lo fija igual: si no, bastaría mandar '15' para pagar un 60% menos.
+  const infillDensity = effectiveInfill(stl, String(raw.infillDensity ?? ''));
   if (!(infillDensity in pricing.tarifas.multiplicadorRelleno)) {
     return { error: 'relleno no disponible' };
   }
