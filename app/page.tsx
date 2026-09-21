@@ -49,7 +49,11 @@ export default async function Home() {
       prisma.product.findMany({ orderBy: { createdAt: 'desc' } }),
       prisma.blogPost.findMany({
         where: { status: 'published' },
-        orderBy: { publishedAt: 'desc' },
+        // Los últimos artículos creados van primero (createdAt, no publishedAt:
+        // publishedAt lo puede fijar el admin a mano y desordenaría el stack).
+        orderBy: { createdAt: 'desc' },
+        // BlogSection muestra máximo 5 artículos (+ tarjeta "ver todos").
+        take: 5,
         select: {
           slug: true,
           title: true,

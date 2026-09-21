@@ -1,6 +1,7 @@
 'use client';
 
 import Link from 'next/link';
+import { ArrowRight } from 'lucide-react';
 import ScrollStack, { ScrollStackItem } from '@/components/ScrollStack';
 
 const PALETTE = [
@@ -9,6 +10,9 @@ const PALETTE = [
   { bg: 'bg-[#fdf6ee]', accent: 'text-orange-600', tagBg: 'bg-orange-100 text-orange-700' },
   { bg: 'bg-[#f5f0ff]', accent: 'text-purple-600', tagBg: 'bg-purple-100 text-purple-700' },
 ];
+
+// El stack muestra como máximo 6 tarjetas: 5 artículos + la invitación a /blog.
+const MAX_POSTS = 5;
 
 type Post = {
   slug: string;
@@ -22,6 +26,8 @@ type Post = {
 type Props = { posts: Post[] };
 
 export default function BlogSection({ posts }: Props) {
+  const visiblePosts = posts.slice(0, MAX_POSTS);
+
   return (
     <section className="bg-white py-24">
       <div className="max-w-7xl mx-auto px-8 mb-4">
@@ -53,7 +59,7 @@ export default function BlogSection({ posts }: Props) {
           baseScale={0.9}
           stackPosition="30%"
         >
-          {posts.map((post, i) => {
+          {visiblePosts.map((post, i) => {
             const { bg, accent, tagBg } = PALETTE[i % PALETTE.length];
             const tag = post.tags[0]?.tag.name;
             const date = post.publishedAt
@@ -108,6 +114,32 @@ export default function BlogSection({ posts }: Props) {
               </ScrollStackItem>
             );
           })}
+
+          {/* Última tarjeta: invitación a ver todos los artículos en /blog */}
+          <ScrollStackItem
+            key="ver-todos"
+            itemClassName="bg-inverse-surface overflow-hidden"
+          >
+            <div className="pointer-events-none absolute -top-16 -right-16 w-64 h-64 bg-primary-container/20 rounded-full blur-3xl" />
+            <Link
+              href="/blog"
+              className="group relative flex flex-col items-center justify-center h-full w-full text-center gap-3 sm:gap-5"
+            >
+              <span className="inline-block px-3 py-1 rounded-full text-xs font-bold uppercase tracking-widest bg-white/10 text-primary-container">
+                Blog
+              </span>
+              <h3 className="text-xl sm:text-2xl md:text-3xl font-headline font-bold text-white leading-snug">
+                ¿Quieres seguir leyendo?
+              </h3>
+              <p className="hidden sm:block text-inverse-on-surface/70 text-sm md:text-base max-w-md">
+                Explora todos los artículos sobre impresión 3D, materiales y fabricación digital.
+              </p>
+              <span className="inline-flex items-center gap-2 bg-primary-container group-hover:bg-cyan-500 text-white px-6 py-3 rounded-xl font-headline font-bold text-sm tracking-wide shadow-lg shadow-primary-container/20 transition-all">
+                Ver todos los artículos
+                <ArrowRight size={16} className="transition-transform group-hover:translate-x-1" />
+              </span>
+            </Link>
+          </ScrollStackItem>
         </ScrollStack>
       </div>
     </section>
