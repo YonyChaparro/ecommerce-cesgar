@@ -72,6 +72,8 @@ export default async function Home() {
       prisma.project.findMany({
         where: { status: 'published' },
         orderBy: { publishedAt: 'desc' },
+        // La grilla muestra máximo 7 proyectos (+ tarjeta "ver más" = 8).
+        take: 7,
         select: {
           slug: true,
           title: true,
@@ -310,17 +312,28 @@ export default async function Home() {
             </AnimateIn>
 
             <ChromaGrid
-              items={projects.map((p, i) => ({
-                image: p.coverImage ?? '',
-                title: p.title,
-                subtitle: p.excerpt ?? '',
-                handle: p.tags[0]?.tag.name,
-                location: p.publishedAt
-                  ? new Date(p.publishedAt).toLocaleDateString('es-CO', { day: 'numeric', month: 'short', year: 'numeric' })
-                  : undefined,
-                ...CARD_STYLES[i % CARD_STYLES.length],
-                url: `/proyectos/${p.slug}`,
-              }))}
+              items={[
+                ...projects.map((p, i) => ({
+                  image: p.coverImage ?? '',
+                  title: p.title,
+                  subtitle: p.excerpt ?? '',
+                  handle: p.tags[0]?.tag.name,
+                  location: p.publishedAt
+                    ? new Date(p.publishedAt).toLocaleDateString('es-CO', { day: 'numeric', month: 'short', year: 'numeric' })
+                    : undefined,
+                  ...CARD_STYLES[i % CARD_STYLES.length],
+                  url: `/proyectos/${p.slug}`,
+                })),
+                // Última tarjeta: invitación a ver todos los proyectos en /proyectos
+                {
+                  title: '¿Quieres ver más?',
+                  subtitle: 'Explora todos los proyectos que hemos resuelto con impresión 3D, escaneo e ingeniería.',
+                  handle: 'Proyectos',
+                  cta: 'Ver todos los proyectos',
+                  ...CARD_STYLES[0],
+                  url: '/proyectos',
+                },
+              ]}
             />
           </div>
         </section>
