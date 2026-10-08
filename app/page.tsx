@@ -4,16 +4,6 @@ import {
   Settings2, Cpu, ArrowRight, ChevronRight,
 } from 'lucide-react';
 
-export const metadata: Metadata = {
-  title: 'Cesgar | Impresión 3D Industrial en Bogotá',
-  description: 'Impresión 3D industrial bajo demanda en Bogotá. Fabricamos repuestos, prototipos y piezas técnicas con FDM y resina. Cotiza en segundos.',
-  openGraph: {
-    title: 'Cesgar | Impresión 3D Industrial en Bogotá',
-    description: 'Fabricamos repuestos, prototipos y piezas técnicas con FDM y resina. Cotiza en segundos.',
-    url: 'https://cesgar.com.co',
-    type: 'website',
-  },
-};
 import Image from 'next/image';
 import Link from 'next/link';
 import HeroCarousel from './components/HeroCarousel';
@@ -23,8 +13,25 @@ import ChromaGrid from '@/components/ui/ChromaGrid';
 import { LogoLoop } from '@/components/LogoLoop';
 import { prisma } from '../lib/prisma';
 import { resolverPortada } from '@/lib/cover-image';
-import { SERVICES } from './data/services';
+import { serviciosConTextos } from './data/services';
+import { getHomeContent } from '@/lib/home-content';
 import AnimateIn from './components/AnimateIn';
+
+// Los textos del home se editan en /admin/inicio.
+export async function generateMetadata(): Promise<Metadata> {
+  const { seo } = await getHomeContent();
+  return {
+    // absolute: la plantilla '%s | Cesgar' del layout no aplica aquí.
+    title: { absolute: seo.titulo },
+    description: seo.descripcion,
+    openGraph: {
+      title: seo.titulo,
+      description: seo.ogDescripcion,
+      url: 'https://cesgar.com.co',
+      type: 'website',
+    },
+  };
+}
 
 // ─── Static data ───────────────────────────────────────────────────────────────
 
@@ -41,6 +48,9 @@ const CARD_STYLES = [
 // ─── Page ─────────────────────────────────────────────────────────────────────
 
 export default async function Home() {
+  // Nunca lanza; sale de la misma consulta que generateMetadata (cache()).
+  const textos = await getHomeContent();
+  const servicios = serviciosConTextos(textos.servicios);
   let products: any[] = [];
   let blogPosts: any[] = [];
   let projects: any[] = [];
@@ -95,7 +105,7 @@ export default async function Home() {
       <main className="pt-16 min-h-screen">
 
         {/* ── Section 1: Hero Carousel ── */}
-        <HeroCarousel />
+        <HeroCarousel textos={textos.hero} />
 
         {/* ── Section 1.5: Services ── */}
         <section className="relative z-10 -mt-96">
@@ -105,9 +115,9 @@ export default async function Home() {
           <div className="max-w-7xl mx-auto px-8">
 
             <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
-              {SERVICES.map((s, i) => (
+              {servicios.map((s, i) => (
                 <AnimateIn
-                  key={s.title}
+                  key={s.id}
                   variant="fadeUp"
                   delay={i * 0.1}
                   className={i === 0 ? 'sm:col-span-2' : ''}
@@ -123,10 +133,10 @@ export default async function Home() {
                       {s.icon}
                     </div>
                     <h3 className="font-headline font-bold text-lg mb-3 leading-snug text-slate-900">
-                      {s.title}
+                      {s.titulo}
                     </h3>
                     <p className={`text-sm leading-relaxed flex-1 mb-6 text-slate-500 ${s.image ? 'w-1/2 pr-2' : ''}`}>
-                      {s.desc}
+                      {s.descripcion}
                     </p>
                     <span className="inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl font-headline font-bold text-sm text-white bg-slate-800 group-hover/service:bg-slate-700 transition-all w-fit">
                       {s.cta}
@@ -162,32 +172,32 @@ export default async function Home() {
               </AnimateIn>
               <AnimateIn variant="slideRight" delay={0.15} className="flex flex-col items-start">
                 <div className="mb-4 inline-block px-4 py-1.5 bg-primary-container/10 text-primary rounded-full text-xs font-bold uppercase tracking-widest font-headline">
-                  Catálogo técnico especializado
+                  {textos.catalogo.etiqueta}
                 </div>
                 <h2 className="text-4xl md:text-5xl font-headline font-bold text-inverse-surface mb-6 leading-tight">
-                  Explora nuestra tienda técnica
+                  {textos.catalogo.titulo}
                 </h2>
                 <p className="text-slate-600 text-lg mb-8 leading-relaxed">
-                  Desde boquillas de alta precisión hasta placas de control industriales, en Cesgar encuentras todo lo que tu impresora necesita. Contamos con un inventario especializado de repuestos, insumos electrónicos y recursos técnicos.
+                  {textos.catalogo.parrafo}
                 </p>
                 <div className="grid grid-cols-2 gap-6 mb-10 w-full">
                   <div className="flex items-start gap-3">
                     <Settings2 size={22} className="text-primary-container shrink-0 mt-0.5" />
                     <div>
-                      <div className="font-bold text-inverse-surface text-sm font-headline">Partes mecánicas</div>
-                      <div className="text-xs text-slate-500">Correas, poleas y extrusores</div>
+                      <div className="font-bold text-inverse-surface text-sm font-headline">{textos.catalogo.destacados[0].titulo}</div>
+                      <div className="text-xs text-slate-500">{textos.catalogo.destacados[0].subtitulo}</div>
                     </div>
                   </div>
                   <div className="flex items-start gap-3">
                     <Cpu size={22} className="text-primary-container shrink-0 mt-0.5" />
                     <div>
-                      <div className="font-bold text-inverse-surface text-sm font-headline">Electrónica</div>
-                      <div className="text-xs text-slate-500">Drivers y placas de control</div>
+                      <div className="font-bold text-inverse-surface text-sm font-headline">{textos.catalogo.destacados[1].titulo}</div>
+                      <div className="text-xs text-slate-500">{textos.catalogo.destacados[1].subtitulo}</div>
                     </div>
                   </div>
                 </div>
                 <Link href="/tienda" className="bg-primary-container hover:bg-cyan-500 text-white px-10 py-4 rounded-xl font-headline font-bold tracking-wide shadow-lg shadow-primary-container/20 transition-all active:scale-95 flex items-center gap-2">
-                  VER CATÁLOGO COMPLETO
+                  {textos.catalogo.boton}
                   <ArrowRight size={18} />
                 </Link>
               </AnimateIn>
@@ -204,15 +214,15 @@ export default async function Home() {
                 <div className="flex items-center gap-2 text-slate-400 text-xs font-bold uppercase tracking-widest mb-3">
                   <span>Cesgar</span>
                   <ChevronRight size={14} />
-                  <span className="text-inverse-surface">Tienda</span>
+                  <span className="text-inverse-surface">{textos.tienda.migaPan}</span>
                 </div>
-                <h2 className="text-5xl font-headline font-bold text-inverse-surface mb-3">Tienda</h2>
+                <h2 className="text-5xl font-headline font-bold text-inverse-surface mb-3">{textos.tienda.titulo}</h2>
                 <p className="text-slate-500 max-w-xl text-lg border-l-4 border-primary-container pl-5">
-                  Insumos industriales y electrónicos especializados.
+                  {textos.tienda.subtitulo}
                 </p>
               </div>
               <Link href="/tienda" className="shrink-0 flex items-center gap-2 text-primary-container font-bold text-sm hover:underline">
-                Ver todos los productos <ArrowRight size={14} />
+                {textos.tienda.enlaceVerTodos} <ArrowRight size={14} />
               </Link>
             </div>
             </AnimateIn>
@@ -246,7 +256,7 @@ export default async function Home() {
                     <span className="text-base font-bold text-inverse-surface block">$ {p.price.toLocaleString('es-CO')}</span>
                   </div>
                   <div className="w-full py-2 bg-inverse-surface text-white rounded-lg font-headline font-bold text-[10px] uppercase tracking-widest text-center group-hover/card:bg-primary-container group-hover/card:text-inverse-surface transition-all">
-                    Ver producto
+                    {textos.tienda.botonTarjeta}
                   </div>
                 </Link>
               ),
@@ -259,7 +269,7 @@ export default async function Home() {
               href="/tienda"
               className="px-12 py-4 border-2 border-inverse-surface text-inverse-surface rounded-xl font-headline font-bold hover:bg-inverse-surface hover:text-white transition-all shadow-sm active:scale-95"
             >
-              Ir a la tienda completa
+              {textos.tienda.botonFinal}
             </Link>
           </div>
         </section>
@@ -269,7 +279,7 @@ export default async function Home() {
           <div className="max-w-7xl mx-auto px-8">
             <AnimateIn variant="fadeIn">
             <p className="text-center text-xs font-bold uppercase tracking-widest text-slate-400 mb-10">
-              Empresas e instituciones que confían en nosotros
+              {textos.clientes.titulo}
             </p>
             </AnimateIn>
           </div>
@@ -302,11 +312,11 @@ export default async function Home() {
             <AnimateIn variant="fadeUp">
             <div className="text-center mb-16">
               <div className="mb-4 inline-block px-4 py-1.5 bg-primary-container/10 text-primary rounded-full text-xs font-bold uppercase tracking-widest font-headline">
-                Proyectos
+                {textos.proyectos.etiqueta}
               </div>
-              <h2 className="text-4xl md:text-5xl font-headline font-bold text-white mb-6">Proyectos realizados</h2>
+              <h2 className="text-4xl md:text-5xl font-headline font-bold text-white mb-6">{textos.proyectos.titulo}</h2>
               <p className="text-zinc-400 text-lg max-w-2xl mx-auto">
-                Casos reales de clientes resueltos con impresión 3D, escaneo e ingeniería a medida.
+                {textos.proyectos.subtitulo}
               </p>
             </div>
             </AnimateIn>
@@ -326,10 +336,10 @@ export default async function Home() {
                 })),
                 // Última tarjeta: invitación a ver todos los proyectos en /proyectos
                 {
-                  title: '¿Quieres ver más?',
-                  subtitle: 'Explora todos los proyectos que hemos resuelto con impresión 3D, escaneo e ingeniería.',
-                  handle: 'Proyectos',
-                  cta: 'Ver todos los proyectos',
+                  title: textos.proyectos.tarjetaFinal.titulo,
+                  subtitle: textos.proyectos.tarjetaFinal.texto,
+                  handle: textos.proyectos.tarjetaFinal.etiqueta,
+                  cta: textos.proyectos.tarjetaFinal.boton,
                   ...CARD_STYLES[0],
                   url: '/proyectos',
                 },
@@ -339,7 +349,7 @@ export default async function Home() {
         </section>
 
         {/* ── Section 7: Blog ── */}
-        <BlogSection posts={blogPosts} />
+        <BlogSection posts={blogPosts} textos={textos.blog} />
 
       </main>
 

@@ -1,10 +1,11 @@
 'use client';
 import { useState } from 'react';
 import Link from 'next/link';
-import { Package, LogOut, Home, Tag, BookOpen, ShoppingCart, Menu, X, Calculator, FileBox, FolderKanban, Truck } from 'lucide-react';
+import { Package, LogOut, Home, Tag, BookOpen, ShoppingCart, Menu, X, Calculator, FileBox, FolderKanban, Truck, LayoutTemplate } from 'lucide-react';
 import type { SessionPayload } from '@/lib/session';
 
 const NAV = [
+  { href: '/admin/inicio',      icon: LayoutTemplate, label: 'Inicio'   },
   { href: '/admin/products',    icon: Package,     label: 'Productos'   },
   { href: '/admin/categories',  icon: Tag,         label: 'Categorías'  },
   { href: '/admin/blog',        icon: BookOpen,    label: 'Blog'        },

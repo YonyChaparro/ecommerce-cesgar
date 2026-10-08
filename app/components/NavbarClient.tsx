@@ -7,22 +7,7 @@ import { User, ShoppingCart } from 'lucide-react';
 import Link from 'next/link';
 import { usePathname } from 'next/navigation';
 import { useCart } from './CartContext';
-
-const CTA_LABELS = [
-  'Cotización Instantánea',
-  'Sin tiempos de espera',
-  'Precio en segundos',
-  'Cotiza sin registrarte',
-  '¡Empieza ahora!',
-];
-
-const CTA_LABELS_SHORT = [
-  '¡Cotizar!',
-  'Sin esperas',
-  'Precio ya',
-  'Sin cuenta',
-  '¡Ahora!',
-];
+import type { TextoCta } from '@/lib/home-content-types';
 
 const NAV_ITEMS = [
   { label: 'Inicio',         href: '/'                },
@@ -33,7 +18,9 @@ const NAV_ITEMS = [
   { label: 'Blog',           href: '/blog'            },
 ];
 
-export default function Navbar() {
+// Los textos del botón «Cotizar» llegan de Navbar.tsx (servidor): se editan en
+// /admin/inicio.
+export default function NavbarClient({ cta }: { cta: TextoCta[] }) {
   const { openCart, totalItems } = useCart();
   const pathname = usePathname();
   const [scrolled, setScrolled] = useState(false);
@@ -46,16 +33,21 @@ export default function Navbar() {
     return () => window.removeEventListener('scroll', onScroll);
   }, []);
 
+  const totalCta = cta.length;
   useEffect(() => {
+    // Con un solo texto no hay nada que rotar: sin intervalo, sin parpadeo.
+    if (totalCta <= 1) return;
     const interval = setInterval(() => {
       setCtaVisible(false);
       setTimeout(() => {
-        setCtaIndex((i) => (i + 1) % CTA_LABELS.length);
+        setCtaIndex((i) => (i + 1) % totalCta);
         setCtaVisible(true);
       }, 250);
     }, 3000);
     return () => clearInterval(interval);
-  }, []);
+  }, [totalCta]);
+  // Con módulo: si una navegación trae menos textos que el índice actual, no se sale.
+  const ctaActual = totalCta ? ctaIndex % totalCta : 0;
 
   const isActive = (href: string) =>
     href === '/' ? pathname === '/' : pathname.startsWith(href);
@@ -116,20 +108,21 @@ export default function Navbar() {
               className="inline-flex items-center justify-center overflow-hidden bg-primary-container text-white w-24 py-2 sm:w-auto sm:px-5 sm:py-2.5 rounded-full font-headline font-bold text-xs sm:text-sm tracking-wide hover:brightness-110 transition-all mr-1"
             >
               <span className={`transition-opacity duration-250 sm:hidden ${ctaVisible ? 'opacity-100' : 'opacity-0'}`}>
-                {CTA_LABELS_SHORT[ctaIndex]}
+                {cta[ctaActual]?.textoCorto}
               </span>
               {/* Todas las etiquetas apiladas en la misma celda: el ancho del
                   botón lo fija la más larga y deja de saltar al rotar */}
               <span className="hidden sm:grid">
-                {CTA_LABELS.map((label, i) => (
+                {/* key por posición: dos textos iguales no deben chocar */}
+                {cta.map(({ texto }, i) => (
                   <span
-                    key={label}
-                    aria-hidden={i !== ctaIndex}
+                    key={i}
+                    aria-hidden={i !== ctaActual}
                     className={`col-start-1 row-start-1 whitespace-nowrap text-center transition-opacity duration-250 ${
-                      i === ctaIndex && ctaVisible ? 'opacity-100' : 'opacity-0'
+                      i === ctaActual && ctaVisible ? 'opacity-100' : 'opacity-0'
                     }`}
                   >
-                    {label}
+                    {texto}
                   </span>
                 ))}
               </span>
