@@ -1,10 +1,11 @@
 'use client';
 
-import { useEffect, useRef } from 'react';
+import { useRef } from 'react';
 import Link from 'next/link';
 import { Info, RotateCcw, XCircle } from 'lucide-react';
 import type { MensajeChat } from '@/lib/asistente/esquemas';
 import type { ErrorChat } from '../_hooks/useAsistente';
+import { useSeguirConversacion } from '../_hooks/useSeguirConversacion';
 import Aviso from './Aviso';
 import Escribiendo from './Escribiendo';
 import MensajeAsistente from './MensajeAsistente';
@@ -26,21 +27,17 @@ export default function Conversacion({ mensajes, estado, error, turnosRestantes,
   onNueva: () => void;
   onAsesor: () => void;
 }) {
-  const fin = useRef<HTMLDivElement>(null);
+  const lista = useRef<HTMLDivElement>(null);
+  const final = useRef<HTMLDivElement>(null);
   const respondiendo = estado === 'submitted' || estado === 'streaming';
   const ultimo = mensajes.at(-1);
   const escribiendo = respondiendo && (ultimo?.role === 'user' || (ultimo && !tieneContenido(ultimo)));
 
-  // Sigue la respuesta mientras llega, salvo que el cliente haya subido a leer.
-  const largo = JSON.stringify(ultimo?.parts ?? []).length;
-  useEffect(() => {
-    const cerca = window.innerHeight + window.scrollY >= document.body.scrollHeight - 320;
-    if (cerca) fin.current?.scrollIntoView({ block: 'end', behavior: 'smooth' });
-  }, [mensajes.length, largo]);
+  useSeguirConversacion(lista, final, mensajes.filter((m) => m.role === 'user').length);
 
   return (
     <>
-      <div aria-live="polite" className="flex flex-col gap-8 py-8">
+      <div ref={lista} aria-live="polite" className="flex flex-col gap-8 py-8">
         {mensajes.map((m, i) => {
           if (m.role === 'user') return <MensajeCliente key={m.id} mensaje={m} />;
           if (!tieneContenido(m)) return null;
@@ -56,7 +53,6 @@ export default function Conversacion({ mensajes, estado, error, turnosRestantes,
         })}
         {escribiendo && <Escribiendo />}
         {error && <AvisoError error={error} onReintentar={onReintentar} />}
-        <div ref={fin} />
       </div>
 
       <div className="sticky bottom-0 -mx-4 mt-auto flex flex-col gap-3 bg-white/95 px-4 pb-4 pt-3 backdrop-blur sm:-mx-6 sm:px-6">
@@ -69,6 +65,8 @@ export default function Conversacion({ mensajes, estado, error, turnosRestantes,
         {bloqueado || error === 'tope' ? <TopeAlcanzado onNueva={onNueva} onAsesor={onAsesor} /> : caja}
         <PieChat variante="conversacion" />
       </div>
+      {/* El final de la zona del chat: lo que se lleva al borde inferior de la ventana. */}
+      <div ref={final} aria-hidden="true" />
     </>
   );
 }
