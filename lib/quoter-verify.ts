@@ -6,8 +6,8 @@
 // descarta sin mirarlo.
 
 import { CLOUDINARY_FOLDER } from './cloudinary';
-import { parseSTL } from './stl-parse';
-import { calcCost } from './quoter-calc';
+import { parseSTL, type STLData } from './stl-parse';
+import { calcCost, type CostResult, type PrintConfig } from './quoter-calc';
 import { buildVerifiedConfig, type RawPrintChoices } from './quoter-rules';
 import type { QuoterPricing } from './quoter-types';
 
@@ -20,7 +20,7 @@ const VERIFY_CONCURRENCY = 4; // acota la memoria: 4 mallas en vuelo, no 100
  * se acepta si apunta al raw upload de nuestra propia carpeta de Cloudinary.
  * Sin esta comprobación el endpoint sería un SSRF de manual.
  */
-function isOurModelUrl(raw: string): boolean {
+export function isOurModelUrl(raw: string): boolean {
   let url: URL;
   try {
     url = new URL(raw);
@@ -35,7 +35,7 @@ function isOurModelUrl(raw: string): boolean {
   );
 }
 
-async function fetchModel(url: string): Promise<ArrayBuffer | null> {
+export async function fetchModel(url: string): Promise<ArrayBuffer | null> {
   const ctrl = new AbortController();
   const timer = setTimeout(() => ctrl.abort(), FETCH_TIMEOUT_MS);
   try {
@@ -62,6 +62,33 @@ export type VerifiedItem =
   | { ok: true; unitPrice: number; total: number }
   | { ok: false; reason: string };
 
+export type QuotedModel =
+  | { ok: true; stl: STLData; config: PrintConfig; cost: CostResult }
+  | { ok: false; reason: string };
+
+/**
+ * Tarifa un STL ya medido por el servidor: la variante de verifyQuoterItem que
+ * devuelve también la geometría y la configuración verificada, no solo el precio.
+ * La usa el asistente de IA, que mide el archivo al subirlo y no vuelve a
+ * descargarlo para cotizar.
+ */
+export function quoteVerifiedModel(
+  choices: RawPrintChoices,
+  stl: STLData,
+  pricing: QuoterPricing,
+  quantity: number,
+): QuotedModel {
+  if (stl.volumeUnreliable) return { ok: false, reason: 'no se pudo medir el volumen del modelo' };
+
+  const built = buildVerifiedConfig(choices, stl, pricing, quantity);
+  if ('error' in built) return { ok: false, reason: built.error };
+
+  const cost = calcCost(built.config, pricing);
+  if (!(cost.billableUnit > 0) || !(cost.total > 0)) return { ok: false, reason: 'el precio calculado no es válido' };
+
+  return { ok: true, stl, config: built.config, cost };
+}
+
 export async function verifyQuoterItem(
   input: QuoterItemInput,
   pricing: QuoterPricing,
@@ -74,16 +101,10 @@ export async function verifyQuoterItem(
   const buffer = await fetchModel(input.modelUrl);
   if (!buffer) return { ok: false, reason: 'no se pudo descargar el modelo para verificarlo' };
 
-  const stl = parseSTL(buffer);
-  if (stl.volumeUnreliable) return { ok: false, reason: 'no se pudo medir el volumen del modelo' };
+  const quoted = quoteVerifiedModel(input.printConfig, parseSTL(buffer), pricing, input.quantity);
+  if (!quoted.ok) return quoted;
 
-  const built = buildVerifiedConfig(input.printConfig, stl, pricing, input.quantity);
-  if ('error' in built) return { ok: false, reason: built.error };
-
-  const { billableUnit, total } = calcCost(built.config, pricing);
-  if (!(billableUnit > 0) || !(total > 0)) return { ok: false, reason: 'el precio calculado no es válido' };
-
-  return { ok: true, unitPrice: billableUnit, total };
+  return { ok: true, unitPrice: quoted.cost.billableUnit, total: quoted.cost.total };
 }
 
 /** Verifica en paralelo con concurrencia acotada, conservando el orden de entrada. */

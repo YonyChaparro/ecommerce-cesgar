@@ -40,6 +40,8 @@ const PATRONES_LARGOS = [
   /photo/i, /video/i, /file$/i, /thumb/i, /logo$/i, /icon$/i, /avatar/i,
   /content$/i, /description$/i, /excerpt$/i, /message$/i, /^note$/i,
   /^body$/i, /^extra$/i, /instructions$/i,
+  // JSON del asistente de IA (ChatSession, ChatQuote)
+  /^mensajes$/i, /^datos$/i, /^modelos$/i,
 ];
 
 // "Modelo.campo" que quedan fuera de la comprobación de columnas largas.

@@ -138,6 +138,8 @@ export default function CheckoutPage() {
               : {}),
           })),
           deliveryMethod: metodo,
+          // Si algo lo agregó el asistente de IA, la orden queda ligada a esa conversación.
+          chatSessionId: items.find((i) => i.chatSessionId)?.chatSessionId,
           // Lo que el cliente tiene en pantalla. El servidor cobra lo suyo; esto
           // solo sirve para que avise si las tarifas cambiaron mientras tanto.
           shippingCostShown: envio.costo,

@@ -9,6 +9,8 @@ import { type QuoterPricing, DEFAULT_QUOTER_PRICING } from '@/lib/quoter-types';
 import { calcCost, effectiveVolumeCm3 } from '@/lib/quoter-calc';
 import { parseSTL, type STLData } from '@/lib/stl-parse';
 import { detectGeometry, effectiveInfill, checkOversize, MAX_SINGLE_PIECE_MM, type GeomType } from '@/lib/quoter-rules';
+import { getAvailableColors, getAvailableQualities } from '@/lib/quoter-catalog';
+import { buildQuoterCartItem } from '@/lib/quoter-cart-item';
 // DEFAULT_QUOTER_PRICING is used as the default prop value below
 
 const STLViewer = dynamic(() => import('@/components/STLViewer'), { ssr: false, loading: () => (
@@ -18,35 +20,6 @@ const STLViewer = dynamic(() => import('@/components/STLViewer'), { ssr: false, 
 )});
 
 const STLViewerFull = dynamic(() => import('@/components/STLViewerFull'), { ssr: false });
-
-// ─── Constants ────────────────────────────────────────────────────────────────
-
-const COLORES: Record<string, Record<string, any[]>> = {
-  fdm: {
-    pla: [
-      { id: 'white', nombre: 'Blanco' }, { id: 'black', nombre: 'Negro' }, { id: 'grey', nombre: 'Gris' },
-      { id: 'silver', nombre: 'Plata' }, { id: 'gold', nombre: 'Dorado' }, { id: 'red', nombre: 'Rojo' },
-      { id: 'blue', nombre: 'Azul' }, { id: 'green', nombre: 'Verde' }, { id: 'yellow', nombre: 'Amarillo' },
-      { id: 'orange', nombre: 'Naranja' }, { id: 'multicolor_red', nombre: 'Multicolor Tono Rojo' },
-      { id: 'multicolor_pink', nombre: 'Multicolor Rosado' }, { id: 'brown', nombre: 'Café' }
-    ],
-    abs: [{ id: 'white', nombre: 'Blanco' }, { id: 'black', nombre: 'Negro' }, { id: 'grey', nombre: 'Gris' }, { id: 'silver', nombre: 'Plata' }],
-    petg: [{ id: 'white', nombre: 'Blanco' }, { id: 'black', nombre: 'Negro' }, { id: 'translucent', nombre: 'Translúcido' }, { id: 'silver', nombre: 'Plata' }],
-    nylon: [{ id: 'black', nombre: 'Negro' }, { id: 'white', nombre: 'Blanco' }, { id: 'silver', nombre: 'Plata' }],
-    tpu: [{ id: 'black', nombre: 'Negro' }, { id: 'yellow', nombre: 'Amarillo' }, { id: 'orange', nombre: 'Naranja' }, { id: 'white', nombre: 'Blanco' }],
-    pp: [{ id: 'black', nombre: 'Negro' }, { id: 'white', nombre: 'Blanco' }, { id: 'grey', nombre: 'Gris' }]
-  },
-  resina: {
-    standard: [{ id: 'white', nombre: 'Blanco' }, { id: 'black', nombre: 'Negro' }, { id: 'translucent', nombre: 'Translúcido' }, { id: 'grey', nombre: 'Gris' }, { id: 'blue', nombre: 'Azul' }],
-    abs_like: [{ id: 'white', nombre: 'Blanco' }, { id: 'black', nombre: 'Negro' }, { id: 'beige', nombre: 'Beige' }, { id: 'grey', nombre: 'Gris' }, { id: 'blue', nombre: 'Azul' }],
-    ultra_transparente: [{ id: 'ultra_transparent', nombre: 'Ultra Transparente' }],
-    tough: [{ id: 'black', nombre: 'Negro' }, { id: 'grey', nombre: 'Gris' }],
-    nylon: [{ id: 'white', nombre: 'Blanco' }],
-    f80: [{ id: 'black', nombre: 'Negro' }]
-  }
-};
-
-
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -98,26 +71,6 @@ function needsManualQuote(m: QuoterModel): boolean {
   if (!m.stl) return false;
   if (m.stl.volumeUnreliable) return true;
   return checkOversize(m.stl, m.config.factorEscalado ?? 1)?.oversize ?? false;
-}
-
-function getAvailableColors(tech: string, material: string) {
-  return (COLORES[tech] && COLORES[tech][material]) || [{ id: 'default', nombre: 'Por defecto' }];
-}
-
-function getAvailableQualities(tech: string) {
-  if (tech === 'fdm') {
-    return [
-      { val: '0.3', text: '0.3mm (Borrador - Rápido)' },
-      { val: '0.2', text: '0.2mm (Estándar - Equilibrado)' },
-      { val: '0.15', text: '0.15mm (Detallado)' },
-      { val: '0.1', text: '0.1mm (Alta Calidad)' }
-    ];
-  }
-  return [
-    { val: '0.1', text: '100 micras (Rápido)' },
-    { val: '0.05', text: '50 micras (Estándar)' },
-    { val: '0.02', text: '20 micras (Ultra Detalle)' }
-  ];
 }
 
 // ─── Modal Component ─────────────────────────────────────────────────────────
@@ -475,32 +428,7 @@ export default function Quoter({ pricing = DEFAULT_QUOTER_PRICING }: { pricing?:
     try {
       const existingIds = new Set(cartItems.map((i) => i.id));
       for (const m of models) {
-        const cartId = `cotizador-${m.id}`;
-        if (existingIds.has(cartId)) continue;
-        const { billableUnit, weightG, timeH } = calculateItemCosts(m, pricing);
-        const techMats = pricing.materiales[m.config.printingTech as 'fdm' | 'resina'] ?? [];
-        const matObj = techMats.find(mat => mat.id === m.config.materialType) || techMats[0];
-        const colorObj = getAvailableColors(m.config.printingTech, m.config.materialType).find(c => c.id === m.config.printColor);
-        const sf = m.config.factorEscalado ?? 1;
-        const infill = effectiveInfill(m.stl, m.config.infillDensity);
-        const dims = m.stl
-          ? `${(m.stl.dimensions.x * sf).toFixed(1)}×${(m.stl.dimensions.y * sf).toFixed(1)}×${(m.stl.dimensions.z * sf).toFixed(1)}mm`
-          : null;
-        const note = [
-          m.config.printingTech.toUpperCase(),
-          matObj.nombre,
-          colorObj?.nombre,
-          `${m.config.layerHeight}mm`,
-          `${infill}% relleno`,
-          sf !== 1 ? `Escala ×${sf}` : null,
-          dims,
-          `~${(weightG / m.config.quantity).toFixed(1)}g/u`,
-          `~${(timeH / m.config.quantity).toFixed(1)}h/u`,
-          m.config.postProcessing ? 'Post-proc.' : 'Sin post-proc.',
-        ].filter(Boolean).join(' · ');
-        // El mismo precio unitario que recalcula /api/checkout: lleva el descuento
-        // por cantidad dentro, porque MercadoPago cobra unit_price × quantity.
-        const effectiveUnitPrice = billableUnit;
+        if (existingIds.has(`cotizador-${m.id}`)) continue;
 
         let modelUrl: string | undefined;
         try {
@@ -519,28 +447,15 @@ export default function Quoter({ pricing = DEFAULT_QUOTER_PRICING }: { pricing?:
           return;
         }
 
-        addItem({
-          id: cartId,
-          slug: 'cotizador',
-          name: m.file.name.replace(/\.stl$/i, ''),
-          price: effectiveUnitPrice,
-          img: '/3d-print.svg',
-          alt: note,
-          category: 'Impresión 3D',
-          note,
+        const { item, quantity } = buildQuoterCartItem({
+          idCotizacion: m.id,
+          nombreArchivo: m.file.name,
+          stl: m.stl,
+          config: m.config,
           modelUrl,
-          printConfig: m.stl ? {
-            tech: m.config.printingTech as 'fdm' | 'resina',
-            materialId: m.config.materialType,
-            layerHeight: m.config.layerHeight,
-            infillDensity: infill,
-            factorEscalado: m.config.factorEscalado ?? 1,
-            postProcessing: m.config.postProcessing,
-            meshVolCm3: m.stl.volumeMm3 / 1000,
-            bboxVolCm3: m.stl.boundingBoxVolumeCm3,
-            quantity: m.config.quantity,
-          } : undefined,
-        }, m.config.quantity);
+          pricing,
+        });
+        addItem(item, quantity);
       }
       openCart();
     } finally {

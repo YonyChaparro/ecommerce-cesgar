@@ -17,6 +17,12 @@ export interface STLData {
   boundingBoxVolumeCm3: number;
   /** La malla no permitió medir el volumen con fiabilidad: no debe cotizarse en automático. */
   volumeUnreliable?: boolean;
+  /**
+   * Ni siquiera es un STL legible. Siempre llega junto a volumeUnreliable (quien
+   * solo mira ese campo sigue sin cotizarlo); sirve para decirle al cliente "No
+   * es un archivo STL" en vez de "No pudimos medir el volumen".
+   */
+  unreadable?: boolean;
 }
 
 // Por encima de esto el análisis de componentes no compensa; se usa el volumen
@@ -32,6 +38,7 @@ const UNPARSEABLE: STLData = {
   dimensions: { x: 0, y: 0, z: 0 },
   boundingBoxVolumeCm3: 0,
   volumeUnreliable: true,
+  unreadable: true,
 };
 
 /** Devuelve los vértices en plano (9 floats por triángulo) o null si no es un STL legible. */

@@ -66,6 +66,11 @@ export async function POST(req: Request) {
     const shipping: ShippingInput | undefined = body?.shipping;
     const deliveryMethod: MetodoEntrega = body?.deliveryMethod === 'recogida' ? 'recogida' : 'domicilio';
     /** Lo que el checkout tenía en pantalla. Solo se usa para detectar desfases. */
+    // Conversación del asistente de la que salió la compra: solo para medir chat → pago.
+    const chatSessionId: string | undefined =
+      typeof body?.chatSessionId === 'string' && /^[A-Za-z0-9_-]{12,64}$/.test(body.chatSessionId)
+        ? body.chatSessionId
+        : undefined;
     const shippingCostShown: number | undefined =
       typeof body?.shippingCostShown === 'number' ? body.shippingCostShown : undefined;
 
@@ -287,6 +292,7 @@ export async function POST(req: Request) {
         shippingCost: envio.costo,
         shippingMethod: metodo,
         total,
+        chatSessionId,
         ...(shipping && {
           shippingName:         shipping.name,
           shippingEmail:        shipping.email,

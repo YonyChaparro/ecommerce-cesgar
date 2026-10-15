@@ -143,9 +143,13 @@ model Order {
   shippingCity         String?
   shippingPostalCode   String?
   shippingInstructions String?
+  /// Conversación del asistente de IA de la que salió la compra (medición chat → pago).
+  chatSessionId        String?
   items                OrderItem[]
   createdAt            DateTime    @default(now())
   updatedAt            DateTime    @updatedAt
+
+  @@index([chatSessionId])
 }
 
 // itemType: "product" | "cotizador"
@@ -169,6 +173,39 @@ model Setting {
   key       String   @id
   value     String
   updatedAt DateTime @updatedAt
+}
+
+// Conversación anónima del asistente de IA del cotizador (/cotizador/asistente).
+// Sin datos personales. Se borra a los 90 días.
+// resultado: "carrito" | "derivado" | null (abandonada o en curso)
+model ChatSession {
+  id            String      @id @default(cuid())
+  mensajes      String      // JSON de la conversación (UIMessage[])
+  turnos        Int         @default(0)
+  modelos       String?     // JSON: modelos que respondieron, marcando si fue un respaldo
+  costoUsd      Float       @default(0)
+  tokensEntrada Int         @default(0)
+  tokensSalida  Int         @default(0)
+  resultado     String?
+  cotizaciones  ChatQuote[]
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  @@index([createdAt])
+}
+
+// Cotización o estimación que el asistente citó con un código.
+// tipo: "archivo" | "estimacion"
+model ChatQuote {
+  id        String      @id @default(cuid())
+  sessionId String
+  session   ChatSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
+  codigo    String      // "Q-7F3K" | "E-2M9P"; único dentro de la conversación
+  tipo      String
+  datos     String      // JSON: archivo, STLData, elección y precios mostrados | medidas, supuesto y rango
+  createdAt DateTime    @default(now())
+
+  @@unique([sessionId, codigo])
 }
 
 // status: "new" | "contacted" | "resolved"

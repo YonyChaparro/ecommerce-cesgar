@@ -1,7 +1,9 @@
 # Propuesta — Asistente de IA en el cotizador
 
-Estado: **propuesta, con decisiones pendientes** (ver §15). Fecha: 2026-10-03;
-actualizada el 2026-10-15 con las vistas y su implementación en React.
+Estado: **fases 0 y 1 implementadas** el 2026-10-15, con las recomendaciones de
+§15 (avance en [tasks.md](tasks.md), diferencias en [design.md](design.md)).
+Fecha: 2026-10-03; actualizada el 2026-10-15 con las vistas y su implementación
+en React.
 Este documento recoge la idea de implementación acordada hasta ahora. La interfaz
 toma como referencia las vistas de `Cesgar — Asistente del cotizador.html` (§5) y
 se construye con componentes React modulares (§6). Cuando se cierren las

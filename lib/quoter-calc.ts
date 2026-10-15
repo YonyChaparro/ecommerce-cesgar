@@ -36,6 +36,17 @@ export function effectiveVolumeCm3(meshVolCm3: number, bboxVolCm3: number, facto
   return Math.min(meshVolCm3, bboxVolCm3) * Math.pow(factorEscalado, 3);
 }
 
+/**
+ * Multiplicador del tramo de descuento por cantidad (1.0 = sin descuento). Lo usa
+ * calcCost y, aparte, quien tiene que mostrar el porcentaje ("−10 %").
+ */
+export function quantityMultiplier(quantity: number, pricing: QuoterPricing): number {
+  for (const d of pricing.tarifas.multiplicadorCantidad) {
+    if (quantity >= d.min) return Math.min(1.0, d.mult);
+  }
+  return 1.0;
+}
+
 export function calcCost(config: PrintConfig, pricing: QuoterPricing): CostResult {
   const { tech, materialId, layerHeight, infillDensity, factorEscalado, postProcessing, meshVolCm3, bboxVolCm3, quantity } = config;
 
@@ -66,10 +77,7 @@ export function calcCost(config: PrintConfig, pricing: QuoterPricing): CostResul
   const costoTiempo = tiempoHoras * tarifas.precioHora;
   const costoPost = postProcessing ? tarifas.postProcesado : 0;
 
-  let descuentoCantidad = 1.0;
-  for (const d of tarifas.multiplicadorCantidad) {
-    if (quantity >= d.min) { descuentoCantidad = d.mult; break; }
-  }
+  const descuentoCantidad = quantityMultiplier(quantity, pricing);
 
   // Sin recargo por tamaño/escalado: el factor solo entra vía el volumen efectivo
   const unitPrice = tarifas.costoSetup + costoMaterial + costoTiempo + costoPost;
@@ -77,7 +85,7 @@ export function calcCost(config: PrintConfig, pricing: QuoterPricing): CostResul
   // El descuento se aplica sobre la unidad y luego se multiplica —no al revés—
   // porque MercadoPago cobra `unit_price × quantity`: si el descuento viviera solo
   // en el total, la pasarela cobraría el precio sin rebaja.
-  const billableUnit = Math.max(1, Math.round(unitPrice * Math.min(1.0, descuentoCantidad)));
+  const billableUnit = Math.max(1, Math.round(unitPrice * descuentoCantidad));
 
   return {
     unitPrice: Math.round(unitPrice),

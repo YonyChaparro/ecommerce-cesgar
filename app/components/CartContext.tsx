@@ -15,6 +15,8 @@ export interface CartItem {
   note?: string;
   modelUrl?: string;
   printConfig?: PrintConfig;
+  /** Conversación del asistente que lo agregó: /api/checkout la copia a la orden. */
+  chatSessionId?: string;
 }
 
 interface CartState {
