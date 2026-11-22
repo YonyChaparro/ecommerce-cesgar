@@ -1,6 +1,6 @@
 # Tareas: el asistente como asesor comercial y técnico (spec v5.1)
 
-Estado: **sin empezar**. Fecha: 2026-11-22.
+Estado: **T0–T8 hechas; desplegado el 2026-11-22** (falta la prueba manual en producción de T9). Fecha: 2026-11-22.
 Documentos hermanos: [`requirements.md`](requirements.md) (qué) · [`design.md`](design.md) (cómo).
 
 Cada tarea dice qué requisitos cubre, qué archivos toca y cuándo está hecha.
@@ -11,9 +11,9 @@ pero el prompt todavía no las usa. La función se vuelve visible en T7.
 
 ## T0. Preparar
 
-- [ ] Rama `feat/agente-v5` desde `feat/agente-cotizador`, que tiene los últimos
+- [x] Rama `feat/agente-v5` desde `feat/agente-cotizador`, que tiene los últimos
       cambios desplegados el 2026-11-22.
-- [ ] Mover `CESGAR_Especificacion_Agente_IA_Cotizador_v5_1 (1).pdf` a
+- [x] Mover `CESGAR_Especificacion_Agente_IA_Cotizador_v5_1 (1).pdf` a
       `docs/specs/agente-v5/fuente-v5_1.pdf` y actualizar la referencia en los
       tres documentos.
 - [x] Resolver los choques de la v5.1 con el sistema actual: decisiones D1–D8
@@ -31,11 +31,11 @@ pero el prompt todavía no las usa. La función se vuelve visible en T7.
 
 `lib/asistente/parametros-tipos.ts`, `parametros.ts` · design §6.3 · R1
 
-- [ ] `ParametrosComerciales`, `DEFAULT_PARAMETROS` (valores de §16.5, con los
+- [x] `ParametrosComerciales`, `DEFAULT_PARAMETROS` (valores de §16.5, con los
       interruptores apagados) y `validarParametros()`: orden de los umbrales,
       horas crecientes de C1 a C5, montos enteros ≥ 0 o `null`, y la versión
       obligatoria.
-- [ ] `getParametros()` (mezcla con los defaults y nunca lanza) y
+- [x] `getParametros()` (mezcla con los defaults y nunca lanza) y
       `saveParametros(p, usuario)`, que llena `aprobadoPor` y `aprobadoEn`.
 
 **Hecho cuando:** `npx tsc --noEmit` pasa y `validarParametros` rechaza
@@ -45,12 +45,12 @@ pero el prompt todavía no las usa. La función se vuelve visible en T7.
 
 `lib/asistente/ficha.ts`, `clasificador.ts` · design §3, §4 · R2–R6
 
-- [ ] Tipo `Ficha`, `FICHA_VACIA`, `mezclarFicha` (§3.2) y `faltantes` (§3.3),
+- [x] Tipo `Ficha`, `FICHA_VACIA`, `mezclarFicha` (§3.2) y `faltantes` (§3.3),
       con las preguntas fijas de §11.1 y §22.
-- [ ] `rutaComercial`, `claseModelado`, `precioModelado`, `esUsoCritico` y
+- [x] `rutaComercial`, `claseModelado`, `precioModelado`, `esUsoCritico` y
       `siguienteAccion`.
-- [ ] `calcularDerivados(ficha, parametros)`, que arma `ficha.derived` completo.
-- [ ] Ningún import de `prisma`, `server-only`, `react` ni `next/*`.
+- [x] `calcularDerivados(ficha, parametros)`, que arma `ficha.derived` completo.
+- [x] Ningún import de `prisma`, `server-only`, `react` ni `next/*`.
 
 **Hecho cuando:** compila. Las pruebas van en T3.
 
@@ -58,10 +58,10 @@ pero el prompt todavía no las usa. La función se vuelve visible en T7.
 
 `scripts/verify-clasificador.ts`, `package.json` · design §9.1 · R12.2
 
-- [ ] Todas las afirmaciones de design §9.1, incluida la tabla de clases de §4.2.
+- [x] Todas las afirmaciones de design §9.1, incluida la tabla de clases de §4.2.
       Si una fila cae fuera del rango que la v5.1 da para ese caso, se ajusta el
       piso o la fila, y la tabla de design se actualiza igual.
-- [ ] `"verify:clasificador": "tsx scripts/verify-clasificador.ts"`.
+- [x] `"verify:clasificador": "tsx scripts/verify-clasificador.ts"`.
 
 **Hecho cuando:** `npm run verify:clasificador` pasa sin red ni base de datos.
 
@@ -71,23 +71,23 @@ pero el prompt todavía no las usa. La función se vuelve visible en T7.
 `tools/contexto.ts`, `tools/*.ts`, `esquemas.ts`, `codigos.ts`,
 `app/api/cotizador/carrito/route.ts` · design §5, §6 · R2.5, R4.5, R5, R6.2, R7.1, R9.2, R10
 
-- [ ] Columnas de `ChatSession` (design §6.1) en los dos schemas.
+- [x] Columnas de `ChatSession` (design §6.1) en los dos schemas.
       `node scripts/verificar-schemas.mjs` tiene que pasar.
-- [ ] `ContextoTools`: `parametros`, `leerFicha()` y `guardarFicha(ficha)`
+- [x] `ContextoTools`: `parametros`, `leerFicha()` y `guardarFicha(ficha)`
       (esta última escribe también `perfil`, `ruta`, `claseMin`, `claseMax` y
       `oportunidadCatalogo`). Implementarlos en `sesion.ts` y en
       `scripts/asistente-contexto-memoria.ts`.
-- [ ] `codigos.ts`: tipo `M`.
-- [ ] Esquemas zod y tools nuevas: `actualizar_ficha`, `estimar_modelado` y
+- [x] `codigos.ts`: tipo `M`.
+- [x] Esquemas zod y tools nuevas: `actualizar_ficha`, `estimar_modelado` y
       `consultar_escaneo`. Registrarlas en `tools/index.ts`.
-- [ ] Cambios en `cotizar_archivo`, `comparar_opciones`, `estimar_rango` y
+- [x] Cambios en `cotizar_archivo`, `comparar_opciones`, `estimar_rango` y
       `derivar_a_asesor` (design §5.4). Copia de los parámetros en `datos`.
-- [ ] `resumen-asesor.ts` (design §5.5), usado por `derivar_a_asesor`.
+- [x] `resumen-asesor.ts` (design §5.5), usado por `derivar_a_asesor`.
       `marcarResultado` guarda también `derivacion`.
-- [ ] `/api/cotizador/carrito`: rechaza el volumen (D1).
-- [ ] `GET /api/cotizador/chat` devuelve también la `ficha`, para el botón de
+- [x] `/api/cotizador/carrito`: rechaza el volumen (D1).
+- [x] `GET /api/cotizador/chat` devuelve también la `ficha`, para el botón de
       WhatsApp sin modelo.
-- [ ] `verify:asistente` sigue pasando: las cifras de las vistas 3 y 4 no
+- [x] `verify:asistente` sigue pasando: las cifras de las vistas 3 y 4 no
       cambian.
 
 **Hecho cuando:** compila, `verify:asistente` y `verify:clasificador` pasan, y
@@ -99,14 +99,14 @@ una conversación vieja (sin ficha) se retoma sin error (N5).
 `_hooks/useSubidaStl.ts`, `AdjuntoStl.tsx`, `CajaTexto.tsx`,
 `lib/asistente/mensaje-asesor.ts` · design §8 · R8.1, R9.1, R9.3, R10.4
 
-- [ ] `TarjetaModelado`, con los estados `estimado`, `revision`, `en-propuesta`
+- [x] `TarjetaModelado`, con los estados `estimado`, `revision`, `en-propuesta`
       y `no-requiere`.
-- [ ] `TarjetaEscaneo`, con los estados `tarifas` y `no-disponible`.
-- [ ] `cotizar_archivo` con `tipo: 'volumen'` y `tipo: 'revision'`.
-- [ ] Rótulos de nivel en `TarjetaCotizacion` y en la tarjeta de estimación.
+- [x] `TarjetaEscaneo`, con los estados `tarifas` y `no-disponible`.
+- [x] `cotizar_archivo` con `tipo: 'volumen'` y `tipo: 'revision'`.
+- [x] Rótulos de nivel en `TarjetaCotizacion` y en la tarjeta de estimación.
       Motivo en `TarjetaAsesor`.
-- [ ] Aviso `solo-texto` para imágenes, videos y PDF, al soltarlos o al pegarlos.
-- [ ] «Hablar con una persona» usa `armarResumenAsesor` con la ficha, si la hay.
+- [x] Aviso `solo-texto` para imágenes, videos y PDF, al soltarlos o al pegarlos.
+- [x] «Hablar con una persona» usa `armarResumenAsesor` con la ficha, si la hay.
 
 **Hecho cuando:** con `npm run dev`, cada estado se ve bien en escritorio y en
 móvil (lo comprueba T6).
@@ -115,10 +115,10 @@ móvil (lo comprueba T6).
 
 `app/admin/(panel)/asistente/*` · design §8 · R1, R11
 
-- [ ] Tarjeta «Parámetros comerciales» en `/admin/asistente`, con la acción de
+- [x] Tarjeta «Parámetros comerciales» en `/admin/asistente`, con la acción de
       guardar que valida en el servidor.
-- [ ] `/admin/asistente/estados`: ejemplos de todas las tarjetas y avisos nuevos.
-- [ ] `/admin/asistente/conversaciones`: filtros perfil, ruta y motivo; los
+- [x] `/admin/asistente/estados`: ejemplos de todas las tarjetas y avisos nuevos.
+- [x] `/admin/asistente/conversaciones`: filtros perfil, ruta y motivo; los
       indicadores de R11.2; la ficha en el detalle; columnas nuevas en el CSV.
       `lib/asistente/filtros.ts` y `metricas.ts`.
 
@@ -130,10 +130,10 @@ prueba.
 
 `lib/asistente/prompt.ts` · design §7 · R2.3, R3, R4.3–R4.4, R5.1, R6, R7, R8.2–R8.3, R10.5
 
-- [ ] Reescribir **Tu trabajo** y sumar las reglas 1–13 de design §7. Quitar la
+- [x] Reescribir **Tu trabajo** y sumar las reglas 1–13 de design §7. Quitar la
       regla vieja de diseño y escaneo.
-- [ ] Mensajes de derivación de §5.6, §14 y §25, en el tono del prompt.
-- [ ] Revisar que no queden cifras de tarifas ni umbrales en el texto (N3).
+- [x] Mensajes de derivación de §5.6, §14 y §25, en el tono del prompt.
+- [x] Revisar que no queden cifras de tarifas ni umbrales en el texto (N3).
 
 **Hecho cuando:** el prompt compila y no tiene cifras. Se valida en T8.
 
@@ -141,24 +141,24 @@ prueba.
 
 `scripts/verify-agente.ts`, `lib/asistente/validaciones.ts` · design §9.2 · R12.1, R12.3
 
-- [ ] Seis reglas nuevas en `REGLAS`.
-- [ ] Situaciones de design §9.2, cada una con su `comprobar`, que mira las
+- [x] Seis reglas nuevas en `REGLAS`.
+- [x] Situaciones de design §9.2, cada una con su `comprobar`, que mira las
       llamadas a tools y sus salidas y no el texto libre, salvo donde no haya
       otra forma (T15, T22, T24).
-- [ ] Correr con un candidato y ajustar el prompt (T7) hasta 100 %. Medir el
+- [x] Correr con un candidato y ajustar el prompt (T7) hasta 100 %. Medir el
       costo medio contra el actual (N2: como mucho +50 %).
 
 **Hecho cuando:** un modelo pasa todas las situaciones y el costo cumple N2.
 
 ## T9. Aprobar modelos y desplegar
 
-- [ ] Correr `npm run verify:agente -- <modelo> <modelo> …` con los tres modelos
+- [x] Correr `npm run verify:agente -- <modelo> <modelo> …` con los tres modelos
       aprobados hoy (`openai/gpt-5.6-luna`, `anthropic/claude-haiku-5.5` y
       `qwen/qwen3.8-flash`), o con los candidatos que se elijan. Hacer commit de
       `validaciones.json`.
-- [ ] **No desplegar sin un modelo aprobado en el JSON nuevo.** Si no, el
+- [x] **No desplegar sin un modelo aprobado en el JSON nuevo.** Si no, el
       asistente se apaga en producción (design §9.2).
-- [ ] Desplegar con el procedimiento de la memoria del proyecto: carpeta limpia,
+- [x] Desplegar con el procedimiento de la memoria del proyecto: carpeta limpia,
       `hosting_deploy` y Node 22.
 - [ ] En producción, en `/admin/asistente`:
       1. Revisar los parámetros.
@@ -170,6 +170,11 @@ prueba.
       - T10: freno → revisión;
       - T19: caja para electrónica → C2–C3;
       - T22: soltar un JPG → aviso.
+
+Resultado del 2026-11-22 (35 situaciones): `anthropic/claude-haiku-5.5` aprobado
+35/35 (≈ US$0,0014 por conversación). `openai/gpt-5.6-luna` y `qwen/qwen3.8-flash`
+quedaron en 34/35, con una falla distinta en cada corrida (variación del modelo):
+vuelven a correrse antes de elegirlos como principal o respaldo.
 
 **Hecho cuando:** las cinco pruebas manuales dan lo esperado y el mensaje de
 WhatsApp llega con el resumen.

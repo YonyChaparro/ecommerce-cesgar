@@ -6,7 +6,9 @@ import type { ShippingConfig } from '../shipping-types';
 import { medirArchivo } from './archivos';
 import { generarCodigo } from './codigos';
 import type { MensajeChat } from './esquemas';
-import type { ContextoTools, CotizacionGuardada, ProductoTienda } from './tools/contexto';
+import { leerFichaGuardada, type Ficha } from './ficha';
+import type { ParametrosComerciales } from './parametros-tipos';
+import { tipoDeCodigo, type ContextoTools, type CotizacionGuardada, type ProductoTienda } from './tools/contexto';
 
 // Persistencia del asistente: ChatSession (conversación anónima) y ChatQuote
 // (cotizaciones y estimaciones con código). Sin datos personales.
@@ -16,14 +18,36 @@ export const PATRON_ID_SESION = /^[A-Za-z0-9_-]{12,64}$/;
 
 const RETENCION_DIAS = 90; // decisión 4 de la propuesta
 
-export async function leerSesion(id: string): Promise<{ mensajes: MensajeChat[]; turnos: number } | null> {
-  const s = await prisma.chatSession.findUnique({ where: { id }, select: { mensajes: true, turnos: true } });
+export async function leerSesion(id: string): Promise<{ mensajes: MensajeChat[]; turnos: number; ficha: Ficha | null } | null> {
+  const s = await prisma.chatSession.findUnique({ where: { id }, select: { mensajes: true, turnos: true, ficha: true } });
   if (!s) return null;
+  const ficha = leerFichaGuardada(s.ficha);
   try {
-    return { mensajes: JSON.parse(s.mensajes) as MensajeChat[], turnos: s.turnos };
+    return { mensajes: JSON.parse(s.mensajes) as MensajeChat[], turnos: s.turnos, ficha };
   } catch {
-    return { mensajes: [], turnos: s.turnos };
+    return { mensajes: [], turnos: s.turnos, ficha };
   }
+}
+
+/** Solo la ficha: la pide el navegador para el botón de WhatsApp sin modelo (R10.4). */
+export async function leerFicha(id: string): Promise<Ficha | null> {
+  const s = await prisma.chatSession.findUnique({ where: { id }, select: { ficha: true } });
+  return leerFichaGuardada(s?.ficha);
+}
+
+/** La ficha y las columnas que la vista 7 filtra y cuenta (design §6.1). */
+export async function guardarFicha(id: string, ficha: Ficha): Promise<void> {
+  await prisma.chatSession.updateMany({
+    where: { id },
+    data: {
+      ficha: JSON.stringify(ficha),
+      perfil: ficha.customer_profile,
+      ruta: ficha.derived.volume_route,
+      claseMin: ficha.derived.class_min,
+      claseMax: ficha.derived.class_max,
+      oportunidadCatalogo: ficha.derived.catalog_opportunity,
+    },
+  });
 }
 
 /** Guarda el estado antes de llamar al modelo: si la respuesta falla, el mensaje del cliente no se pierde. */
@@ -63,14 +87,16 @@ export async function registrarUso(
 
 /**
  * "carrito" al confirmar una tarjeta o usar el "+"; "derivado" al abrir WhatsApp.
- * Si una conversación tiene las dos, queda "carrito" (propuesta §14).
+ * Si una conversación tiene las dos, queda "carrito" (propuesta §14). La
+ * derivación guarda también su motivo (R10.1), aunque el resultado sea "carrito".
  */
-export async function marcarResultado(id: string, resultado: 'carrito' | 'derivado'): Promise<void> {
+export async function marcarResultado(id: string, resultado: 'carrito' | 'derivado', derivacion?: string): Promise<void> {
   if (resultado === 'carrito') {
     await prisma.chatSession.updateMany({ where: { id }, data: { resultado: 'carrito' } });
-  } else {
-    await prisma.chatSession.updateMany({ where: { id, resultado: null }, data: { resultado: 'derivado' } });
+    return;
   }
+  await prisma.chatSession.updateMany({ where: { id, resultado: null }, data: { resultado: 'derivado' } });
+  if (derivacion) await prisma.chatSession.updateMany({ where: { id }, data: { derivacion } });
 }
 
 let ultimaLimpieza = 0;
@@ -138,10 +164,18 @@ export async function leerCotizacion(sesionId: string, codigo: string): Promise<
   return { tipo: q.tipo, id: q.id, codigo: q.codigo, datos: JSON.parse(q.datos) } as CotizacionGuardada;
 }
 
-export function contextoTools(sesionId: string, pricing: QuoterPricing, envio: ShippingConfig): ContextoTools {
+export function contextoTools(
+  sesionId: string,
+  pricing: QuoterPricing,
+  envio: ShippingConfig,
+  parametros: ParametrosComerciales,
+  tarifasCotizadorFecha: string | null,
+): ContextoTools {
   return {
     pricing,
     envio,
+    parametros,
+    tarifasCotizadorFecha,
     medirArchivo,
     buscarProductos,
     leerProducto,
@@ -149,7 +183,7 @@ export function contextoTools(sesionId: string, pricing: QuoterPricing, envio: S
       // Códigos de 4 caracteres: una colisión dentro de la misma conversación es
       // rarísima, pero la restricción única la detecta y se reintenta.
       for (let intento = 0; intento < 5; intento++) {
-        const codigo = generarCodigo(nueva.tipo === 'archivo' ? 'Q' : 'E');
+        const codigo = generarCodigo(tipoDeCodigo(nueva.tipo));
         try {
           await prisma.chatQuote.create({
             data: { sessionId: sesionId, codigo, tipo: nueva.tipo, datos: JSON.stringify(nueva.datos) },
@@ -169,6 +203,13 @@ export function contextoTools(sesionId: string, pricing: QuoterPricing, envio: S
         where: { sessionId_codigo: { sessionId: sesionId, codigo } },
         data: { datos: JSON.stringify({ ...cot.datos, preciosMostrados: precios }) },
       });
+    },
+    leerFicha: () => leerFicha(sesionId),
+    guardarFicha: (ficha) => guardarFicha(sesionId, ficha),
+    // Solo el motivo: el resultado "derivado" lo marca el clic en WhatsApp (/api/cotizador/eventos),
+    // así la vista 7 sigue contando las derivaciones que el cliente abrió.
+    marcarDerivacion: async (motivo) => {
+      await prisma.chatSession.updateMany({ where: { id: sesionId }, data: { derivacion: motivo } });
     },
   };
 }

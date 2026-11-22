@@ -4,7 +4,9 @@ import { detectGeometry, checkOversize } from '../../quoter-rules';
 import { isOurModelUrl, quoteVerifiedModel } from '../../quoter-verify';
 import { esquemas } from '../esquemas';
 import { etiquetaConfiguracion, etiquetaOpcion } from '../etiquetas';
+import { esCritica } from '../clasificador';
 import type { ContextoTools } from './contexto';
+import { actualizarFichaGuardada } from './actualizar-ficha';
 import { descuentoPct, errorDeConfiguracion, validarColor, validarMaterial } from './comun';
 
 const ladoMayorCm = (d: { x: number; y: number; z: number }) => Math.round(Math.max(d.x, d.y, d.z)) / 10;
@@ -18,7 +20,8 @@ export function cotizarArchivo(ctx: ContextoTools) {
   return tool({
     description:
       'Calcula el precio exacto de un archivo STL que el cliente adjuntó en el chat. Devuelve un código de cotización (Q-XXXX). ' +
-      'Si la pieza pasa de 30 cm o no se pudo medir el volumen, no hay precio: deriva a un asesor.',
+      'Si la pieza pasa de 30 cm o no se pudo medir el volumen, no hay precio: deriva a un asesor. ' +
+      'Desde cierta cantidad por referencia no hay precio sino propuesta por WhatsApp (tipo "volumen"), y una pieza de uso crítico va a revisión técnica.',
     inputSchema: esquemas.cotizar_archivo.entrada,
     outputSchema: esquemas.cotizar_archivo.salida,
     execute: async (e) => {
@@ -29,6 +32,18 @@ export function cotizarArchivo(ctx: ContextoTools) {
       if (!stl || stl.unreadable) throw new Error('No se pudo leer ese archivo. Pídele al cliente que lo vuelva a subir.');
 
       const archivo = decodeURIComponent(e.modelUrl.split('/').pop() ?? 'modelo.stl').replace(/^\d+-/, '');
+
+      // La ficha sabe que hay archivo; la cantidad se toma si no estaba (design §5.4).
+      const previa = await ctx.leerFicha();
+      const ficha = await actualizarFichaGuardada(ctx, {
+        part: { has_file: true },
+        demand: previa?.demand.initial_quantity == null ? { initial_quantity: e.cantidad } : undefined,
+      });
+      if (esCritica(ficha)) return { tipo: 'revision' as const, archivo, motivo: 'critica' as const };
+      if (e.cantidad >= ctx.parametros.Q_VOLUMEN_MIN) {
+        return { tipo: 'volumen' as const, archivo, cantidad: e.cantidad, medidasMm: stl.dimensions };
+      }
+
       const oversize = checkOversize(stl, 1);
       if (oversize?.oversize || stl.volumeUnreliable) {
         return {
@@ -69,6 +84,7 @@ export function cotizarArchivo(ctx: ContextoTools) {
           eleccion: { ...eleccion, postProcessing: q.config.postProcessing },
           cantidad: e.cantidad,
           preciosMostrados: { [e.cantidad]: q.cost.billableUnit },
+          parametros: { version: ctx.parametros.PRICE_LIST_VERSION, tarifasCotizador: ctx.tarifasCotizadorFecha },
         },
       });
 
@@ -91,6 +107,7 @@ export function cotizarArchivo(ctx: ContextoTools) {
         descuentoPct: descuentoPct(e.cantidad, ctx.pricing),
         total: q.cost.total,
         rellenoFijado: geometria === 'hollow' ? 'hueca' as const : geometria === 'thin' ? 'laminar' as const : null,
+        nivel: 'calculada' as const,
       };
     },
   });

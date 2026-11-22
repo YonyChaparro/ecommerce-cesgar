@@ -17,6 +17,9 @@ export function urlConversaciones(
   if (v.id) p.set('q', v.id);
   if (v.resultado) p.set('resultado', v.resultado);
   if (v.modelo) p.set('modelo', v.modelo);
+  if (v.perfil) p.set('perfil', v.perfil);
+  if (v.ruta) p.set('ruta', v.ruta);
+  if (v.motivo) p.set('motivo', v.motivo);
   if (v.pagina > 1) p.set('pagina', String(v.pagina));
   if (cambios.detalle) p.set('id', cambios.detalle);
   const qs = p.toString();

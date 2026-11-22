@@ -1,8 +1,8 @@
 # Requisitos: el asistente como asesor comercial y técnico (spec v5.1)
 
-Estado: **aprobada para construir, sin empezar**. Choques resueltos el 2026-11-22 (§7). Fecha: 2026-11-22.
-Fuente: `CESGAR_Especificacion_Agente_IA_Cotizador_v5_1 (1).pdf` (en la raíz
-del repo; en este documento, «la v5.1» y §N son sus secciones).
+Estado: **construida (T0–T8)**, pendiente de despliegue. Choques resueltos el 2026-11-22 (§7). Fecha: 2026-11-22.
+Fuente: [`fuente-v5_1.pdf`](fuente-v5_1.pdf) (en esta carpeta; en este
+documento, «la v5.1» y §N son sus secciones).
 Documentos hermanos: [`design.md`](design.md) (cómo) · [`tasks.md`](tasks.md) (en qué orden).
 Parte del asistente que ya existe: [`../agente-cotizador/`](../agente-cotizador/) (fases 0 a 2).
 

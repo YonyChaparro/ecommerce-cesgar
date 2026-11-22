@@ -25,21 +25,33 @@ export default function TablaOpciones({ salida }: { salida: SalidaTool<'comparar
                   {f.elegida && <span className="ml-1.5 text-xs font-bold uppercase text-ia-tinta">Tu elección</span>}
                 </td>
                 <td className="px-3.5 py-3 text-right">{numero(f.cantidad)}</td>
-                <td className="px-3.5 py-3 text-right">
-                  {pesos(f.precioUnitario)}
-                  {f.descuentoPct > 0 && (
-                    <span className={cn('ml-1 text-xs', f.descuentoPct > (elegida?.descuentoPct ?? 0) ? 'text-amber-800' : 'text-slate-500')}>
-                      −{f.descuentoPct} %
-                    </span>
-                  )}
-                </td>
-                <td className="rounded-r-xl px-3.5 py-3 text-right">{f.elegida ? <strong>{pesos(f.total)}</strong> : pesos(f.total)}</td>
+                {f.precioUnitario == null || f.total == null ? (
+                  // R4.5: desde la cantidad de volumen no hay precio, hay propuesta.
+                  <td colSpan={2} className="rounded-r-xl px-3.5 py-3 text-right text-xs font-semibold text-ia-tinta">
+                    Propuesta por WhatsApp
+                  </td>
+                ) : (
+                  <>
+                    <td className="px-3.5 py-3 text-right">
+                      {pesos(f.precioUnitario)}
+                      {(f.descuentoPct ?? 0) > 0 && (
+                        <span className={cn('ml-1 text-xs', (f.descuentoPct ?? 0) > (elegida?.descuentoPct ?? 0) ? 'text-amber-800' : 'text-slate-500')}>
+                          −{f.descuentoPct} %
+                        </span>
+                      )}
+                    </td>
+                    <td className="rounded-r-xl px-3.5 py-3 text-right">{f.elegida ? <strong>{pesos(f.total)}</strong> : pesos(f.total)}</td>
+                  </>
+                )}
               </tr>
             ))}
           </tbody>
         </table>
       </div>
-      <p className="px-5 pb-4 pt-2.5 text-xs text-slate-500">El descuento por cantidad ya está aplicado. No incluye envío.</p>
+      <p className="px-5 pb-4 pt-2.5 text-xs text-slate-500">
+        El descuento por cantidad ya está aplicado. No incluye diseño ni envío.
+        {salida.filas.some((f) => f.volumen) && ' Las cantidades de volumen se cotizan con una propuesta por WhatsApp.'}
+      </p>
     </>
   );
 }

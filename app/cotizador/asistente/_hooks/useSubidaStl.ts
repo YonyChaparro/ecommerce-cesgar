@@ -10,7 +10,16 @@ export type EstadoSubida =
   | { fase: 'subiendo'; nombre: string; bytes: number; progreso: number }
   | { fase: 'midiendo'; nombre: string; bytes: number }
   | { fase: 'listo'; nombre: string; bytes: number; archivo: ArchivoAdjunto }
-  | { fase: 'error'; nombre: string; bytes: number; titulo: string; texto: string };
+  | { fase: 'error'; nombre: string; bytes: number; titulo: string; texto: string }
+  /** Foto, video o PDF: el chat es solo de texto y STL (R8.1, T22). No se sube. */
+  | { fase: 'solo-texto'; nombre: string; bytes: number };
+
+const MEDIOS = /\.(jpe?g|png|gif|webp|heic|heif|bmp|tiff?|avif|svg|mp4|mov|avi|webm|mkv|m4v|3gp|pdf)$/i;
+
+/** Lo que el chat no recibe: imágenes, videos y PDF, por extensión o por MIME. */
+export function esMedioNoAdmitido(file: { name: string; type: string }): boolean {
+  return /^(image|video)\//.test(file.type) || file.type === 'application/pdf' || MEDIOS.test(file.name);
+}
 
 const ERRORES: Record<string, { titulo: string; texto: string }> = {
   'no-stl': { titulo: 'No es un archivo STL', texto: 'Exporta tu modelo en formato .stl e inténtalo de nuevo.' },
@@ -30,6 +39,10 @@ export function useSubidaStl(idConversacion: string) {
   const subir = useCallback((file: File) => {
     xhrRef.current?.abort();
     const base = { nombre: file.name, bytes: file.size };
+    if (esMedioNoAdmitido(file)) {
+      setEstado({ fase: 'solo-texto', ...base });
+      return;
+    }
     if (!file.name.toLowerCase().endsWith('.stl')) {
       setEstado({ fase: 'error', ...base, ...ERRORES['no-stl'] });
       return;
@@ -79,5 +92,11 @@ export function useSubidaStl(idConversacion: string) {
     setEstado({ fase: 'inactivo' });
   }, []);
 
-  return { estado, subir, cancelar, limpiar: cancelar };
+  /** Una imagen pegada en la caja de texto: mismo aviso, sin subir nada. */
+  const rechazarMedio = useCallback((file: File) => {
+    xhrRef.current?.abort();
+    setEstado({ fase: 'solo-texto', nombre: file.name || 'imagen', bytes: file.size });
+  }, []);
+
+  return { estado, subir, cancelar, limpiar: cancelar, rechazarMedio };
 }

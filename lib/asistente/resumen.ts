@@ -32,18 +32,33 @@ function resumenTool(p: MensajeChat['parts'][number]): PasoRecorrido | null {
     }
     case 'tool-cotizar_archivo': {
       const o = p.output;
-      return o.tipo === 'cotizacion'
-        ? { quien, texto: `${o.codigo} · ${volumenCm3(o.volumenCm3)} · ${pesos(o.precioUnitario)} c/u × ${numero(o.cantidad)}` }
-        : { quien, texto: `${o.archivo}: ${o.motivo === 'grande' ? 'pasa de 30 cm' : 'volumen no fiable'}` };
+      if (o.tipo === 'cotizacion') return { quien, texto: `${o.codigo} · ${volumenCm3(o.volumenCm3)} · ${pesos(o.precioUnitario)} c/u × ${numero(o.cantidad)}` };
+      if (o.tipo === 'volumen') return { quien, texto: `${o.archivo}: ${numero(o.cantidad)} u., propuesta por WhatsApp` };
+      if (o.tipo === 'revision') return { quien, texto: `${o.archivo}: uso crítico, revisión técnica` };
+      return { quien, texto: `${o.archivo}: ${o.motivo === 'grande' ? 'pasa de 30 cm' : 'volumen no fiable'}` };
     }
     case 'tool-comparar_opciones':
-      return { quien, texto: p.output.filas.filter((f) => !f.elegida).map((f) => `${f.opcion} × ${f.cantidad}`).join(' · ') };
+      return { quien, texto: p.output.filas.filter((f) => !f.elegida).map((f) => `${f.opcion} × ${f.cantidad}${f.volumen ? ' (volumen)' : ''}`).join(' · ') };
     case 'tool-estimar_rango': {
       const o = p.output;
-      return o.tipo === 'estimacion'
-        ? { quien, texto: `${o.codigo} · ${pesos(o.min)} – ${pesos(o.max)} c/u` }
-        : { quien, texto: `${o.descripcion}: pasa de 30 cm` };
+      if (o.tipo === 'estimacion') return { quien, texto: `${o.codigo} · ${pesos(o.min)} – ${pesos(o.max)} c/u` };
+      if (o.tipo === 'revision') return { quien, texto: `${o.descripcion}: uso crítico, sin rango` };
+      return { quien, texto: `${o.descripcion}: pasa de 30 cm` };
     }
+    case 'tool-actualizar_ficha': {
+      const o = p.output;
+      return { quien, texto: [o.perfil, o.ruta, o.clase, o.next_action, o.primerFaltante && `falta ${o.primerFaltante.campo}`].filter(Boolean).join(' · ') };
+    }
+    case 'tool-estimar_modelado': {
+      const o = p.output;
+      if (o.tipo === 'no-requiere') return { quien, texto: 'archivo listo: no requiere modelado' };
+      const clase = o.claseMin === o.claseMax ? o.claseMin : `${o.claseMin}–${o.claseMax}`;
+      if (o.tipo === 'estimado') return { quien, texto: `${o.codigo} · ${clase} · ${pesos(o.min)} – ${pesos(o.max)}` };
+      if (o.tipo === 'revision') return { quien, texto: `${o.codigo} · ${clase} · sin precio (${o.motivo})` };
+      return { quien, texto: `${o.codigo} · ${clase} · en la propuesta de volumen` };
+    }
+    case 'tool-consultar_escaneo':
+      return { quien, texto: p.output.tipo === 'tarifas' ? `${p.output.filas.length} tarifas «desde»` : `sin tarifas (${p.output.motivo})` };
     case 'tool-estimar_envio':
       return p.output.tipo === 'envio'
         ? { quien, texto: `${p.output.destino} · envío ${pesos(p.output.costoEnvio)}` }
@@ -55,7 +70,7 @@ function resumenTool(p: MensajeChat['parts'][number]): PasoRecorrido | null {
       return { quien, texto: r === 'confirmado' ? 'confirmado por el cliente' : r === 'rechazado' ? 'rechazado por el cliente' : r };
     }
     case 'tool-derivar_a_asesor':
-      return { quien, texto: `${p.input.piezas.length} pieza(s) para WhatsApp` };
+      return { quien, texto: `${p.input.motivo ?? 'sin motivo'} · ${p.input.piezas.length} pieza(s) para WhatsApp` };
     default:
       return { quien, texto: '' };
   }

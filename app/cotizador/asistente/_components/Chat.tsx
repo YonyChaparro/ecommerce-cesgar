@@ -3,8 +3,9 @@
 import { useCallback, useMemo, useRef, useState } from 'react';
 import Orbe from '@/components/ia/Orbe';
 import type { MensajeChat } from '@/lib/asistente/esquemas';
+import type { Ficha } from '@/lib/asistente/ficha';
 import { useAsistente, useSesionGuardada } from '../_hooks/useAsistente';
-import { useSubidaStl } from '../_hooks/useSubidaStl';
+import { esMedioNoAdmitido, useSubidaStl } from '../_hooks/useSubidaStl';
 import { AccionesChatProvider, type AccionesChatValor } from './AccionesChat';
 import AdjuntoStl from './AdjuntoStl';
 import BarraChat from './BarraChat';
@@ -26,7 +27,7 @@ export default function Chat(topes: Topes) {
     <main className="flex min-h-screen flex-col overflow-x-clip bg-white pt-26 text-inverse-surface">
       {sesion ? (
         // La key reinicia useChat al empezar una conversación nueva.
-        <ChatSesion key={sesion.id} id={sesion.id} iniciales={sesion.iniciales} onNueva={nueva} {...topes} />
+        <ChatSesion key={sesion.id} id={sesion.id} iniciales={sesion.iniciales} fichaInicial={sesion.ficha} onNueva={nueva} {...topes} />
       ) : (
         <>
           <BarraChat conCarrito={false} onNueva={nueva} />
@@ -39,12 +40,13 @@ export default function Chat(topes: Topes) {
   );
 }
 
-function ChatSesion({ id, iniciales, onNueva, maxTurnos, maxCaracteres }: Topes & {
+function ChatSesion({ id, iniciales, fichaInicial, onNueva, maxTurnos, maxCaracteres }: Topes & {
   id: string;
   iniciales: MensajeChat[];
+  fichaInicial: Ficha | null;
   onNueva: () => void;
 }) {
-  const a = useAsistente({ id, iniciales, maxTurnos });
+  const a = useAsistente({ id, iniciales, fichaInicial, maxTurnos });
   const subida = useSubidaStl(id);
   const [texto, setTexto] = useState('');
   const inputArchivo = useRef<HTMLInputElement>(null);
@@ -99,8 +101,14 @@ function ChatSesion({ id, iniciales, onNueva, maxTurnos, maxCaracteres }: Topes 
       puedeEnviar={puedeEnviar}
       deshabilitada={a.bloqueado}
       placeholder={tamano === 'grande' ? 'Ej.: soportes para una repisa de baño, unos 15 cm, que aguanten humedad' : 'Escribe tu mensaje…'}
+      onArchivo={(file) => (esMedioNoAdmitido(file) ? subida.rechazarMedio(file) : subida.subir(file))}
       adjunto={subida.estado.fase !== 'inactivo' && (
-        <AdjuntoStl estado={subida.estado} onQuitar={subida.cancelar} onAsesor={() => abrirWhatsApp()} />
+        <AdjuntoStl
+          estado={subida.estado}
+          onQuitar={subida.cancelar}
+          onAsesor={() => abrirWhatsApp()}
+          onFotos={() => { abrirWhatsApp(undefined, 'PHOTOS_NEEDED'); subida.cancelar(); }}
+        />
       )}
     />
   );

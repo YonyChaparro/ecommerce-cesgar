@@ -14,11 +14,13 @@ import type { MensajeChat } from '@/lib/asistente/esquemas';
 import { contarTurnos, fusionarMensaje, parteDatosParaModelo } from '@/lib/asistente/fusion';
 import { limitar, respuestaLimite } from '@/lib/asistente/limite';
 import { costoDe, modeloChat } from '@/lib/asistente/openrouter';
-import { PROMPT_ASISTENTE } from '@/lib/asistente/prompt';
+import { fechaTarifasCotizador, getParametros } from '@/lib/asistente/parametros';
+import { INSTRUCCIONES_ASISTENTE } from '@/lib/asistente/prompt';
 import {
   contextoTools,
   guardarMensajes,
   guardarSesion,
+  leerFicha,
   leerSesion,
   limpiarSesionesViejas,
   PATRON_ID_SESION,
@@ -39,12 +41,19 @@ function error(status: number, codigo: string, detalle?: string) {
   return Response.json({ codigo, detalle }, { status });
 }
 
-/** Retoma una conversación al recargar: el navegador guarda solo el id. */
+/**
+ * Retoma una conversación al recargar: el navegador guarda solo el id. Con
+ * `?solo=ficha` devuelve solo la ficha, que el navegador vuelve a pedir después
+ * de cada respuesta para el botón de WhatsApp sin modelo (R10.4). La ficha
+ * solo se lee: la escribe la tool actualizar_ficha en el servidor (R2.5).
+ */
 export async function GET(req: Request) {
-  const id = new URL(req.url).searchParams.get('id') ?? '';
+  const params = new URL(req.url).searchParams;
+  const id = params.get('id') ?? '';
   if (!PATRON_ID_SESION.test(id)) return error(400, 'id-invalido');
+  if (params.get('solo') === 'ficha') return Response.json({ ficha: await leerFicha(id) });
   const sesion = await leerSesion(id);
-  return Response.json({ mensajes: sesion?.mensajes ?? [] });
+  return Response.json({ mensajes: sesion?.mensajes ?? [], ficha: sesion?.ficha ?? null });
 }
 
 export async function POST(req: Request) {
@@ -73,12 +82,14 @@ export async function POST(req: Request) {
   if (fusion.nuevoTurno && turnos > config.maxTurnos) return error(403, 'tope-turnos');
   await guardarSesion(id, fusion.mensajes, turnos);
 
-  const [pricing, envio] = await Promise.all([getQuoterPricing(), getShippingConfig()]);
-  const tools = crearTools(contextoTools(id, pricing, envio));
+  const [pricing, envio, parametros, tarifasFecha] = await Promise.all([
+    getQuoterPricing(), getShippingConfig(), getParametros(), fechaTarifasCotizador(),
+  ]);
+  const tools = crearTools(contextoTools(id, pricing, envio, parametros, tarifasFecha));
 
   const result = streamText({
     model: modeloChat(config, id),
-    instructions: PROMPT_ASISTENTE,
+    instructions: INSTRUCCIONES_ASISTENTE,
     messages: await convertToModelMessages(fusion.mensajes, {
       tools,
       // Una tarjeta de confirmación que el cliente dejó sin responder antes de

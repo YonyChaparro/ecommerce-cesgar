@@ -19,18 +19,20 @@ export type EstadoConfirmacion =
   | { estado: 'confirmado'; datos: DatosConfirmacion }
   | { estado: 'rechazado'; datos?: DatosConfirmacion }
   | { estado: 'sin-stock'; titulo: string; disponible: number }
-  | { estado: 'no-disponible'; detalle: string }
+  | { estado: 'no-disponible'; detalle: string; codigo?: 'volumen' }
   | { estado: 'sin-confirmar' };
 
 /**
  * La tarjeta de confirmación de la vista 3 con sus estados de la vista 5. Todo
  * entra por props: TarjetaConfirmacion la conecta con el servidor y el carrito.
  */
-export default function VistaConfirmacion({ e, onConfirmar, onRechazar, onVerCarrito }: {
+export default function VistaConfirmacion({ e, onConfirmar, onRechazar, onVerCarrito, onWhatsApp }: {
   e: EstadoConfirmacion;
   onConfirmar?: () => void;
   onRechazar?: () => void;
   onVerCarrito?: () => void;
+  /** Volumen (D1): la tarjeta ofrece la propuesta por WhatsApp. */
+  onWhatsApp?: () => void;
 }) {
   if (e.estado === 'cargando') {
     return (
@@ -48,6 +50,18 @@ export default function VistaConfirmacion({ e, onConfirmar, onRechazar, onVerCar
         texto={e.disponible > 0
           ? `De ${e.titulo} quedan ${numero(e.disponible)} unidades. No se agregó nada a tu carrito.`
           : `${e.titulo} está agotado. No se agregó nada a tu carrito.`}
+      />
+    );
+  }
+  if (e.estado === 'no-disponible' && e.codigo === 'volumen') {
+    return (
+      <Aviso
+        tono="info"
+        titulo="Para esta cantidad preparamos una propuesta"
+        texto={e.detalle}
+        accion={onWhatsApp && (
+          <button type="button" onClick={onWhatsApp} className="text-sm font-bold text-primary hover:underline">Pedir la propuesta por WhatsApp</button>
+        )}
       />
     );
   }

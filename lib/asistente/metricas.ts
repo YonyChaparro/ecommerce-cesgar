@@ -2,6 +2,7 @@ import 'server-only';
 import type { Prisma } from '@prisma/client';
 import { prisma } from '../prisma';
 import type { MensajeChat } from './esquemas';
+import { leerFichaGuardada, type Ficha } from './ficha';
 import { desdeDe, TAMANO_PAGINA, type Filtros, type Resultado } from './filtros';
 import { modelosDe, type ModeloRespondio } from './resumen';
 
@@ -18,6 +19,11 @@ function dondeDe(f: Filtros, conFiltrosDeTabla: boolean): Prisma.ChatSessionWher
   if (f.resultado) where.resultado = f.resultado === 'abandonado' ? null : f.resultado;
   // `modelos` es JSON en texto: basta con buscar la entrada de ese modelo.
   if (f.modelo) where.modelos = { contains: `"modelo":${JSON.stringify(f.modelo)}` };
+  // Sin ficha (conversaciones de antes de la v5) el perfil cuenta como sin identificar.
+  if (f.perfil === 'UNKNOWN') where.OR = [{ perfil: null }, { perfil: 'UNKNOWN' }];
+  else if (f.perfil) where.perfil = f.perfil;
+  if (f.ruta) where.ruta = f.ruta;
+  if (f.motivo) where.derivacion = f.motivo;
   return where;
 }
 
@@ -65,6 +71,56 @@ export async function indicadores(f: Filtros): Promise<Indicadores> {
   return { conversaciones, carrito, derivadas, pagadas, costoUsd: costo._sum.costoUsd ?? 0 };
 }
 
+export interface Conteo { clave: string; total: number }
+
+export interface IndicadoresComerciales {
+  conversaciones: number;
+  /** Con perfil distinto de UNKNOWN. */
+  conPerfil: number;
+  porPerfil: Conteo[];
+  /** VOLUME + INDUSTRIAL_PRIORITY. */
+  oportunidadesVolumen: number;
+  oportunidadesDerivadas: number;
+  porMotivo: Conteo[];
+  /** "C2–C3" → conversaciones. */
+  porClase: Conteo[];
+  estimadosModelado: number;
+  oportunidadesCatalogo: number;
+}
+
+const conteos = <T extends { _count: { _all: number } }>(filas: T[], clave: (f: T) => string | null): Conteo[] =>
+  filas.flatMap((f) => { const k = clave(f); return k ? [{ clave: k, total: f._count._all }] : []; })
+    .sort((a, b) => b.total - a.total);
+
+/** Indicadores del agente v5 (R11.2), por periodo. Salen de las columnas de ChatSession, no del JSON. */
+export async function indicadoresComerciales(f: Filtros): Promise<IndicadoresComerciales> {
+  const where = dondeDe(f, false);
+  const volumen = { ...where, ruta: { in: ['VOLUME', 'INDUSTRIAL_PRIORITY'] } };
+  const [conversaciones, conPerfil, porPerfil, oportunidadesVolumen, oportunidadesDerivadas, porMotivo, porClase, estimadosModelado, oportunidadesCatalogo] =
+    await Promise.all([
+      prisma.chatSession.count({ where }),
+      prisma.chatSession.count({ where: { ...where, AND: [{ perfil: { not: null } }, { perfil: { not: 'UNKNOWN' } }] } }),
+      prisma.chatSession.groupBy({ by: ['perfil'], where: { ...where, perfil: { not: null } }, _count: { _all: true } }),
+      prisma.chatSession.count({ where: volumen }),
+      prisma.chatSession.count({ where: { ...volumen, resultado: 'derivado' } }),
+      prisma.chatSession.groupBy({ by: ['derivacion'], where: { ...where, derivacion: { not: null } }, _count: { _all: true } }),
+      prisma.chatSession.groupBy({ by: ['claseMin', 'claseMax'], where: { ...where, claseMin: { not: null } }, _count: { _all: true } }),
+      prisma.chatQuote.count({ where: { tipo: 'modelado', createdAt: { gte: desdeDe(f.periodo) } } }),
+      prisma.chatSession.count({ where: { ...where, oportunidadCatalogo: true } }),
+    ]);
+  return {
+    conversaciones,
+    conPerfil,
+    porPerfil: conteos(porPerfil, (x) => x.perfil),
+    oportunidadesVolumen,
+    oportunidadesDerivadas,
+    porMotivo: conteos(porMotivo, (x) => x.derivacion),
+    porClase: conteos(porClase, (x) => (x.claseMin && x.claseMax ? (x.claseMin === x.claseMax ? x.claseMin : `${x.claseMin}–${x.claseMax}`) : null)),
+    estimadosModelado,
+    oportunidadesCatalogo,
+  };
+}
+
 export interface FilaConversacion {
   id: string;
   inicio: Date;
@@ -75,11 +131,18 @@ export interface FilaConversacion {
   costoUsd: number;
   resultado: Resultado;
   orden: OrdenDeChat | null;
+  perfil: string | null;
+  ruta: string | null;
+  derivacion: string | null;
+  claseMin: string | null;
+  claseMax: string | null;
+  oportunidadCatalogo: boolean;
 }
 
 const SELECT_FILA = {
   id: true, createdAt: true, modelos: true, turnos: true, tokensEntrada: true,
   tokensSalida: true, costoUsd: true, resultado: true,
+  perfil: true, ruta: true, derivacion: true, claseMin: true, claseMax: true, oportunidadCatalogo: true,
 } as const;
 
 function aFila(
@@ -96,6 +159,12 @@ function aFila(
     costoUsd: s.costoUsd,
     resultado: (s.resultado as Resultado | null) ?? 'abandonado',
     orden: ordenes.get(s.id) ?? null,
+    perfil: s.perfil,
+    ruta: s.ruta,
+    derivacion: s.derivacion,
+    claseMin: s.claseMin,
+    claseMax: s.claseMax,
+    oportunidadCatalogo: s.oportunidadCatalogo,
   };
 }
 
@@ -169,13 +238,14 @@ export async function modelosDelPeriodo(f: Filtros): Promise<string[]> {
 export interface DetalleConversacion extends FilaConversacion {
   modelos: ModeloRespondio[];
   mensajes: MensajeChat[];
+  ficha: Ficha | null;
 }
 
 export async function detalleConversacion(id: string): Promise<DetalleConversacion | null> {
-  const s = await prisma.chatSession.findUnique({ where: { id }, select: { ...SELECT_FILA, mensajes: true } });
+  const s = await prisma.chatSession.findUnique({ where: { id }, select: { ...SELECT_FILA, mensajes: true, ficha: true } });
   if (!s) return null;
   let mensajes: MensajeChat[] = [];
   try { mensajes = JSON.parse(s.mensajes); } catch {}
   const ordenes = await ordenesDe([s.id]);
-  return { ...aFila(s, ordenes), modelos: modelosDe(s.modelos), mensajes };
+  return { ...aFila(s, ordenes), modelos: modelosDe(s.modelos), mensajes, ficha: leerFichaGuardada(s.ficha) };
 }

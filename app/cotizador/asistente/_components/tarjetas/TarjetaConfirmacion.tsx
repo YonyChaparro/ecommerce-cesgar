@@ -19,7 +19,7 @@ export default function TarjetaConfirmacion({ parte, interactiva }: {
   /** Es la propuesta del último mensaje y no hay una respuesta en curso. */
   interactiva: boolean;
 }) {
-  const { idConversacion, responderConfirmacion, evento, precioMostradoProducto } = useAccionesChat();
+  const { idConversacion, responderConfirmacion, evento, precioMostradoProducto, abrirWhatsApp } = useAccionesChat();
   const { items, addItem, updateQty, openCart } = useCart();
   const pendiente = parte.state === 'input-available';
   const entrada = parte.state === 'input-streaming' ? undefined : parte.input;
@@ -103,5 +103,13 @@ export default function TarjetaConfirmacion({ parte, interactiva }: {
     });
   };
 
-  return <VistaConfirmacion e={e} onConfirmar={confirmar} onRechazar={rechazar} onVerCarrito={openCart} />;
+  return (
+    <VistaConfirmacion
+      e={e}
+      onConfirmar={confirmar}
+      onRechazar={rechazar}
+      onVerCarrito={openCart}
+      onWhatsApp={() => abrirWhatsApp(undefined, 'VOLUME')}
+    />
+  );
 }

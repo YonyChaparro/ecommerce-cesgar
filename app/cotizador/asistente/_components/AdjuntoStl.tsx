@@ -1,6 +1,7 @@
-import { FileBox, X } from 'lucide-react';
+import { FileBox, ImageOff, MessageCircle, X } from 'lucide-react';
 import Orbe from '@/components/ia/Orbe';
 import { medidasMm, tamanoArchivo, volumenCm3 } from '@/lib/formato';
+import { AVISO_SOLO_TEXTO } from '@/lib/asistente/mensajes-derivacion';
 import type { EstadoSubida } from '../_hooks/useSubidaStl';
 import Aviso from './Aviso';
 
@@ -8,11 +9,14 @@ import Aviso from './Aviso';
  * Ficha del archivo con los estados de subida de la vista 5. Solo recibe props:
  * el estado vive en useSubidaStl.
  */
-export default function AdjuntoStl({ estado, onQuitar, onAsesor }: {
+export default function AdjuntoStl({ estado, onQuitar, onAsesor, onFotos }: {
   estado: Exclude<EstadoSubida, { fase: 'inactivo' }>;
   onQuitar: () => void;
   onAsesor: () => void;
+  /** WhatsApp con el resumen y el motivo PHOTOS_NEEDED (R8.1). */
+  onFotos: () => void;
 }) {
+  if (estado.fase === 'solo-texto') return <AvisoSoloTexto onFotos={onFotos} onCerrar={onQuitar} />;
   if (estado.fase === 'error') {
     return (
       <Aviso
@@ -87,5 +91,34 @@ function AvisosArchivo({ archivo, onAsesor }: { archivo: Extract<EstadoSubida, {
         />
       )}
     </>
+  );
+}
+
+/** T22: el chat no recibe fotos; se ofrecen por WhatsApp con el resumen ya armado. */
+export function AvisoSoloTexto({ onFotos, onCerrar }: { onFotos: () => void; onCerrar?: () => void }) {
+  return (
+    <Aviso
+      tono="info"
+      icono={<ImageOff size={16} />}
+      titulo="Las fotos van por WhatsApp"
+      texto={AVISO_SOLO_TEXTO}
+      accion={
+        <div className="flex flex-wrap items-center gap-3">
+          <button
+            type="button"
+            onClick={onFotos}
+            className="boton-ia inline-flex min-h-10 items-center gap-2 rounded-full px-4 text-sm font-bold text-white"
+          >
+            <MessageCircle size={16} aria-hidden="true" />
+            Enviar fotos por WhatsApp
+          </button>
+          {onCerrar && (
+            <button type="button" onClick={onCerrar} className="text-sm font-semibold text-slate-600 hover:underline">
+              Seguir en el chat
+            </button>
+          )}
+        </div>
+      }
+    />
   );
 }

@@ -2,18 +2,21 @@
 import { useState, useTransition } from 'react';
 import { AlertCircle, CheckCircle, RotateCcw, Save } from 'lucide-react';
 import type { AsistenteConfig } from '@/lib/asistente/tipos';
+import type { ParametrosComerciales as Parametros } from '@/lib/asistente/parametros-tipos';
 import type { Validaciones } from '@/lib/asistente/validaciones';
 import { saveAsistenteConfigAction } from './actions';
 import CabeceraAsistente from './_components/CabeceraAsistente';
 import InterruptorActivo from './_components/InterruptorActivo';
 import ListaRespaldos from './_components/ListaRespaldos';
+import ParametrosComerciales from './_components/ParametrosComerciales';
 import SelectorModelo from './_components/SelectorModelo';
 import TablaValidacion from './_components/TablaValidacion';
 import TopesConversacion from './_components/TopesConversacion';
 import type { FilaModelo } from './_components/tipos';
 
-export default function AsistenteConfigForm({ initial, modelos, validaciones, sinListaOpenRouter, hayKey }: {
+export default function AsistenteConfigForm({ initial, parametros, modelos, validaciones, sinListaOpenRouter, hayKey }: {
   initial: AsistenteConfig;
+  parametros: Parametros;
   modelos: FilaModelo[];
   validaciones: Validaciones;
   sinListaOpenRouter: boolean;
@@ -110,6 +113,8 @@ export default function AsistenteConfigForm({ initial, modelos, validaciones, si
             <TablaValidacion validaciones={validaciones} />
           </div>
         </div>
+
+        <ParametrosComerciales initial={parametros} />
       </div>
     </div>
   );

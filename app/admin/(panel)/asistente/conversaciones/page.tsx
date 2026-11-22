@@ -5,6 +5,7 @@ import {
   costoPorModelo,
   detalleConversacion,
   indicadores,
+  indicadoresComerciales,
   leerFiltros,
   modelosDelPeriodo,
   paginaConversaciones,
@@ -14,6 +15,7 @@ import CostoPorModelo from './_components/CostoPorModelo';
 import DetalleConversacion from './_components/DetalleConversacion';
 import FiltrosConversaciones, { SelectorPeriodo } from './_components/FiltrosConversaciones';
 import Indicadores from './_components/Indicadores';
+import IndicadoresComerciales from './_components/IndicadoresComerciales';
 import TablaConversaciones from './_components/TablaConversaciones';
 import { urlConversaciones, urlCsv } from './_components/url';
 
@@ -25,8 +27,9 @@ export default async function ConversacionesPage({ searchParams }: {
   const filtros = leerFiltros(sp);
   const idDetalle = typeof sp.id === 'string' ? sp.id.slice(0, 64) : undefined;
 
-  const [datos, pagina, costos, modelos, detalle, config] = await Promise.all([
+  const [datos, comerciales, pagina, costos, modelos, detalle, config] = await Promise.all([
     indicadores(filtros),
+    indicadoresComerciales(filtros),
     paginaConversaciones(filtros),
     costoPorModelo(filtros),
     modelosDelPeriodo(filtros),
@@ -53,6 +56,7 @@ export default async function ConversacionesPage({ searchParams }: {
           }
         />
         <Indicadores datos={datos} periodo={filtros.periodo} />
+        <IndicadoresComerciales datos={comerciales} />
         <div className={detalle ? 'grid gap-5 xl:grid-cols-[minmax(0,1fr)_24rem] items-start' : ''}>
           <div className="space-y-5 min-w-0">
             <TablaConversaciones
@@ -60,7 +64,17 @@ export default async function ConversacionesPage({ searchParams }: {
               total={pagina.total}
               filtros={filtros}
               idActivo={detalle?.id}
-              filtrosUi={<FiltrosConversaciones q={filtros.id} resultado={filtros.resultado} modelo={filtros.modelo} modelos={modelos} />}
+              filtrosUi={
+                <FiltrosConversaciones
+                  q={filtros.id}
+                  resultado={filtros.resultado}
+                  modelo={filtros.modelo}
+                  modelos={modelos}
+                  perfil={filtros.perfil}
+                  ruta={filtros.ruta}
+                  motivo={filtros.motivo}
+                />
+              }
             />
             <CostoPorModelo costos={costos} />
           </div>

@@ -10,7 +10,9 @@ import type {
   ParteMensaje,
   SalidaTool,
 } from '@/lib/asistente/esquemas';
-import { enlaceAsesor, lineasDesdeConversacion } from '@/lib/asistente/mensaje-asesor';
+import type { Ficha } from '@/lib/asistente/ficha';
+import { lineasDesdeConversacion } from '@/lib/asistente/mensaje-asesor';
+import { enlaceResumen, type MotivoDerivacion } from '@/lib/asistente/resumen-asesor';
 
 const CLAVE_ID = 'cesgar-asistente-id';
 const PATRON_ID = /^[A-Za-z0-9_-]{12,64}$/;
@@ -26,7 +28,7 @@ function guardarId(id: string) {
  * los mensajes a ChatSession (propuesta §8). "Nueva conversación" empieza otra.
  */
 export function useSesionGuardada() {
-  const [sesion, setSesion] = useState<{ id: string; iniciales: MensajeChat[] } | null>(null);
+  const [sesion, setSesion] = useState<{ id: string; iniciales: MensajeChat[]; ficha: Ficha | null } | null>(null);
 
   useEffect(() => {
     let id: string | null = null;
@@ -36,13 +38,13 @@ export function useSesionGuardada() {
     if (esNueva) guardarId(sesionId);
 
     let cancelado = false;
-    const cargar: Promise<{ mensajes?: MensajeChat[] }> = esNueva
+    const cargar: Promise<{ mensajes?: MensajeChat[]; ficha?: Ficha | null }> = esNueva
       ? Promise.resolve({ mensajes: [] })
       : fetch(`/api/cotizador/chat?id=${encodeURIComponent(sesionId)}`)
           .then((r) => (r.ok ? r.json() : { mensajes: [] }))
           .catch(() => ({ mensajes: [] }));
     cargar.then((d) => {
-      if (!cancelado) setSesion({ id: sesionId, iniciales: d.mensajes ?? [] });
+      if (!cancelado) setSesion({ id: sesionId, iniciales: d.mensajes ?? [], ficha: d.ficha ?? null });
     });
     return () => { cancelado = true; };
   }, []);
@@ -50,7 +52,7 @@ export function useSesionGuardada() {
   const nueva = useCallback(() => {
     const id = nuevoId();
     guardarId(id);
-    setSesion({ id, iniciales: [] });
+    setSesion({ id, iniciales: [], ficha: null });
   }, []);
 
   return { sesion, nueva };
@@ -74,9 +76,10 @@ function clasificarError(error: Error | undefined): ErrorChat | null {
 
 type Evento = 'carrito' | 'derivado';
 
-export function useAsistente({ id, iniciales, maxTurnos }: {
+export function useAsistente({ id, iniciales, fichaInicial, maxTurnos }: {
   id: string;
   iniciales: MensajeChat[];
+  fichaInicial: Ficha | null;
   maxTurnos: number;
 }) {
   // Productos agregados con el "+": viajan en el siguiente mensaje del cliente.
@@ -102,6 +105,20 @@ export function useAsistente({ id, iniciales, maxTurnos }: {
     sendAutomaticallyWhen: lastAssistantMessageIsCompleteWithToolCalls,
   });
   const { messages, sendMessage, regenerate, addToolOutput, status, error, clearError } = chat;
+
+  // La ficha la escribe solo el servidor (R2.5). El navegador la vuelve a leer
+  // al terminar cada respuesta, para el WhatsApp sin modelo (R10.4).
+  const [ficha, setFicha] = useState<Ficha | null>(fichaInicial);
+  const largo = messages.length;
+  useEffect(() => {
+    if (status !== 'ready' || largo === 0) return;
+    let cancelado = false;
+    fetch(`/api/cotizador/chat?id=${encodeURIComponent(id)}&solo=ficha`)
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d: { ficha?: Ficha | null } | null) => { if (!cancelado && d) setFicha(d.ficha ?? null); })
+      .catch(() => {});
+    return () => { cancelado = true; };
+  }, [status, largo, id]);
 
   const turnosUsados = messages.filter((m) => m.role === 'user').length;
   const turnosRestantes = Math.max(0, maxTurnos - turnosUsados);
@@ -143,12 +160,15 @@ export function useAsistente({ id, iniciales, maxTurnos }: {
     else agregados.current.push({ nombre, cantidad: 1 });
   }, []);
 
-  /** "Hablar con una persona": WhatsApp directo, sin pasar por el modelo (§10.3). */
-  const abrirWhatsApp = useCallback((enlace?: string) => {
-    const destino = enlace ?? enlaceAsesor(lineasDesdeConversacion(messages)).enlace;
+  /**
+   * "Hablar con una persona": WhatsApp directo, sin pasar por el modelo (§10.3).
+   * Sin enlace, arma el resumen con la ficha guardada y las cotizaciones (R10.4).
+   */
+  const abrirWhatsApp = useCallback((enlace?: string, motivo: MotivoDerivacion = 'CUSTOMER_ASKED') => {
+    const destino = enlace ?? enlaceResumen(ficha, lineasDesdeConversacion(messages), motivo).enlace;
     window.open(destino, '_blank', 'noopener,noreferrer');
     evento('derivado');
-  }, [messages, evento]);
+  }, [messages, evento, ficha]);
 
   return {
     mensajes: messages,

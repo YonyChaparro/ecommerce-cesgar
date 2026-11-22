@@ -1,6 +1,6 @@
 import Link from 'next/link';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { RESULTADOS, TAMANO_PAGINA, type FilaConversacion, type Filtros } from '@/lib/asistente/metricas';
+import { PERFILES_ETIQUETA, RESULTADOS, RUTAS_ETIQUETA, TAMANO_PAGINA, type FilaConversacion, type Filtros } from '@/lib/asistente/metricas';
 import { numero } from '@/lib/formato';
 import { cn } from '@/lib/utils';
 import { Card } from '../../../_ui';
@@ -26,10 +26,10 @@ export default function TablaConversaciones({ filas, total, filtros, idActivo, f
       ) : (
         <div className="space-y-3">
           <div className="overflow-x-auto -mx-5 px-5">
-            <table className="w-full min-w-3xl text-sm tabular-nums">
+            <table className="w-full min-w-4xl text-sm tabular-nums">
               <thead>
                 <tr className="text-left text-xs text-slate-400">
-                  {['Conversación', 'Inicio', 'Modelo', 'Turnos', 'Tokens ent. / sal.', 'Costo', 'Resultado', 'Orden'].map((h) => (
+                  {['Conversación', 'Inicio', 'Modelo', 'Perfil · ruta', 'Turnos', 'Tokens ent. / sal.', 'Costo', 'Resultado', 'Orden'].map((h) => (
                     <th key={h} className="py-2 pr-3 font-semibold whitespace-nowrap">{h}</th>
                   ))}
                 </tr>
@@ -48,6 +48,17 @@ export default function TablaConversaciones({ filas, total, filtros, idActivo, f
                         <div className="flex flex-col">
                           <span className="font-mono text-xs text-slate-900">{f.modelo.modelo.split('/').pop()}</span>
                           {f.modelo.respaldo && <span className="text-xs text-amber-800">respaldo</span>}
+                        </div>
+                      ) : <span className="text-slate-400">—</span>}
+                    </td>
+                    <td className="py-2.5 pr-3">
+                      {f.perfil || f.ruta ? (
+                        <div className="flex flex-col text-xs">
+                          <span className="text-slate-900">{PERFILES_ETIQUETA[f.perfil as keyof typeof PERFILES_ETIQUETA] ?? 'Sin identificar'}</span>
+                          <span className="text-slate-500">
+                            {RUTAS_ETIQUETA[f.ruta as keyof typeof RUTAS_ETIQUETA] ?? '—'}
+                            {f.claseMin && f.claseMax && ` · ${f.claseMin === f.claseMax ? f.claseMin : `${f.claseMin}–${f.claseMax}`}`}
+                          </span>
                         </div>
                       ) : <span className="text-slate-400">—</span>}
                     </td>

@@ -6,13 +6,19 @@
 
 import datos from './validaciones.json';
 
-/** Las cinco reglas de la vista 6. Cada situación de verify:agente comprueba una. */
+/** Las reglas de la vista 6. Cada situación de verify:agente comprueba una. Las seis últimas son del agente v5 (R12.1). */
 export const REGLAS = [
   { id: 'precio-de-tool', titulo: 'Todo precio sale de una tool' },
   { id: 'deriva-grandes', titulo: 'Deriva piezas de más de 30 cm' },
   { id: 'sin-datos-personales', titulo: 'No pide datos personales' },
   { id: 'sin-descuentos', titulo: 'No promete descuentos fuera de tarifa' },
   { id: 'confirma-carrito', titulo: 'Pide confirmación antes del carrito' },
+  { id: 'segmenta-cliente', titulo: 'Segmenta al cliente' },
+  { id: 'ruta-volumen', titulo: 'Ruta de volumen' },
+  { id: 'escala-criticas', titulo: 'Escala piezas críticas' },
+  { id: 'modelado-preliminar', titulo: 'Modelado preliminar' },
+  { id: 'solo-texto', titulo: 'Solo texto' },
+  { id: 'no-repite', titulo: 'No repite preguntas' },
 ] as const;
 
 export type ReglaId = (typeof REGLAS)[number]['id'];

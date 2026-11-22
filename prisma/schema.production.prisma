@@ -191,20 +191,31 @@ model ChatSession {
   tokensEntrada Int         @default(0)
   tokensSalida  Int         @default(0)
   resultado     String?
+  // Ficha de la solicitud (agente v5, design §6.1): el JSON completo y, aparte,
+  // las columnas por las que filtra y cuenta la vista 7.
+  ficha         String?     @db.Text // JSON de Ficha (última versión)
+  perfil        String?     // customer_profile
+  ruta          String?     // derived.volume_route
+  derivacion    String?     // motivo de la última derivación
+  claseMin      String?
+  claseMax      String?
+  oportunidadCatalogo Boolean @default(false)
   cotizaciones  ChatQuote[]
   createdAt     DateTime    @default(now())
   updatedAt     DateTime    @updatedAt
 
   @@index([createdAt])
+  @@index([perfil])
+  @@index([ruta])
 }
 
-// Cotización o estimación que el asistente citó con un código.
-// tipo: "archivo" | "estimacion"
+// Cotización, estimación o estimado de modelado que el asistente citó con un código.
+// tipo: "archivo" | "estimacion" | "modelado"
 model ChatQuote {
   id        String      @id @default(cuid())
   sessionId String
   session   ChatSession @relation(fields: [sessionId], references: [id], onDelete: Cascade)
-  codigo    String      // "Q-7F3K" | "E-2M9P"; único dentro de la conversación
+  codigo    String      // "Q-7F3K" | "E-2M9P" | "M-4H8R"; único dentro de la conversación
   tipo      String
   datos     String      @db.Text // JSON: archivo, STLData, elección y precios mostrados | medidas, supuesto y rango
   createdAt DateTime    @default(now())

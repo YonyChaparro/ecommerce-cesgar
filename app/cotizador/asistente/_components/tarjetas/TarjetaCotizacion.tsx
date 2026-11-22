@@ -1,6 +1,8 @@
 'use client';
 
+import { MessageCircle, ShieldAlert } from 'lucide-react';
 import type { SalidaTool } from '@/lib/asistente/esquemas';
+import { MENSAJE_VOLUMEN } from '@/lib/asistente/mensajes-derivacion';
 import { medidasMm, numero, pesos, volumenCm3 } from '@/lib/formato';
 import Aviso from '../Aviso';
 import { useAccionesChat } from '../AccionesChat';
@@ -21,7 +23,9 @@ export function CabeceraCotizacion({ archivo, codigo, configuracion }: { archivo
     <div className="flex flex-wrap items-center gap-3 px-5 py-4.5">
       <div className="flex flex-col gap-0.5">
         <strong className="text-base">{archivo}</strong>
-        <span className="text-xs text-slate-500">Cotización {codigo} · medido en el servidor</span>
+        <span className="text-xs text-slate-500">
+          <span className="font-bold text-ia-tinta">Cotización calculada</span> · {codigo} · medido en el servidor
+        </span>
       </div>
       <span className="text-sm text-slate-600 sm:ml-auto">{configuracion}</span>
     </div>
@@ -35,6 +39,29 @@ export default function TarjetaCotizacion({ salida, comparacion }: {
 }) {
   const { abrirWhatsApp } = useAccionesChat();
 
+  if (salida.tipo === 'volumen') {
+    // D1: desde Q_VOLUMEN_MIN por referencia, propuesta por WhatsApp; sin precio ni carrito.
+    return (
+      <Aviso
+        tono="info"
+        icono={<MessageCircle size={16} />}
+        titulo={`Para ${numero(salida.cantidad)} unidades preparamos una propuesta de producción`}
+        texto={`${salida.archivo} (${medidasMm(salida.medidasMm)}). ${MENSAJE_VOLUMEN}`}
+        accion={<BotonWhatsApp onClick={() => abrirWhatsApp(undefined, 'VOLUME')} texto="Pedir la propuesta por WhatsApp" />}
+      />
+    );
+  }
+  if (salida.tipo === 'revision') {
+    return (
+      <Aviso
+        tono="advertencia"
+        icono={<ShieldAlert size={16} />}
+        titulo="Esta pieza necesita revisión técnica"
+        texto={`${salida.archivo}: es de uso crítico o de seguridad, así que no la cotizamos en automático. Un asesor la revisa contigo.`}
+        accion={<BotonWhatsApp onClick={() => abrirWhatsApp(undefined, 'CRITICAL')} texto="Hablar con un asesor" />}
+      />
+    );
+  }
   if (salida.tipo === 'no-cotizable') {
     const grande = salida.motivo === 'grande';
     return (
@@ -44,7 +71,7 @@ export default function TarjetaCotizacion({ salida, comparacion }: {
         texto={grande
           ? `${salida.archivo}: su lado más largo mide ${numero(salida.ladoMayorCm, 1)} cm. Un asesor puede revisar si se imprime por partes.`
           : `${salida.archivo}: la malla parece tener huecos o caras abiertas. Revisa el archivo o habla con un asesor antes de comprar.`}
-        accion={<button type="button" onClick={() => abrirWhatsApp()} className="text-sm font-bold text-primary hover:underline">Hablar con un asesor</button>}
+        accion={<button type="button" onClick={() => abrirWhatsApp(undefined, grande ? 'OVERSIZE' : 'OTHER')} className="text-sm font-bold text-primary hover:underline">Hablar con un asesor</button>}
       />
     );
   }
@@ -70,6 +97,7 @@ export default function TarjetaCotizacion({ salida, comparacion }: {
             <strong className="text-xl">{pesos(salida.total)}</strong>
           </div>
         )}
+        <p className="border-t border-slate-200 px-5 py-2.5 text-xs text-slate-500">No incluye diseño ni envío.</p>
       </div>
       {salida.rellenoFijado && (
         <Aviso
@@ -79,5 +107,18 @@ export default function TarjetaCotizacion({ salida, comparacion }: {
         />
       )}
     </div>
+  );
+}
+
+export function BotonWhatsApp({ onClick, texto }: { onClick: () => void; texto: string }) {
+  return (
+    <button
+      type="button"
+      onClick={onClick}
+      className="boton-ia inline-flex min-h-10 items-center gap-2 rounded-full px-4 text-sm font-bold text-white"
+    >
+      <MessageCircle size={16} aria-hidden="true" />
+      {texto}
+    </button>
   );
 }

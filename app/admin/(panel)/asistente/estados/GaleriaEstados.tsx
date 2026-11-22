@@ -4,6 +4,10 @@ import { FileBox } from 'lucide-react';
 import type { SalidaTool } from '@/lib/asistente/esquemas';
 import { AccionesChatProvider, type AccionesChatValor } from '@/app/cotizador/asistente/_components/AccionesChat';
 import AdjuntoStl from '@/app/cotizador/asistente/_components/AdjuntoStl';
+import TarjetaEscaneo from '@/app/cotizador/asistente/_components/tarjetas/TarjetaEscaneo';
+import TarjetaModelado from '@/app/cotizador/asistente/_components/tarjetas/TarjetaModelado';
+import TablaOpciones from '@/app/cotizador/asistente/_components/tarjetas/TablaOpciones';
+import { NO_INCLUYE_MODELADO } from '@/lib/asistente/mensajes-derivacion';
 import { AvisoError, TopeAlcanzado } from '@/app/cotizador/asistente/_components/Conversacion';
 import Escribiendo from '@/app/cotizador/asistente/_components/Escribiendo';
 import FichaTool from '@/app/cotizador/asistente/_components/FichaTool';
@@ -62,9 +66,41 @@ const PRODUCTOS: SalidaTool<'buscar_productos'> = {
   ],
 };
 const ASESOR: SalidaTool<'derivar_a_asesor'> = {
-  mensaje: 'Hola, vengo del asistente de cotización de Cesgar. Necesito:\n• Tapa para tanque de agua de 45 cm de diámetro (pasa de 30 cm).\n• Caja para circuito de 10 × 6 × 3 cm en PLA, sin archivo (estimado: $10.600 – $18.300 c/u).',
+  mensaje: 'Hola, vengo del asistente de cotización de Cesgar.\nMotivo: Producción por volumen (50 unidades de una referencia).\nPerfil: Revendedor · Repuestos El Cruce\nPieza: rejilla de ventilación central — Chevrolet Spark GT 2016, tablero\nCantidad: 50 iniciales · mensual · ≈ 20/mes · para reventa\nMuestra: fragmentos · Medidas: unos 12 x 6 cm\nModelado: C3–C4 preliminar (confianza media)\nEnvío fotos de la pieza por aquí.',
   enlace: '#',
+  motivo: 'VOLUME',
 };
+// Agente v5: modelado, escaneo y rutas de volumen (las cifras salen de los parámetros de fábrica).
+const MODELADO_BASE = {
+  codigo: 'M-4H8R', descripcion: 'Caja para tarjeta electrónica con tapa atornillada', claseMin: 'C2' as const, claseMax: 'C3' as const,
+  horasMin: 0.5, confianza: 'media' as const, operaciones: ['extrusión', 'vaciado (shell)'],
+  podriaCambiar: ['¿Tienes medidas, un plano o la pieza original para tomarlas?'], noIncluye: NO_INCLUYE_MODELADO,
+};
+const MODELADO: SalidaTool<'estimar_modelado'> = { tipo: 'estimado', ...MODELADO_BASE, horasMax: 2, min: 25000, max: 90000, revisionRecomendada: false };
+const MODELADO_REVISION: SalidaTool<'estimar_modelado'> = { tipo: 'revision', ...MODELADO_BASE, horasMax: 2, motivo: 'no-publicado' };
+const MODELADO_PROPUESTA: SalidaTool<'estimar_modelado'> = {
+  tipo: 'en-propuesta', codigo: 'M-4H8R', descripcion: MODELADO_BASE.descripcion, claseMin: 'C2', claseMax: 'C3', horasMin: 0.5, horasMax: 2, confianza: 'media',
+  mensaje: 'Por el volumen que necesitas, lo mejor es revisar tu proyecto como una solución de producción y no cotizar el diseño por separado. Nuestro equipo puede evaluar el lote y la posibilidad de incluir el desarrollo del modelo dentro de la propuesta.',
+};
+const ESCANEO: SalidaTool<'consultar_escaneo'> = {
+  tipo: 'tarifas',
+  filas: [
+    { servicio: 'Escaneo pequeño', desde: 80000, condicion: 'Confirmar tamaño, superficie y acceso.' },
+    { servicio: 'Limpieza adicional de malla', desde: 30000, condicion: 'Según el estado de la malla y el tiempo.' },
+    { servicio: 'Reconstrucción CAD editable', desde: 250000, condicion: 'Aparte del escaneo; depende de la complejidad (C1–C6).' },
+  ],
+  aclaracion: 'El escaneo entrega una malla 3D; el CAD editable se cotiza aparte.',
+};
+const COMPARACION_VOLUMEN: SalidaTool<'comparar_opciones'> = {
+  ...COMPARACION_BASE(),
+  filas: [
+    { opcion: 'PETG Negro', cantidad: 4, precioUnitario: 10983, descuentoPct: 10, total: 43932, elegida: true },
+    { opcion: 'PETG Negro', cantidad: 60, precioUnitario: null, descuentoPct: null, total: null, elegida: false, volumen: true },
+  ],
+};
+function COMPARACION_BASE() {
+  return { codigo: 'Q-7F3K', archivo: 'soporte_repisa.stl', configuracion: 'FDM · PETG Negro · Capa 0,2 mm · Relleno 40 %' };
+}
 const ENVIO: SalidaTool<'estimar_envio'> = {
   tipo: 'envio', destino: 'Medellín, Antioquia', etiqueta: 'Ciudades principales · 2–4 días hábiles', costoEnvio: 18000,
   gratisPorMonto: false, lineas: [{ descripcion: 'Impresión 3D · soporte_repisa.stl', cantidad: 4, total: 43932 }],
@@ -98,17 +134,18 @@ export default function GaleriaEstados() {
     <AccionesChatProvider valor={ACCIONES}>
       <div className="grid gap-5 lg:grid-cols-2 items-start text-inverse-surface">
         <Grupo titulo="Subida de STL">
-          <Estado nombre="subiendo"><AdjuntoStl estado={{ fase: 'subiendo', ...base, progreso: 64 }} onQuitar={nada} onAsesor={nada} /></Estado>
-          <Estado nombre="midiendo"><AdjuntoStl estado={{ fase: 'midiendo', ...base }} onQuitar={nada} onAsesor={nada} /></Estado>
-          <Estado nombre="listo"><AdjuntoStl estado={{ fase: 'listo', ...base, archivo: ARCHIVO }} onQuitar={nada} onAsesor={nada} /></Estado>
+          <Estado nombre="subiendo"><AdjuntoStl estado={{ fase: 'subiendo', ...base, progreso: 64 }} onQuitar={nada} onAsesor={nada} onFotos={nada} /></Estado>
+          <Estado nombre="midiendo"><AdjuntoStl estado={{ fase: 'midiendo', ...base }} onQuitar={nada} onAsesor={nada} onFotos={nada} /></Estado>
+          <Estado nombre="listo"><AdjuntoStl estado={{ fase: 'listo', ...base, archivo: ARCHIVO }} onQuitar={nada} onAsesor={nada} onFotos={nada} /></Estado>
           <Estado nombre="no es STL">
-            <AdjuntoStl estado={{ fase: 'error', ...base, titulo: 'No es un archivo STL', texto: 'Exporta tu modelo en formato .stl e inténtalo de nuevo.' }} onQuitar={nada} onAsesor={nada} />
+            <AdjuntoStl estado={{ fase: 'error', ...base, titulo: 'No es un archivo STL', texto: 'Exporta tu modelo en formato .stl e inténtalo de nuevo.' }} onQuitar={nada} onAsesor={nada} onFotos={nada} />
           </Estado>
           <Estado nombre="hueca, más de 30 cm y volumen no fiable">
             <AdjuntoStl
               estado={{ fase: 'listo', ...base, archivo: { ...ARCHIVO, geometria: 'hollow', grande: true, ladoMayorCm: 34, volumenNoFiable: true } }}
               onQuitar={nada}
               onAsesor={nada}
+              onFotos={nada}
             />
           </Estado>
           <Estado nombre="adjunto enviado">
@@ -129,6 +166,9 @@ export default function GaleriaEstados() {
           <Estado nombre="rechazado"><VistaConfirmacion e={{ estado: 'rechazado', datos: CONFIRMACION }} /></Estado>
           <Estado nombre="sin stock"><VistaConfirmacion e={{ estado: 'sin-stock', titulo: 'Hotend All-Metal V6 Kit Completo', disponible: 1 }} /></Estado>
           <Estado nombre="no disponible"><VistaConfirmacion e={{ estado: 'no-disponible', detalle: 'Una estimación sin archivo no se puede pagar.' }} /></Estado>
+          <Estado nombre="volumen (D1)">
+            <VistaConfirmacion e={{ estado: 'no-disponible', codigo: 'volumen', detalle: 'Para esta cantidad te preparamos una propuesta por WhatsApp.' }} onWhatsApp={nada} />
+          </Estado>
           <Estado nombre="sin confirmar"><VistaConfirmacion e={{ estado: 'sin-confirmar' }} /></Estado>
         </Grupo>
 
@@ -160,11 +200,36 @@ export default function GaleriaEstados() {
           <Estado nombre="no cotizable">
             <TarjetaCotizacion salida={{ tipo: 'no-cotizable', archivo: 'tapa_tanque.stl', motivo: 'grande', medidasMm: { x: 340, y: 60, z: 40 }, ladoMayorCm: 34 }} />
           </Estado>
+          <Estado nombre="volumen: 50 unidades o más">
+            <TarjetaCotizacion salida={{ tipo: 'volumen', archivo: 'rejilla.stl', cantidad: 50, medidasMm: { x: 120, y: 60, z: 15 } }} />
+          </Estado>
+          <Estado nombre="uso crítico: revisión técnica">
+            <TarjetaCotizacion salida={{ tipo: 'revision', archivo: 'soporte_mordaza_freno.stl', motivo: 'critica' }} />
+          </Estado>
+          <Estado nombre="comparación con fila de volumen">
+            <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white"><TablaOpciones salida={COMPARACION_VOLUMEN} /></div>
+          </Estado>
+        </Grupo>
+
+        <Grupo titulo="Diseño 3D y escaneo (agente v5)">
+          <Estado nombre="modelado: estimado"><TarjetaModelado salida={MODELADO} /></Estado>
+          <Estado nombre="modelado: revisión (precio sin publicar)"><TarjetaModelado salida={MODELADO_REVISION} /></Estado>
+          <Estado nombre="modelado: en la propuesta de volumen"><TarjetaModelado salida={MODELADO_PROPUESTA} /></Estado>
+          <Estado nombre="modelado: no requiere"><TarjetaModelado salida={{ tipo: 'no-requiere', descripcion: 'Soporte' }} /></Estado>
+          <Estado nombre="escaneo: tarifas «desde»"><TarjetaEscaneo salida={ESCANEO} /></Estado>
+          <Estado nombre="escaneo: no disponible">
+            <TarjetaEscaneo salida={{ tipo: 'no-disponible', motivo: 'no-publicado', aclaracion: ESCANEO.aclaracion }} />
+          </Estado>
+          <Estado nombre="solo texto: soltó una foto">
+            <AdjuntoStl estado={{ fase: 'solo-texto', nombre: 'foto_pieza.jpg', bytes: 2_400_000 }} onQuitar={nada} onAsesor={nada} onFotos={nada} />
+          </Estado>
+          <Estado nombre="ficha (sin tarjeta)"><FichaTool enCurso={false} texto="Anotado" /></Estado>
         </Grupo>
 
         <Grupo titulo="Sin archivo, tienda, envío y asesor">
           <Estado nombre="estimación"><TarjetaEstimacion salida={ESTIMACION} /></Estado>
           <Estado nombre="estimación de más de 30 cm"><TarjetaEstimacion salida={{ tipo: 'grande', descripcion: 'Tapa de tanque', ladoMayorCm: 45 }} /></Estado>
+          <Estado nombre="estimación: uso crítico"><TarjetaEstimacion salida={{ tipo: 'revision', descripcion: 'Soporte de pastilla de freno', motivo: 'critica' }} /></Estado>
           <Estado nombre="productos"><ListaProductos salida={PRODUCTOS} /></Estado>
           <Estado nombre="envío"><TarjetaEnvio salida={ENVIO} /></Estado>
           <Estado nombre="envío a confirmar"><TarjetaEnvio salida={{ tipo: 'a-confirmar', destino: 'Leticia, Amazonas', subtotal: 0 }} /></Estado>

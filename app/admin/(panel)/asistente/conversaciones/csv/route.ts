@@ -14,7 +14,10 @@ export async function GET(req: Request) {
   const filtros = leerFiltros(Object.fromEntries(new URL(req.url).searchParams));
   const filas = await todasLasConversaciones(filtros);
 
-  const encabezado = ['conversacion', 'inicio', 'modelo', 'respaldo', 'turnos', 'tokens_entrada', 'tokens_salida', 'costo_usd', 'resultado', 'orden', 'orden_pagada'];
+  const encabezado = [
+    'conversacion', 'inicio', 'modelo', 'respaldo', 'turnos', 'tokens_entrada', 'tokens_salida', 'costo_usd', 'resultado', 'orden', 'orden_pagada',
+    'perfil', 'ruta', 'motivo_derivacion', 'clase_min', 'clase_max', 'catalog_opportunity',
+  ];
   const lineas = filas.map((f) => [
     f.id,
     f.inicio.toISOString(),
@@ -27,6 +30,13 @@ export async function GET(req: Request) {
     RESULTADOS[f.resultado],
     f.orden?.id ?? '',
     f.orden ? (f.orden.pagada ? 'si' : 'no') : '',
+    // Los códigos de la ficha, como los nombra la v5.1 (R11.3).
+    f.perfil ?? '',
+    f.ruta ?? '',
+    f.derivacion ?? '',
+    f.claseMin ?? '',
+    f.claseMax ?? '',
+    f.oportunidadCatalogo ? 'si' : 'no',
   ].map(celda).join(','));
 
   // BOM: Excel abre el archivo en UTF-8 y respeta las tildes.

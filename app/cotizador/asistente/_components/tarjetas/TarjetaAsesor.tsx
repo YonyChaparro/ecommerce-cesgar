@@ -4,6 +4,7 @@ import { useState } from 'react';
 import { MessageCircle, ShieldCheck } from 'lucide-react';
 import Aura from '@/components/ia/Aura';
 import type { SalidaTool } from '@/lib/asistente/esquemas';
+import { ETIQUETA_MOTIVO } from '@/lib/asistente/resumen-asesor';
 import { useAccionesChat } from '../AccionesChat';
 
 /**
@@ -18,7 +19,9 @@ export default function TarjetaAsesor({ salida }: { salida: SalidaTool<'derivar_
     <Aura activa={!decidido} className="max-w-2xl">
       <div className="flex flex-col gap-4 rounded-3xl border-2 border-ia-violeta bg-white p-5">
         <div className="flex flex-col gap-1">
-          <span className="text-xs font-bold uppercase tracking-wider text-ia-tinta">Habla con un asesor</span>
+          <span className="text-xs font-bold uppercase tracking-wider text-ia-tinta">
+            Habla con un asesor{salida.motivo && ` · ${ETIQUETA_MOTIVO[salida.motivo]}`}
+          </span>
           <span className="text-sm text-slate-600">Te abrimos WhatsApp con este mensaje. Tú decides si lo envías.</span>
         </div>
         <div className="whitespace-pre-line rounded-2xl bg-slate-50 px-4 py-3 text-sm leading-relaxed text-slate-700">

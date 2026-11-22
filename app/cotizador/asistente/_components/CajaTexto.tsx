@@ -21,6 +21,7 @@ export default function CajaTexto({
   deshabilitada = false,
   adjunto,
   placeholder,
+  onArchivo,
 }: {
   tamano: 'grande' | 'compacta';
   valor: string;
@@ -33,6 +34,8 @@ export default function CajaTexto({
   deshabilitada?: boolean;
   adjunto?: React.ReactNode;
   placeholder: string;
+  /** Un archivo soltado o pegado: useSubidaStl decide si es STL o una imagen que no se admite (R8.1). */
+  onArchivo?: (file: File) => void;
 }) {
   const ref = useRef<HTMLTextAreaElement>(null);
   const largo = valor.length;
@@ -48,7 +51,17 @@ export default function CajaTexto({
   };
 
   return (
-    <form onSubmit={enviar} className="w-full">
+    <form
+      onSubmit={enviar}
+      className="w-full"
+      onDragOver={(e) => { if (onArchivo && e.dataTransfer.types.includes('Files')) e.preventDefault(); }}
+      onDrop={(e) => {
+        const file = e.dataTransfer.files?.[0];
+        if (!onArchivo || !file || deshabilitada) return;
+        e.preventDefault();
+        onArchivo(file);
+      }}
+    >
       <Aura variante={grande ? 'tarjeta' : 'suave'} activa={!deshabilitada} className="group">
         <div className={cn('borde-ia flex rounded-3xl', grande ? 'flex-col gap-2.5 p-4 pb-3.5' : 'flex-col gap-2 py-3 pl-4 pr-3')}>
           {adjunto}
@@ -67,6 +80,12 @@ export default function CajaTexto({
                   ref.current.style.height = 'auto';
                   ref.current.style.height = `${Math.min(ref.current.scrollHeight, 160)}px`;
                 }
+              }}
+              onPaste={(e) => {
+                const file = e.clipboardData.files?.[0];
+                if (!onArchivo || !file) return;
+                e.preventDefault();
+                onArchivo(file);
               }}
               onKeyDown={(e) => {
                 if (e.key === 'Enter' && !e.shiftKey && !e.nativeEvent.isComposing) enviar(e);

@@ -14,7 +14,8 @@
     "verify:home": "ts-node --compiler-options '{\"module\":\"CommonJS\",\"target\":\"ES2020\",\"moduleResolution\":\"node\",\"esModuleInterop\":true,\"skipLibCheck\":true,\"lib\":[\"ES2020\",\"DOM\"]}' scripts/verify-home-content.ts",
     "verify:asistente": "tsx --conditions=react-server scripts/verify-asistente.ts",
     "verify:agente": "tsx --conditions=react-server scripts/verify-agente.ts",
-    "verify:youtube": "ts-node --compiler-options '{\"module\":\"CommonJS\",\"target\":\"ES2020\",\"moduleResolution\":\"node\",\"esModuleInterop\":true,\"skipLibCheck\":true,\"lib\":[\"ES2020\",\"DOM\"]}' scripts/verify-youtube-embed.ts"
+    "verify:youtube": "ts-node --compiler-options '{\"module\":\"CommonJS\",\"target\":\"ES2020\",\"moduleResolution\":\"node\",\"esModuleInterop\":true,\"skipLibCheck\":true,\"lib\":[\"ES2020\",\"DOM\"]}' scripts/verify-youtube-embed.ts",
+    "verify:clasificador": "tsx scripts/verify-clasificador.ts"
   },
   "dependencies": {
     "@ai-sdk/react": "^4.0.145",

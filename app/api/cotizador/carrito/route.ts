@@ -8,6 +8,7 @@ import { estadoAsistente, getAsistenteConfig } from '@/lib/asistente/config';
 import { etiquetaConfiguracion } from '@/lib/asistente/etiquetas';
 import type { ItemVigente } from '@/lib/asistente/item-vigente';
 import { limitar, respuestaLimite } from '@/lib/asistente/limite';
+import { getParametros } from '@/lib/asistente/parametros';
 import { leerCotizacion, PATRON_ID_SESION } from '@/lib/asistente/sesion';
 
 const cuerpo = z.object({
@@ -38,6 +39,12 @@ export async function POST(req: Request) {
   const { id, codigo, productoId, cantidad } = body.data;
 
   if (codigo) {
+    // D1: desde Q_VOLUMEN_MIN por referencia, el asistente no vende por carrito.
+    // El cotizador manual (/cotizador/modelo) no pasa por aquí y no cambia.
+    const { Q_VOLUMEN_MIN } = await getParametros();
+    if (cantidad >= Q_VOLUMEN_MIN) {
+      return responder({ estado: 'no-disponible', codigo: 'volumen', detalle: 'Para esta cantidad te preparamos una propuesta por WhatsApp.' }, 422);
+    }
     const cot = await leerCotizacion(id, codigo);
     if (!cot) return responder({ estado: 'no-disponible', detalle: `No hay una cotización ${codigo} en esta conversación.` }, 404);
     if (cot.tipo !== 'archivo') {

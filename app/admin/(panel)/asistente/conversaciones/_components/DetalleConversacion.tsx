@@ -4,6 +4,7 @@ import { RESULTADOS, type DetalleConversacion as Datos } from '@/lib/asistente/m
 import { recorrido, transcripcion } from '@/lib/asistente/resumen';
 import { numero, pesos } from '@/lib/formato';
 import { cn } from '@/lib/utils';
+import FichaConversacion from './FichaConversacion';
 import { CHIP_RESULTADO, fechaCorta, ordenCorta, usd } from './formato';
 
 /** Se abre con ?id=. Recorrido: mensajes del cliente y tools con su resumen. */
@@ -45,6 +46,11 @@ export default function DetalleConversacion({ d, maxTurnos, cerrar }: { d: Datos
             </div>
           ))}
         </dl>
+
+        <div className="space-y-2">
+          <span className="text-xs font-bold uppercase tracking-widest text-slate-400">Ficha</span>
+          <FichaConversacion ficha={d.ficha} derivacion={d.derivacion} />
+        </div>
 
         <div className="space-y-2">
           <span className="text-xs font-bold uppercase tracking-widest text-slate-400">Recorrido</span>

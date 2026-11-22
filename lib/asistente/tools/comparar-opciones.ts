@@ -13,7 +13,8 @@ export function compararOpciones(ctx: ContextoTools) {
   return tool({
     description:
       'Compara variaciones de una cotización de archivo (material, color, capa, relleno o cantidad). ' +
-      'Lo que no indiques se toma de la cotización. La primera fila es la cotización original.',
+      'Lo que no indiques se toma de la cotización. La primera fila es la cotización original. ' +
+      'Una fila desde la cantidad de volumen sale sin precio: esa cantidad va por propuesta en WhatsApp.',
     inputSchema: esquemas.comparar_opciones.entrada,
     outputSchema: esquemas.comparar_opciones.salida,
     execute: async ({ codigo, opciones }) => {
@@ -45,6 +46,13 @@ export function compararOpciones(ctx: ContextoTools) {
       const preciosMostrados = { ...cot.datos.preciosMostrados };
       const filas = variantes.map(({ eleccion, cantidad }, i) => {
         if (!eleccion.layerHeight) throw new Error('Si cambias la tecnología, indica también la capa.');
+        // R4.5: desde Q_VOLUMEN_MIN por referencia no hay precio ni carrito.
+        if (cantidad >= ctx.parametros.Q_VOLUMEN_MIN) {
+          return {
+            opcion: etiquetaOpcion(eleccion, ctx.pricing), cantidad,
+            precioUnitario: null, descuentoPct: null, total: null, elegida: i === 0, volumen: true,
+          };
+        }
         const q = quoteVerifiedModel(
           { ...eleccion, factorEscalado: 1, postProcessing: base.postProcessing },
           cot.datos.stl,

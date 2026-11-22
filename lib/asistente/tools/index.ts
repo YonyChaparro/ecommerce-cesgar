@@ -1,5 +1,8 @@
 import 'server-only';
 import type { ContextoTools } from './contexto';
+import { actualizarFicha } from './actualizar-ficha';
+import { consultarEscaneo } from './consultar-escaneo';
+import { estimarModelado } from './estimar-modelado';
 import { agregarAlCarrito } from './agregar-al-carrito';
 import { buscarProductos } from './buscar-productos';
 import { compararOpciones } from './comparar-opciones';
@@ -24,6 +27,9 @@ export function crearTools(ctx: ContextoTools) {
     estimar_envio: estimarEnvio(ctx),
     agregar_al_carrito: agregarAlCarrito(),
     derivar_a_asesor: derivarAAsesor(ctx),
+    actualizar_ficha: actualizarFicha(ctx),
+    estimar_modelado: estimarModelado(ctx),
+    consultar_escaneo: consultarEscaneo(ctx),
   };
 }
 

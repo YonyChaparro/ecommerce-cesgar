@@ -22,4 +22,5 @@ export type ItemVigente =
       reemplazaCantidad: boolean;
     }
   | { estado: 'sin-stock'; titulo: string; disponible: number }
-  | { estado: 'no-disponible'; detalle: string };
+  /** codigo 'volumen': desde Q_VOLUMEN_MIN el asistente deriva a WhatsApp (D1). */
+  | { estado: 'no-disponible'; detalle: string; codigo?: 'volumen' };

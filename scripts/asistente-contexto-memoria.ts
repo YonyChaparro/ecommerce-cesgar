@@ -3,7 +3,9 @@
 
 import { CLOUDINARY_FOLDER } from '../lib/cloudinary';
 import { generarCodigo } from '../lib/asistente/codigos';
-import type { ContextoTools, CotizacionGuardada, ProductoTienda } from '../lib/asistente/tools/contexto';
+import type { Ficha } from '../lib/asistente/ficha';
+import { DEFAULT_PARAMETROS, type ParametrosComerciales } from '../lib/asistente/parametros-tipos';
+import { tipoDeCodigo, type ContextoTools, type CotizacionGuardada, type ProductoTienda } from '../lib/asistente/tools/contexto';
 import { DEFAULT_QUOTER_PRICING, type QuoterPricing } from '../lib/quoter-types';
 import { DEFAULT_SHIPPING_CONFIG, type ShippingConfig } from '../lib/shipping-types';
 import type { STLData } from '../lib/stl-parse';
@@ -37,14 +39,20 @@ export function contextoEnMemoria(
   archivos: Record<string, STLData>,
   pricing: QuoterPricing = DEFAULT_QUOTER_PRICING,
   envio: ShippingConfig = ENVIO_DE_EJEMPLO,
+  parametros: ParametrosComerciales = DEFAULT_PARAMETROS,
 ): ContextoTools & {
   cotizaciones: Map<string, CotizacionGuardada>;
+  estado: { ficha: Ficha | null; derivacion: string | null };
 } {
   const cotizaciones = new Map<string, CotizacionGuardada>();
+  const estado: { ficha: Ficha | null; derivacion: string | null } = { ficha: null, derivacion: null };
   return {
     pricing,
     envio,
+    parametros,
+    tarifasCotizadorFecha: '2026-11-01T00:00:00.000Z',
     cotizaciones,
+    estado,
     leerProducto: async (id) => PRODUCTOS.find((p) => p.id === id) ?? null,
     medirArchivo: async (url) => archivos[url] ?? null,
     buscarProductos: async (consulta) => {
@@ -52,8 +60,8 @@ export function contextoEnMemoria(
       return PRODUCTOS.filter((p) => q.split(/\s+/).some((w) => w.length > 2 && p.nombre.toLowerCase().normalize('NFD').replace(/\p{Diacritic}/gu, '').includes(w)));
     },
     guardarCotizacion: async (nueva) => {
-      let codigo = generarCodigo(nueva.tipo === 'archivo' ? 'Q' : 'E');
-      while (cotizaciones.has(codigo)) codigo = generarCodigo(nueva.tipo === 'archivo' ? 'Q' : 'E');
+      let codigo = generarCodigo(tipoDeCodigo(nueva.tipo));
+      while (cotizaciones.has(codigo)) codigo = generarCodigo(tipoDeCodigo(nueva.tipo));
       cotizaciones.set(codigo, { ...nueva, id: `mem-${cotizaciones.size + 1}`, codigo } as CotizacionGuardada);
       return codigo;
     },
@@ -62,5 +70,8 @@ export function contextoEnMemoria(
       const c = cotizaciones.get(codigo);
       if (c?.tipo === 'archivo') c.datos.preciosMostrados = precios;
     },
+    leerFicha: async () => estado.ficha,
+    guardarFicha: async (ficha) => { estado.ficha = ficha; },
+    marcarDerivacion: async (motivo) => { estado.derivacion = motivo; },
   };
 }

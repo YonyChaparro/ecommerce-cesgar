@@ -3,6 +3,7 @@ import { numero } from '../../formato';
 import { esquemas } from '../esquemas';
 import { ELECCION_POR_DEFECTO, estimarRango as calcularRango, OCUPACION_SUPUESTA } from '../estimacion';
 import { nombreMaterial } from '../etiquetas';
+import { esCritica, esUsoCritico } from '../clasificador';
 import type { ContextoTools } from './contexto';
 
 /** Rango orientativo sin archivo, no pagable (propuesta §7.3, vista 4). */
@@ -15,6 +16,11 @@ export function estimarRango(ctx: ContextoTools) {
     inputSchema: esquemas.estimar_rango.entrada,
     outputSchema: esquemas.estimar_rango.salida,
     execute: async (e) => {
+      // R6.2: una pieza de uso crítico no lleva rango, ni aunque el modelo no lo haya marcado.
+      const ficha = await ctx.leerFicha();
+      if ((ficha && esCritica(ficha)) || esUsoCritico(e.descripcion)) {
+        return { tipo: 'revision' as const, descripcion: e.descripcion, motivo: 'critica' as const };
+      }
       const tech = e.tecnologia ?? ELECCION_POR_DEFECTO.tech;
       const usaDefectos = tech === ELECCION_POR_DEFECTO.tech;
       const eleccion = {
@@ -36,7 +42,10 @@ export function estimarRango(ctx: ContextoTools) {
       const medidasCm = { x: e.largoCm, y: e.anchoCm, z: e.altoCm };
       const codigo = await ctx.guardarCotizacion({
         tipo: 'estimacion',
-        datos: { descripcion: e.descripcion, medidasCm, eleccion, min: r.min, max: r.max },
+        datos: {
+          descripcion: e.descripcion, medidasCm, eleccion, min: r.min, max: r.max,
+          parametros: { version: ctx.parametros.PRICE_LIST_VERSION, tarifasCotizador: ctx.tarifasCotizadorFecha },
+        },
       });
       return {
         tipo: 'estimacion' as const,
@@ -52,6 +61,7 @@ export function estimarRango(ctx: ContextoTools) {
         ocupacionMaxPct: OCUPACION_SUPUESTA.max * 100,
         min: r.min,
         max: r.max,
+        nivel: 'preliminar' as const,
       };
     },
   });

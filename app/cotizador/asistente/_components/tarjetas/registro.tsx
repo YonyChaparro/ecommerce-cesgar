@@ -10,7 +10,9 @@ import TarjetaAsesor from './TarjetaAsesor';
 import TarjetaConfirmacion from './TarjetaConfirmacion';
 import TarjetaCotizacion, { CabeceraCotizacion } from './TarjetaCotizacion';
 import TarjetaEnvio from './TarjetaEnvio';
+import TarjetaEscaneo from './TarjetaEscaneo';
 import TarjetaEstimacion from './TarjetaEstimacion';
+import TarjetaModelado from './TarjetaModelado';
 import TarjetasMaterial from './TarjetasMaterial';
 
 export type ParteTool<K extends NombreTool> = Extract<MensajeChat['parts'][number], { type: `tool-${K}` }>;
@@ -88,6 +90,21 @@ export const REGISTRO: { [K in NombreTool]: Entrada<K> } = {
   },
   derivar_a_asesor: {
     tarjeta: conSalida<'derivar_a_asesor'>((s) => <TarjetaAsesor salida={s} />),
+  },
+  // La ficha no se le muestra al cliente: solo la ficha gris (design §5.1).
+  actualizar_ficha: {
+    enCurso: 'Anotando…',
+    hecho: () => 'Anotado',
+  },
+  estimar_modelado: {
+    enCurso: 'Estimando el diseño…',
+    hecho: () => 'Estimó el diseño 3D',
+    tarjeta: conSalida<'estimar_modelado'>((s) => <TarjetaModelado salida={s} />),
+  },
+  consultar_escaneo: {
+    enCurso: 'Consultando tarifas de escaneo…',
+    hecho: () => 'Consultó las tarifas de escaneo',
+    tarjeta: conSalida<'consultar_escaneo'>((s) => <TarjetaEscaneo salida={s} />),
   },
 };
 

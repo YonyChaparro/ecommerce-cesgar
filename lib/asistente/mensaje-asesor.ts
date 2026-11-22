@@ -1,8 +1,8 @@
-// Mensaje de WhatsApp para pasar la conversación a un asesor (propuesta §10.3).
+// Líneas con precio del mensaje de WhatsApp para un asesor (propuesta §10.3).
 //
-// Lo arma la tool derivar_a_asesor en el servidor y, cuando el cliente pulsa
-// "Hablar con una persona" sin pasar por el modelo, el navegador. Las dos
-// entradas usan estas funciones. Los precios y rangos salen siempre de las
+// El mensaje completo lo arma resumen-asesor.ts con la ficha (agente v5). Aquí
+// quedan las líneas por pieza, que usan la tool derivar_a_asesor y el
+// navegador ("Hablar con una persona" sin pasar por el modelo). Los precios y rangos salen siempre de las
 // cotizaciones y estimaciones, nunca del texto del modelo.
 
 import { medidasMm, numero, pesos } from '../formato';
@@ -69,12 +69,28 @@ export function lineasDesdeConversacion(mensajes: MensajeChat[]): LineaPieza[] {
             descripcion: `Impresión de ${o.archivo}, ${o.configuracion}`,
             detalle: detalleCotizacion(o.codigo, o.cantidad, o.precioUnitario),
           });
-        } else {
+        } else if (o.tipo === 'no-cotizable') {
           lineas.push({
             descripcion: `Impresión de ${o.archivo}, de ${medidasMm(o.medidasMm)}`,
             detalle: o.motivo === 'grande' ? `pasa de 30 cm` : 'no se pudo medir el volumen',
           });
+        } else if (o.tipo === 'volumen') {
+          lineas.push({ descripcion: `Impresión de ${o.archivo}, de ${medidasMm(o.medidasMm)}`, detalle: `${numero(o.cantidad)} unidades` });
+        } else {
+          lineas.push({ descripcion: `Impresión de ${o.archivo}`, detalle: 'uso crítico, revisión técnica' });
         }
+      }
+      if (p.type === 'tool-estimar_modelado' && p.state === 'output-available' && p.output.tipo !== 'no-requiere') {
+        const o = p.output;
+        if (vistos.has(o.codigo)) continue;
+        vistos.add(o.codigo);
+        const clase = o.claseMin === o.claseMax ? o.claseMin : `${o.claseMin}–${o.claseMax}`;
+        lineas.push({
+          descripcion: `Diseño 3D: ${o.descripcion}`,
+          detalle: o.tipo === 'estimado'
+            ? `modelado ${o.codigo}: ${clase}, estimado ${pesos(o.min)} – ${pesos(o.max)}`
+            : `modelado ${o.codigo}: ${clase}, sin precio`,
+        });
       }
       if (p.type === 'tool-estimar_rango' && p.state === 'output-available' && p.output.tipo === 'estimacion') {
         const o = p.output;

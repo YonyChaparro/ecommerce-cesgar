@@ -1,7 +1,8 @@
 # Diseño: el asistente como asesor comercial y técnico (spec v5.1)
 
-Estado: **aprobado para construir**, con las decisiones D1–D8 de requirements §7. Fecha: 2026-11-22.
+Estado: **construido** (T0–T8), con las decisiones D1–D8 de requirements §7. Fecha: 2026-11-22. Lo que cambió al construir está en §11.
 Documentos hermanos: [`requirements.md`](requirements.md) (qué) · [`tasks.md`](tasks.md) (en qué orden).
+Fuente: [`fuente-v5_1.pdf`](fuente-v5_1.pdf).
 Base: la arquitectura de [`../agente-cotizador/propuesta.md`](../agente-cotizador/propuesta.md) §6 y §8,
 y sus cambios en [`../agente-cotizador/design.md`](../agente-cotizador/design.md).
 
@@ -222,6 +223,7 @@ Comprobaciones con §4.3, §26 y §28 (van en `verify:clasificador`):
 | Caja para electrónica (T19) | 0, 1, 1, ?, 1, 0 | SHELL, EXTRUDE | C2–C3, media |
 | Cuatro elementos atornillados (T20) | 1, 1, 2, ?, 1, ? | ASSEMBLY | C3–C5, media |
 | Tapa lateral de Hilux 2015 (T17) | 2, 1, 1, ?, 1, ? | FREEFORM_SURFACE, FIT_TOLERANCE | C4–C5, media |
+| Dos piezas que encajan y una desliza (T21) | 1, 1, 2, ?, 1, ? | FIT_TOLERANCE, ASSEMBLY | C3–C5, media |
 | Hélice de 5 aspas (§26) | 2, 2, 1, ?, ?, ? | FREEFORM_SURFACE, PATTERN | C4–C6, baja → revisión |
 
 La tabla se ajusta al escribir el script. Cada fila debe caer dentro del rango
@@ -597,3 +599,64 @@ pasan a la `description` de sus tools.
 - **Guardar las tarifas en `/admin/cotizador`.** Mezcla la impresión, que tiene
   checkout, con servicios que no se pagan en línea. Una tarjeta en
   `/admin/asistente` deja claro que son referencias del agente.
+
+## 11. Cambios al construir (2026-11-22)
+
+Lo que se apartó de este documento al implementarlo, y por qué. Las pruebas de
+`verify:clasificador` y `verify:agente` ya reflejan estos cambios.
+
+- **Ficha (§3.1).** Dos campos más:
+  - `part.needs_cad`: el faltante «si necesita CAD editable» del escaneo
+    (§3.3) necesitaba un campo. No se usa `ip_request`, que es exclusividad o
+    derechos y deriva.
+  - `modeling.customer_unknown`: los factores que el cliente dijo no saber.
+    Siguen en `UNKNOWN` para la clase (se evalúan en 0 y 2), pero dejan de
+    preguntarse. Sin esto, R5.3 («cada factor desconocido es un faltante») y
+    R2.4 («UNKNOWN deja de ser faltante») chocaban y el agente repetía la
+    pregunta (T23).
+- **Mezcla (§3.2).** `UNKNOWN` no borra un perfil ni una intención ya
+  conocidos (es su estado vacío). `shared_demand_signal` tampoco vuelve a
+  `false`, como `critical_use` e `ip_request`.
+- **Faltantes (§3.3).** El perfil no se pregunta en `MAINTENANCE` ni en
+  `BUY_CATALOG_PART`: ahí no cambia la ruta. Un reemplazo pedido por un taller,
+  revendedor o empresa usa primero el orden de suministro (cantidad,
+  recurrencia, canal) y después el de la pieza.
+- **Precio de modelado (§4.3).** El uso crítico va antes que la ruta de
+  volumen: 200 piezas de freno siguen en revisión técnica, no «en propuesta».
+- **Uso crítico (§4.4).** «Estructural» suelto no cuenta (el modelo describió
+  un soporte de repisa como «soporte estructural»): cuenta con un vehículo o
+  una construcción («estructural del chasis», «viga estructural»), además de
+  «chasis» y «estructura portante». «Presión» precedida de «a», «al» o «por» no cuenta:
+  «encaje a presión» y «cierre a presión» son encajes, y el ejemplo de la
+  rejilla de §5.5 se escalaba por error. «Alta presión», «válvula de presión»,
+  «tanque a presión» y similares sí cuentan.
+- **`actualizar_ficha` (§5.1).** La salida suma `siguientePaso`: la
+  instrucción concreta del turno (derivar con qué motivo, ofrecer WhatsApp,
+  qué preguntar, ofrecer fotos cuando la muestra pasa a fragmentos o nada).
+  La calcula el servidor con `next_action` y `whatsapp`. Sin ella, los modelos
+  leían `whatsapp: OFFER` y no lo ofrecían (T05). La escala de los seis
+  factores de §4.2 y los ejemplos de calibración de §4.3/§26 van en la
+  `description` del esquema, no en el prompt (N3): sin ellos, el modelo
+  marcaba casi todo `UNKNOWN` y los rangos llegaban a C6.
+- **`derivar_a_asesor` (§5.4).** Guarda solo `ChatSession.derivacion`. El
+  `resultado = 'derivado'` lo sigue marcando el clic en WhatsApp
+  (`/api/cotizador/eventos`), para que «derivadas» y «oportunidades que
+  terminaron derivadas» (R11.2) cuenten las que el cliente abrió y no las que
+  el agente propuso. `piezas` puede ir vacía: el resumen ya sale de la ficha.
+- **`comparar_opciones` (§5.4).** Las filas de volumen llevan
+  `precioUnitario`, `descuentoPct` y `total` en `null`, y `volumen: true`.
+- **Ficha en el navegador (§8).** `GET /api/cotizador/chat?id=…&solo=ficha`
+  devuelve solo la ficha. El navegador la vuelve a pedir al terminar cada
+  respuesta, para que «Hablar con una persona» use la ficha vigente.
+- **Solo texto (§8).** Además de pegar, la caja de texto acepta soltar un
+  archivo: un STL se sube como siempre; una imagen, un video o un PDF muestran
+  el aviso.
+- **`verify:agente` (§9.2).** `--solo s16,s20` corre solo esas situaciones y no
+  escribe `validaciones.json`, para ajustar el prompt sin gastar la corrida
+  completa. El script imprime aparte el costo medio de s01–s15 para comparar
+  con el medido antes (N2).
+- **Costo (N2).** El prompt va como mensaje de sistema con punto de caché
+  (`INSTRUCCIONES_ASISTENTE` en `prompt.ts`): Anthropic cachea las tools y el
+  prompt solo si se marcan. Sin la marca, las situaciones s01–s15 costaban
+  ≈ US$0,0052 por conversación con claude-haiku-5.5 (antes de la v5, US$0,002:
+  +160 %); con la marca, ≈ US$0,0016. Los modelos que cachean solos la ignoran.

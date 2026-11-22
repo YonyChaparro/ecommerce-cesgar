@@ -1,6 +1,7 @@
 export const dynamic = 'force-dynamic';
 import { getAsistenteConfig } from '@/lib/asistente/config';
 import { listarModelosConTools } from '@/lib/asistente/openrouter';
+import { getParametros } from '@/lib/asistente/parametros';
 import { estadoValidacion, leerValidaciones } from '@/lib/asistente/validaciones';
 import AsistenteConfigForm from './AsistenteConfigForm';
 import type { FilaModelo } from './_components/tipos';
@@ -10,7 +11,7 @@ const ORDEN = { aprobado: 0, fallo: 1, 'sin-validar': 2 } as const;
 // Lee en el servidor la configuración, los resultados de verify:agente y los
 // modelos de OpenRouter que soportan tools (vista 6).
 export default async function AdminAsistentePage() {
-  const [config, deOpenRouter] = await Promise.all([getAsistenteConfig(), listarModelosConTools()]);
+  const [config, deOpenRouter, parametros] = await Promise.all([getAsistenteConfig(), listarModelosConTools(), getParametros()]);
   const validaciones = leerValidaciones();
 
   // Los validados y los elegidos se muestran aunque OpenRouter no los liste hoy.
@@ -25,6 +26,7 @@ export default async function AdminAsistentePage() {
   return (
     <AsistenteConfigForm
       initial={config}
+      parametros={parametros}
       modelos={modelos}
       validaciones={validaciones}
       sinListaOpenRouter={deOpenRouter === null}

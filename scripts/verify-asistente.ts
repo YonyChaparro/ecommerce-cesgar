@@ -59,10 +59,10 @@ async function main() {
   console.log('\nVista 3 · comparar_opciones (PLA, 5 unidades)');
   const comp = await ejecutar('comparar_opciones', { codigo: cot.codigo, opciones: [{ material: 'pla' }, { cantidad: 5 }] });
   const [base, pla, cinco] = comp.filas;
-  check('fila elegida = la cotización', base.elegida && base.precioUnitario === 10983, `${base.opcion} ${pesos(base.precioUnitario)}`);
-  check('PLA, 4 u.: $9.066 c/u, $36.264', pla.precioUnitario === 9066 && pla.total === 36264, `${pla.opcion} ${pesos(pla.precioUnitario)} · ${pesos(pla.total)}`);
+  check('fila elegida = la cotización', base.elegida && base.precioUnitario === 10983, `${base.opcion} ${pesos(base.precioUnitario ?? 0)}`);
+  check('PLA, 4 u.: $9.066 c/u, $36.264', pla.precioUnitario === 9066 && pla.total === 36264, `${pla.opcion} ${pesos(pla.precioUnitario ?? 0)} · ${pesos(pla.total ?? 0)}`);
   check('PETG, 5 u.: $10.373 c/u (−15 %), $51.865', cinco.precioUnitario === 10373 && cinco.descuentoPct === 15 && cinco.total === 51865,
-    `${pesos(cinco.precioUnitario)} −${cinco.descuentoPct} % · ${pesos(cinco.total)}`);
+    `${pesos(cinco.precioUnitario ?? 0)} −${cinco.descuentoPct} % · ${pesos(cinco.total ?? 0)}`);
   const guardada = await ctx.leerCotizacion(cot.codigo);
   check('el precio de 5 u. queda como "mostrado"', guardada?.tipo === 'archivo' && guardada.datos.preciosMostrados[5] === 10373);
 
@@ -109,18 +109,25 @@ async function main() {
 
   console.log('\nVista 4 · derivar_a_asesor');
   const der = await ejecutar('derivar_a_asesor', {
+    motivo: 'OVERSIZE',
     piezas: [
       { descripcion: 'Tapa para tanque de agua de 45 cm de diámetro', nota: 'pasa de 30 cm' },
       { descripcion: 'Caja para circuito de 10 × 6 × 3 cm en PLA', codigo: est.codigo },
     ],
   });
-  const esperado = 'Hola, vengo del asistente de cotización de Cesgar. Necesito:\n' +
+  // La ficha ya existe (cotizar_archivo la abrió): el mensaje lleva la cantidad que anotó.
+  const esperado = 'Hola, vengo del asistente de cotización de Cesgar.\n' +
+    'Motivo: Pieza de más de 30 cm.\n' +
+    'Cantidad: 4 iniciales\n' +
+    'Pendientes: qué pieza es\n' +
+    'Detalle:\n' +
     '• Tapa para tanque de agua de 45 cm de diámetro (pasa de 30 cm).\n' +
     '• Caja para circuito de 10 × 6 × 3 cm en PLA, sin archivo (estimado: $10.600 – $18.300 c/u).';
   check('el rango sale de la estimación guardada', der.mensaje === esperado, JSON.stringify(der.mensaje));
   check('enlace a WhatsApp', der.enlace.startsWith('https://wa.me/573057956352?text='));
+  check('derivar guarda el motivo', ctx.estado.derivacion === 'OVERSIZE' && der.motivo === 'OVERSIZE', String(ctx.estado.derivacion));
   check('sin precios escritos por el modelo', !!(await lanza(() => ejecutar('derivar_a_asesor', {
-    piezas: [{ descripcion: 'Caja de $15.000' }],
+    motivo: 'OTHER', piezas: [{ descripcion: 'Caja de $15.000' }],
   }))));
   check('mensaje de la vista 4', armarMensajeAsesor([
     { descripcion: 'Tapa para tanque de agua de 45 cm de diámetro', detalle: 'pasa de 30 cm' },

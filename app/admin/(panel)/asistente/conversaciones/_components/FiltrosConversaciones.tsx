@@ -1,7 +1,7 @@
 'use client';
 import { usePathname, useRouter, useSearchParams } from 'next/navigation';
 import { Search } from 'lucide-react';
-import { PERIODOS, RESULTADOS } from '@/lib/asistente/filtros';
+import { MOTIVOS_ETIQUETA, PERFILES_ETIQUETA, PERIODOS, RESULTADOS, RUTAS_ETIQUETA } from '@/lib/asistente/filtros';
 import { cn } from '@/lib/utils';
 import { inputCls } from '../../../_ui';
 
@@ -36,11 +36,33 @@ export function SelectorPeriodo({ periodo }: { periodo: string }) {
   );
 }
 
-export default function FiltrosConversaciones({ q, resultado, modelo, modelos }: {
+function Selector({ id, etiqueta, todos, valor, opciones, onCambio }: {
+  id: string;
+  etiqueta: string;
+  todos: string;
+  valor?: string;
+  opciones: Record<string, string>;
+  onCambio: (v: string) => void;
+}) {
+  return (
+    <>
+      <label htmlFor={id} className="sr-only">{etiqueta}</label>
+      <select id={id} value={valor ?? ''} onChange={(e) => onCambio(e.target.value)} className={cn(inputCls, 'w-auto max-w-48')}>
+        <option value="">{todos}</option>
+        {Object.entries(opciones).map(([k, texto]) => <option key={k} value={k}>{texto}</option>)}
+      </select>
+    </>
+  );
+}
+
+export default function FiltrosConversaciones({ q, resultado, modelo, modelos, perfil, ruta, motivo }: {
   q?: string;
   resultado?: string;
   modelo?: string;
   modelos: string[];
+  perfil?: string;
+  ruta?: string;
+  motivo?: string;
 }) {
   const cambiar = useCambiarParam();
   return (
@@ -66,6 +88,9 @@ export default function FiltrosConversaciones({ q, resultado, modelo, modelos }:
         <option value="">Todos los modelos</option>
         {modelos.map((m) => <option key={m} value={m}>{m}</option>)}
       </select>
+      <Selector id="filtro-perfil" etiqueta="Perfil" todos="Todos los perfiles" valor={perfil} opciones={PERFILES_ETIQUETA} onCambio={(v) => cambiar('perfil', v)} />
+      <Selector id="filtro-ruta" etiqueta="Ruta" todos="Todas las rutas" valor={ruta} opciones={RUTAS_ETIQUETA} onCambio={(v) => cambiar('ruta', v)} />
+      <Selector id="filtro-motivo" etiqueta="Motivo de derivación" todos="Todos los motivos" valor={motivo} opciones={MOTIVOS_ETIQUETA} onCambio={(v) => cambiar('motivo', v)} />
     </div>
   );
 }
