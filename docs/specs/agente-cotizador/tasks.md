@@ -41,7 +41,7 @@ con la recomendación de la propia propuesta (ver el final de este archivo).
 
 Sin empezar; cada punto necesita una decisión antes de construirse:
 
-- [ ] Fotos de piezas: elegir y validar un modelo con visión; definir dónde se guardan (Cloudinary) y si cuentan como dato personal.
+- [ ] ~~Fotos de piezas: elegir y validar un modelo con visión; definir dónde se guardan (Cloudinary) y si cuentan como dato personal.~~ Reemplazada por la spec v5.1 ([`../agente-v5/`](../agente-v5/)): el chat web es solo texto y STL; las fotos van por WhatsApp.
 - [ ] Modelos de repositorios externos (decisión 2): elegir fuente (Printables, Thingiverse) y su API/key, y filtrar por licencia comercial.
 - [ ] El asistente en `/cotizador/modelo`, con el STL ya cargado como contexto.
 
