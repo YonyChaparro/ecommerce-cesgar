@@ -3,6 +3,7 @@ import type { Metadata } from 'next';
 import Link from 'next/link';
 import Navbar from '../components/Navbar';
 import { estadoAsistente, getAsistenteConfig } from '@/lib/asistente/config';
+import AvisoEntrega from './_components/AvisoEntrega';
 import TarjetaArchivo from './_components/TarjetaArchivo';
 import TarjetaAsistente from './_components/TarjetaAsistente';
 import TarjetaPersonalizada from './_components/TarjetaPersonalizada';
@@ -24,15 +25,14 @@ export default async function CotizadorPage() {
       <main className="min-h-screen overflow-x-clip bg-white text-inverse-surface">
         <div className="mx-auto max-w-7xl px-4 sm:px-8 pt-28 sm:pt-36 pb-16 sm:pb-20">
           <header className="mx-auto mb-10 sm:mb-14 flex max-w-3xl flex-col items-center gap-4 text-center">
-            <span className="inline-flex items-center rounded-full bg-primary-container/15 px-3.5 py-1.5 text-xs font-bold uppercase tracking-widest text-primary">
-              Cotizador de impresión 3D
-            </span>
             <h1 className="text-3xl sm:text-5xl font-extrabold leading-tight">¿Cómo quieres cotizar tu pieza?</h1>
             <p className="text-base sm:text-lg leading-relaxed text-slate-600">
               Elige según lo que tengas hoy: <strong className="text-inverse-surface">un archivo 3D</strong> o{' '}
               <strong className="text-inverse-surface">solo una idea</strong>.
             </p>
           </header>
+
+          <AvisoEntrega />
 
           <div className="grid items-stretch gap-8 lg:grid-cols-2 lg:gap-10">
             <TarjetaArchivo />
