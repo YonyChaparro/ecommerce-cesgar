@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import Script from "next/script";
 import "./globals.css";
 import Breadcrumbs from "./components/Breadcrumbs";
 import Footer from "./components/Footer";
@@ -7,6 +8,8 @@ import { Geist } from "next/font/google";
 import { cn } from "@/lib/utils";
 
 const geist = Geist({subsets:['latin'],variable:'--font-sans'});
+
+const GA_MEASUREMENT_ID = 'G-KMCFP3WBX5';
 
 export const metadata: Metadata = {
   title: {
@@ -63,6 +66,18 @@ export default function RootLayout({
           <Footer />
         </CartShell>
       </body>
+      {/* Google tag (gtag.js) */}
+      <Script
+        src={`https://www.googletagmanager.com/gtag/js?id=${GA_MEASUREMENT_ID}`}
+        strategy="afterInteractive"
+      />
+      <Script id="google-analytics" strategy="afterInteractive">
+        {`window.dataLayer = window.dataLayer || [];
+function gtag(){dataLayer.push(arguments);}
+gtag('js', new Date());
+
+gtag('config', '${GA_MEASUREMENT_ID}');`}
+      </Script>
     </html>
   );
 }

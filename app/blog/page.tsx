@@ -12,16 +12,20 @@ export const metadata: Metadata = {
   },
 };
 import { prisma } from '@/lib/prisma';
+import { resolverPortada } from '@/lib/cover-image';
 import Navbar from '@/app/components/Navbar';
 import { CalendarDays, User, ArrowRight, Tag } from 'lucide-react';
 import AnimateIn from '@/app/components/AnimateIn';
 
 export default async function BlogListPage() {
-  const posts = await prisma.blogPost.findMany({
+  const posts = (await prisma.blogPost.findMany({
     where: { status: 'published' },
     orderBy: { publishedAt: 'desc' },
     include: { author: true, tags: { include: { tag: true } } },
-  });
+  })).map((post) => ({
+    ...post,
+    coverImage: resolverPortada(post.coverImage, post.content),
+  }));
 
   return (
     <>

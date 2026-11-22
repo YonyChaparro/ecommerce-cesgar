@@ -1,9 +1,17 @@
 import { NextResponse } from 'next/server';
 import { getPreference } from '@/lib/mercadopago';
 import { prisma } from '@/lib/prisma';
+import { getQuoterPricing } from '@/lib/quoter-config';
+import { verifyQuoterItems } from '@/lib/quoter-verify';
+import type { RawPrintChoices } from '@/lib/quoter-rules';
+import { getShippingConfig } from '@/lib/shipping-config';
+import { calcShipping, type MetodoEntrega } from '@/lib/shipping-calc';
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000';
 const isProduction = process.env.NODE_ENV === 'production';
+// Cada modelo implica descargar y medir su STL, así que el límite general de 100
+// ítems es demasiado holgado para estos.
+const MAX_COTIZADOR_ITEMS = 20;
 
 function truncate(s: string, max = 250): string {
   return s.length > max ? `${s.slice(0, max - 1)}…` : s;
@@ -29,9 +37,11 @@ interface CartItemInput {
   quantity: number;
   // Cotizador-only fields
   name?: string;
+  /** Lo que el navegador cree que vale. Solo se usa para registrar intentos de manipulación. */
   price?: number;
   note?: string;
   modelUrl?: string;
+  printConfig?: RawPrintChoices;
 }
 
 interface ShippingInput {
@@ -54,6 +64,15 @@ export async function POST(req: Request) {
     const body = await req.json();
     const items: CartItemInput[] = body?.items;
     const shipping: ShippingInput | undefined = body?.shipping;
+    const deliveryMethod: MetodoEntrega = body?.deliveryMethod === 'recogida' ? 'recogida' : 'domicilio';
+    /** Lo que el checkout tenía en pantalla. Solo se usa para detectar desfases. */
+    // Conversación del asistente de la que salió la compra: solo para medir chat → pago.
+    const chatSessionId: string | undefined =
+      typeof body?.chatSessionId === 'string' && /^[A-Za-z0-9_-]{12,64}$/.test(body.chatSessionId)
+        ? body.chatSessionId
+        : undefined;
+    const shippingCostShown: number | undefined =
+      typeof body?.shippingCostShown === 'number' ? body.shippingCostShown : undefined;
 
     // ── Basic input validation ────────────────────────────────────────────────
     if (!Array.isArray(items) || items.length === 0) {
@@ -120,28 +139,67 @@ export async function POST(req: Request) {
     }
 
     // ── Validate cotizador items ──────────────────────────────────────────────
-    for (const item of cotizadorItems) {
-      if (!item.name?.trim()) {
+    // El precio de una impresión cuelga entero del volumen de la malla, y ese dato
+    // lo medía el navegador. Se descarga el STL que se subió, se mide de nuevo y se
+    // retarifa con los precios guardados por el admin: lo que mande el cliente como
+    // precio o como geometría se descarta.
+    const cotizadorValidated: MPItem[] = [];
+
+    if (cotizadorItems.length > 0) {
+      if (cotizadorItems.length > MAX_COTIZADOR_ITEMS) {
+        return NextResponse.json(
+          { error: `Máximo ${MAX_COTIZADOR_ITEMS} modelos 3D por pedido` },
+          { status: 400 },
+        );
+      }
+      if (cotizadorItems.some((i) => !i.name?.trim())) {
         return NextResponse.json({ error: 'Ítem de cotizador sin nombre' }, { status: 400 });
       }
-      if (!Number.isInteger(item.price) || (item.price ?? 0) <= 0) {
-        return NextResponse.json({
-          error: `Precio inválido para el modelo "${item.name}"`,
-        }, { status: 400 });
-      }
-    }
 
-    const cotizadorValidated = cotizadorItems.map((item) => ({
-      id: item.id,
-      title: truncate(item.name!),
-      quantity: item.quantity,
-      unit_price: item.price!,
-      picture_url: `${APP_URL}/3d-print.svg`,
-      currency_id: 'COP',
-      // Internal fields — not sent to MP
-      slug: 'cotizador',
-      category: 'Impresión 3D',
-    }));
+      const pricing = await getQuoterPricing();
+      const verified = await verifyQuoterItems(
+        cotizadorItems.map((i) => ({
+          modelUrl: i.modelUrl,
+          printConfig: i.printConfig,
+          quantity: i.quantity,
+        })),
+        pricing,
+      );
+
+      const failedAt = verified.findIndex((v) => !v.ok);
+      if (failedAt !== -1) {
+        const failed = cotizadorItems[failedAt];
+        const reason = (verified[failedAt] as { ok: false; reason: string }).reason;
+        console.warn('[checkout] ítem de cotizador rechazado', {
+          name: failed.name, clientPrice: failed.price, reason,
+        });
+        return NextResponse.json(
+          { error: `No pudimos verificar "${failed.name}": ${reason}. Vuelve a cotizarlo.` },
+          { status: 422 },
+        );
+      }
+
+      cotizadorItems.forEach((item, i) => {
+        // unitPrice ya trae el descuento por cantidad: MP cobra unit_price × quantity.
+        const { unitPrice } = verified[i] as { ok: true; unitPrice: number };
+        if (item.price !== undefined && Math.abs(item.price - unitPrice) > 1) {
+          console.warn('[checkout] precio del cotizador corregido', {
+            name: item.name, clientPrice: item.price, serverPrice: unitPrice,
+          });
+        }
+        cotizadorValidated.push({
+          id: item.id,
+          title: truncate(item.name!),
+          quantity: item.quantity,
+          unit_price: unitPrice,
+          picture_url: `${APP_URL}/3d-print.svg`,
+          currency_id: 'COP',
+          // Internal fields — not sent to MP
+          slug: 'cotizador',
+          category: 'Impresión 3D',
+        });
+      });
+    }
 
     const allMPItems = [
       ...dbValidated.map(({ id, title, quantity, unit_price, picture_url, currency_id, category }) => ({
@@ -166,11 +224,60 @@ export async function POST(req: Request) {
       })),
     ];
 
-    const total = allMPItems.reduce((s, i) => s + i.unit_price * i.quantity, 0);
+    const subtotal = allMPItems.reduce((s, i) => s + i.unit_price * i.quantity, 0);
 
-    if (total <= 0) {
+    if (subtotal <= 0) {
       return NextResponse.json({ error: 'El total del pedido es inválido' }, { status: 400 });
     }
+
+    // ── Envío ─────────────────────────────────────────────────────────────────
+    // El costo lo calcula el servidor con su propia configuración. Lo que el
+    // navegador dice que mostró (shippingCostShown) jamás se usa para cobrar.
+    const shippingConfig = await getShippingConfig();
+
+    // Recoger en punto solo vale si el admin la tiene habilitada; si no, se
+    // exige dirección como en cualquier domicilio.
+    const metodo: MetodoEntrega =
+      deliveryMethod === 'recogida' && shippingConfig.recogida.habilitada ? 'recogida' : 'domicilio';
+
+    if (deliveryMethod === 'recogida' && metodo !== 'recogida') {
+      return NextResponse.json(
+        { error: 'La recogida en punto no está disponible en este momento' },
+        { status: 400 },
+      );
+    }
+
+    // Sin dirección no hay a dónde enviar ni con qué tarifar.
+    if (metodo === 'domicilio' && shippingConfig.habilitado && (!shipping?.department || !shipping?.city)) {
+      return NextResponse.json(
+        { error: 'Faltan el departamento y la ciudad de entrega' },
+        { status: 400 },
+      );
+    }
+
+    const envio = calcShipping(
+      { metodo, departamento: shipping?.department, ciudad: shipping?.city },
+      subtotal,
+      shippingConfig,
+    );
+
+    // El cliente vio una cifra y el servidor calcula otra: pasa si un
+    // administrador cambia las tarifas mientras alguien llena el formulario.
+    // Cobrar de más sin avisar sería peor que pedir que confirme el nuevo total.
+    if (shippingCostShown !== undefined && shippingCostShown !== envio.costo) {
+      console.warn('[checkout] costo de envío desfasado', {
+        mostrado: shippingCostShown, calculado: envio.costo, destino: shipping?.city,
+      });
+      return NextResponse.json(
+        {
+          error: 'El costo de envío cambió. Revisa el nuevo total antes de continuar.',
+          breakdown: { subtotal, shippingCost: envio.costo, total: subtotal + envio.costo, label: envio.etiqueta },
+        },
+        { status: 409 },
+      );
+    }
+
+    const total = subtotal + envio.costo;
 
     const orderType =
       dbValidated.length > 0 && cotizadorItems.length > 0 ? 'mixed'      :
@@ -181,7 +288,11 @@ export async function POST(req: Request) {
       data: {
         status: 'pending',
         type: orderType,
+        subtotal,
+        shippingCost: envio.costo,
+        shippingMethod: metodo,
         total,
+        chatSessionId,
         ...(shipping && {
           shippingName:         shipping.name,
           shippingEmail:        shipping.email,
@@ -207,10 +318,10 @@ export async function POST(req: Request) {
               price:     i.unit_price,
               quantity:  i.quantity,
             })),
-            ...cotizadorItems.map((i) => ({
+            ...cotizadorItems.map((i, idx) => ({
               itemType: 'cotizador',
               name:     i.name!,
-              price:    i.price!,
+              price:    cotizadorValidated[idx].unit_price,
               quantity: i.quantity,
               note:     i.note,
               modelUrl: i.modelUrl,
@@ -224,9 +335,42 @@ export async function POST(req: Request) {
     // If MP fails here, the order is orphaned → delete it and return 502.
     let result;
     try {
+      // El envío puede viajar de dos formas, según `modoPasarela`:
+      //  · 'shipments' (por defecto) → campo nativo de MP. `items` sigue
+      //    cuadrando uno a uno con los OrderItem, que es lo que conviene si
+      //    algún día hay que conciliar.
+      //  · 'item' → una línea más en el carrito de MP, para cuando la
+      //    facturación necesita el envío como producto.
+      // En los dos casos el monto cobrado es subtotal + envío.
+      const comoItem = shippingConfig.modoPasarela === 'item' && envio.costo > 0;
+      const itemsParaMP = comoItem
+        ? [...allMPItems, {
+            id: 'envio',
+            title: `Envío — ${envio.etiqueta}`,
+            description: 'Costo de envío',
+            category_id: 'services',
+            quantity: 1,
+            unit_price: envio.costo,
+            picture_url: `${APP_URL}/3d-print.svg`,
+            currency_id: 'COP',
+          }]
+        : allMPItems;
+
       result = await getPreference().create({
         body: {
-          items: allMPItems,
+          items: itemsParaMP,
+          ...(!comoItem && envio.costo > 0 && {
+            shipments: {
+              mode: 'not_specified',
+              cost: envio.costo,
+              ...(shipping && {
+                receiver_address: {
+                  zip_code:    shipping.postalCode ?? '',
+                  street_name: [shipping.address, shipping.neighborhood].filter(Boolean).join(', '),
+                },
+              }),
+            },
+          }),
           back_urls: {
             success: `${APP_URL}/pago/exito`,
             failure: `${APP_URL}/pago/fallo`,
@@ -282,12 +426,20 @@ export async function POST(req: Request) {
       orderId:         order.id,
       preferenceId:    result.id,
       checkoutUrl,
+      subtotal,
+      envio:           envio.costo,
+      metodo,
+      total,
       back_success:    `${APP_URL}/pago/exito`,
       back_failure:    `${APP_URL}/pago/fallo`,
       notification_url:`${APP_URL}/api/webhooks/mercadopago`,
     });
 
-    return NextResponse.json({ url: checkoutUrl, order_id: order.id });
+    return NextResponse.json({
+      url: checkoutUrl,
+      order_id: order.id,
+      breakdown: { subtotal, shippingCost: envio.costo, total, label: envio.etiqueta },
+    });
   } catch (err) {
     console.error('[checkout]', err);
     return NextResponse.json({ error: 'Error al procesar el pago' }, { status: 500 });

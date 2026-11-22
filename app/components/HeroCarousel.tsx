@@ -3,15 +3,10 @@
 import CountUp from '@/components/ui/CountUp';
 import SplitText from './SplitText';
 import TextType from './TextType';
+import type { HomeContent } from '@/lib/home-content-types';
 
-const METRICS = [
-  { to: 500, prefix: '+', suffix: '',  label: 'Proyectos completados' },
-  { to: 150, prefix: '+', suffix: '',  label: 'Clientes satisfechos' },
-  { to: 15,  prefix: '+', suffix: '',  label: 'Materiales disponibles' },
-  { to: 48,  prefix: '',  suffix: 'h', label: 'Tiempo de entrega' },
-];
-
-export default function HeroCarousel() {
+// Los textos llegan de la página (servidor): se editan en /admin/inicio.
+export default function HeroCarousel({ textos }: { textos: HomeContent['hero'] }) {
 
   return (
     <div className="relative overflow-hidden bg-gray-900 h-217.5">
@@ -33,7 +28,7 @@ export default function HeroCarousel() {
         <div className="max-w-md md:max-w-lg ml-0 md:ml-8 lg:ml-16">
           <SplitText
             tag="h1"
-            text="Precisión industrial a tu alcance"
+            text={textos.titulo}
             className="text-4xl md:text-5xl lg:text-6xl font-bold text-white mb-4 leading-tight"
             delay={40}
             duration={0.8}
@@ -47,11 +42,7 @@ export default function HeroCarousel() {
           />
           <TextType
             as="p"
-            text={[
-              "Impresión 3D, diseño, escaneo y prototipado de precisión.",
-              "Todo lo que necesitas para llevar tus ideas a la realidad.",
-              "Fabricación industrial de precisión en Bogotá.",
-            ]}
+            text={textos.frases}
             className="text-lg md:text-xl text-gray-200 mb-8"
             typingSpeed={40}
             deletingSpeed={20}
@@ -68,16 +59,17 @@ export default function HeroCarousel() {
       <div className="absolute top-7/12 left-0 right-0 z-20 px-6 md:px-16">
         <div className="max-w-7xl mx-auto">
           <div className="grid grid-cols-4 gap-4">
-            {METRICS.map((metric) => (
+            {/* Son 4 fijas y la etiqueta ya no es única por garantía: key por posición. */}
+            {textos.metricas.map((metric, i) => (
               <div
-                key={metric.label}
+                key={i}
                 className="bg-white/10 backdrop-blur-md border border-white/20 rounded-lg p-1 text-center hover:bg-white/15 transition-all duration-300"
               >
                 <div className="text-2xl md:text-3xl font-bold text-[#4dbdcc] mb-1 tabular-nums">
-                  {metric.prefix}<CountUp to={metric.to} />{metric.suffix}
+                  {metric.prefijo}<CountUp to={metric.valor} />{metric.sufijo}
                 </div>
                 <div className="text-[10px] sm:text-xs md:text-sm text-gray-200 font-medium break-words">
-                  {metric.label}
+                  {metric.etiqueta}
                 </div>
               </div>
             ))}

@@ -15,6 +15,7 @@ export async function saveQuoterPricingAction(pricing: QuoterPricing): Promise<{
   try {
     await saveQuoterPricing(pricing);
     revalidatePath('/cotizador');
+    revalidatePath('/cotizador/modelo');
     revalidatePath('/admin/cotizador');
     return { ok: true };
   } catch (e) {

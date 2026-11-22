@@ -4,7 +4,8 @@ import Image from 'next/image';
 import Link from 'next/link';
 import Navbar from '../components/Navbar';
 
-import { SERVICES } from '../data/services';
+import { serviciosConTextos } from '../data/services';
+import { getHomeContent } from '@/lib/home-content';
 import AnimateIn from '../components/AnimateIn';
 
 export const metadata: Metadata = {
@@ -17,7 +18,10 @@ export const metadata: Metadata = {
   },
 };
 
-export default function ServiciosPage() {
+export default async function ServiciosPage() {
+  // Los textos de las tarjetas se editan en /admin/inicio y son los mismos del
+  // home. Página estática: la acción de guardado la regenera con revalidatePath.
+  const servicios = serviciosConTextos((await getHomeContent()).servicios);
   return (
     <>
       <Navbar />
@@ -38,8 +42,8 @@ export default function ServiciosPage() {
           </AnimateIn>
 
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
-            {SERVICES.map((s, i) => (
-              <AnimateIn key={s.title} variant="fadeUp" delay={i * 0.1} className={i === 0 ? 'sm:col-span-2' : ''}>
+            {servicios.map((s, i) => (
+              <AnimateIn key={s.id} variant="fadeUp" delay={i * 0.1} className={i === 0 ? 'sm:col-span-2' : ''}>
               <Link
                 href={s.href ?? '/cotizador'}
                 className="group flex flex-col rounded-2xl border border-slate-200 p-6 transition-all duration-300 relative overflow-hidden cursor-pointer bg-white h-full"
@@ -59,10 +63,10 @@ export default function ServiciosPage() {
                     {s.icon}
                   </div>
                   <h3 className="font-headline font-bold text-lg mb-3 leading-snug text-slate-900">
-                    {s.title}
+                    {s.titulo}
                   </h3>
                   <p className={`text-sm leading-relaxed flex-1 mb-6 text-slate-500 ${s.image ? 'w-1/2 pr-2' : ''}`}>
-                    {s.desc}
+                    {s.descripcion}
                   </p>
                   <span className="inline-flex items-center justify-center gap-2 px-5 py-3 rounded-xl font-headline font-bold text-sm text-white bg-slate-800 group-hover:bg-slate-700 transition-all w-fit">
                     {s.cta}

@@ -20,6 +20,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: BASE,                                    priority: 1.0, changeFrequency: 'weekly'  },
     { url: `${BASE}/tienda`,                        priority: 0.9, changeFrequency: 'daily'   },
     { url: `${BASE}/cotizador`,                     priority: 0.9, changeFrequency: 'monthly' },
+    { url: `${BASE}/cotizador/modelo`,              priority: 0.8, changeFrequency: 'monthly' },
+    { url: `${BASE}/cotizador/asistente`,           priority: 0.7, changeFrequency: 'monthly' },
     { url: `${BASE}/servicios`,                     priority: 0.8, changeFrequency: 'monthly' },
     { url: `${BASE}/servicios/diseno-3d`,           priority: 0.7, changeFrequency: 'monthly' },
     { url: `${BASE}/servicios/prototipado-fabricacion`, priority: 0.7, changeFrequency: 'monthly' },

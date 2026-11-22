@@ -2,9 +2,10 @@
 import React, { useRef, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { gsap } from 'gsap';
+import { ArrowRight } from 'lucide-react';
 
 export interface ChromaItem {
-  image: string;
+  image?: string;
   title: string;
   subtitle: string;
   handle?: string;
@@ -12,6 +13,8 @@ export interface ChromaItem {
   borderColor?: string;
   gradient?: string;
   url?: string;
+  /** Texto del botón: convierte la tarjeta en una invitación sin imagen. */
+  cta?: string;
 }
 
 export interface ChromaGridProps {
@@ -129,15 +132,33 @@ const ChromaGrid: React.FC<ChromaGridProps> = ({
                 'radial-gradient(circle at var(--mouse-x) var(--mouse-y), var(--spotlight-color), transparent 70%)'
             }}
           />
-          <div className="relative z-10 flex-1 p-2.5 box-border">
-            <img src={c.image} alt={c.title} loading="lazy" className="w-full h-full object-cover rounded-[10px]" />
-          </div>
-          <footer className="relative z-10 p-3 text-white font-sans grid grid-cols-[1fr_auto] gap-x-3 gap-y-1">
-            <h3 className="m-0 text-[1.05rem] font-semibold">{c.title}</h3>
-            {c.handle && <span className="text-[0.95rem] opacity-80 text-right">{c.handle}</span>}
-            <p className="m-0 text-[0.72rem] opacity-75 line-clamp-2">{c.subtitle}</p>
-            {c.location && <span className="text-[0.85rem] opacity-85 text-right">{c.location}</span>}
-          </footer>
+          {c.cta ? (
+            <div className="relative z-10 flex-1 flex flex-col items-center justify-center gap-5 p-8 text-center text-white">
+              {c.handle && (
+                <span className="inline-block px-3 py-1 rounded-full text-xs font-bold uppercase tracking-widest bg-white/10 text-primary-container">
+                  {c.handle}
+                </span>
+              )}
+              <h3 className="m-0 text-2xl font-headline font-bold leading-snug">{c.title}</h3>
+              <p className="m-0 text-sm opacity-75 max-w-xs">{c.subtitle}</p>
+              <span className="inline-flex items-center gap-2 bg-primary-container group-hover:bg-cyan-500 text-white px-6 py-3 rounded-xl font-headline font-bold text-sm tracking-wide shadow-lg shadow-primary-container/20 transition-all">
+                {c.cta}
+                <ArrowRight size={16} className="transition-transform group-hover:translate-x-1" />
+              </span>
+            </div>
+          ) : (
+            <>
+              <div className="relative z-10 flex-1 p-2.5 box-border">
+                <img src={c.image} alt={c.title} loading="lazy" className="w-full h-full object-cover rounded-[10px]" />
+              </div>
+              <footer className="relative z-10 p-3 text-white font-sans grid grid-cols-[1fr_auto] gap-x-3 gap-y-1">
+                <h3 className="m-0 text-[1.05rem] font-semibold">{c.title}</h3>
+                {c.handle && <span className="text-[0.95rem] opacity-80 text-right">{c.handle}</span>}
+                <p className="m-0 text-[0.72rem] opacity-75 line-clamp-2">{c.subtitle}</p>
+                {c.location && <span className="text-[0.85rem] opacity-85 text-right">{c.location}</span>}
+              </footer>
+            </>
+          )}
         </article>
       ))}
       <div

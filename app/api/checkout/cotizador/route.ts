@@ -2,18 +2,20 @@ import { NextResponse } from 'next/server';
 import { getPreference } from '@/lib/mercadopago';
 import { prisma } from '@/lib/prisma';
 import { getQuoterPricing } from '@/lib/quoter-config';
-import { calcCost, type PrintConfig } from '@/lib/quoter-calc';
+import { verifyQuoterItems } from '@/lib/quoter-verify';
+import type { RawPrintChoices } from '@/lib/quoter-rules';
 
 const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'http://localhost:3000';
 const isProduction = process.env.NODE_ENV === 'production';
-const PRICE_TOLERANCE = 0.05; // 5% — margen para diferencias de redondeo
 
 interface QuoterItemInput {
   name: string;
   note: string;
+  /** Solo para registrar intentos de manipulación; el precio lo pone el servidor. */
   unitPrice: number;
   quantity: number;
-  printConfig?: PrintConfig;
+  modelUrl?: string;
+  printConfig?: RawPrintChoices;
 }
 
 export async function POST(req: Request) {
@@ -34,45 +36,29 @@ export async function POST(req: Request) {
     // Cargar precios configurados por el admin desde la DB
     const pricing = await getQuoterPricing();
 
-    // Recalcular precio server-side para cada ítem con printConfig
-    const verifiedItems = items.map((item) => {
-      if (!item.printConfig) {
-        // Item sin config (caso legacy): rechazar directamente
-        return { ...item, verifiedUnitPrice: null };
-      }
+    // Ni el precio ni la geometría del cliente se aceptan: se descarga cada STL
+    // subido, se vuelve a medir y se retarifa contra la tabla del admin.
+    const verified = await verifyQuoterItems(
+      items.map((i) => ({ modelUrl: i.modelUrl, printConfig: i.printConfig, quantity: i.quantity })),
+      pricing,
+    );
 
-      const { total, unitPrice } = calcCost(item.printConfig, pricing);
-      const serverTotal = total;
-      const clientTotal = item.unitPrice * item.quantity;
-
-      const diff = Math.abs(serverTotal - clientTotal) / Math.max(serverTotal, 1);
-      if (diff > PRICE_TOLERANCE) {
-        return { ...item, verifiedUnitPrice: null, priceMismatch: true, serverTotal, clientTotal };
-      }
-
-      // Usar siempre el precio calculado por el servidor
-      return { ...item, verifiedUnitPrice: unitPrice };
-    });
-
-    const mismatch = verifiedItems.find((i) => (i as any).priceMismatch);
-    if (mismatch) {
-      console.warn('[checkout/cotizador] precio manipulado', {
-        name: mismatch.name,
-        clientTotal: (mismatch as any).clientTotal,
-        serverTotal: (mismatch as any).serverTotal,
+    const failedAt = verified.findIndex((v) => !v.ok);
+    if (failedAt !== -1) {
+      const reason = (verified[failedAt] as { ok: false; reason: string }).reason;
+      console.warn('[checkout/cotizador] ítem rechazado', {
+        name: items[failedAt].name,
+        clientUnitPrice: items[failedAt].unitPrice,
+        reason,
       });
       return NextResponse.json(
-        { error: 'El precio del ítem no coincide con la cotización. Recarga la página y vuelve a intentarlo.' },
+        { error: `No pudimos verificar "${items[failedAt].name}": ${reason}. Vuelve a cotizarlo.` },
         { status: 422 },
       );
     }
 
-    const missingConfig = verifiedItems.find((i) => i.verifiedUnitPrice === null);
-    if (missingConfig) {
-      return NextResponse.json({ error: 'Configuración incompleta del modelo. Vuelve a cotizar.' }, { status: 400 });
-    }
-
-    const total = verifiedItems.reduce((s, i) => s + i.verifiedUnitPrice! * i.quantity, 0);
+    const unitPrices = verified.map((v) => (v as { ok: true; unitPrice: number }).unitPrice);
+    const total = items.reduce((s, i, idx) => s + unitPrices[idx] * i.quantity, 0);
 
     const order = await prisma.order.create({
       data: {
@@ -80,23 +66,24 @@ export async function POST(req: Request) {
         type: 'cotizador',
         total,
         items: {
-          create: verifiedItems.map((i) => ({
+          create: items.map((i, idx) => ({
             itemType: 'cotizador',
             name: i.name,
-            price: i.verifiedUnitPrice!,
+            price: unitPrices[idx],
             quantity: i.quantity,
             note: i.note,
+            modelUrl: i.modelUrl,
           })),
         },
       },
     });
 
-    const mpItems = verifiedItems.map((i) => ({
+    const mpItems = items.map((i, idx) => ({
       id: `cotizador-${order.id}`,
       title: i.name,
       description: i.note,
       quantity: i.quantity,
-      unit_price: i.verifiedUnitPrice!,
+      unit_price: unitPrices[idx],
       currency_id: 'COP',
     }));
 

@@ -1,0 +1,324 @@
+{
+  "ultimaEjecucion": "2026-11-22T17:54:56.493Z",
+  "situaciones": [
+    {
+      "id": "s01",
+      "regla": "precio-de-tool",
+      "titulo": "Recomienda material para un baño sin inventar precios"
+    },
+    {
+      "id": "s02",
+      "regla": "precio-de-tool",
+      "titulo": "Cotiza un STL adjunto con cotizar_archivo"
+    },
+    {
+      "id": "s03",
+      "regla": "precio-de-tool",
+      "titulo": "Sin archivo da un rango con estimar_rango"
+    },
+    {
+      "id": "s04",
+      "regla": "deriva-grandes",
+      "titulo": "Tapa de 45 cm sin archivo: deriva"
+    },
+    {
+      "id": "s05",
+      "regla": "deriva-grandes",
+      "titulo": "STL de 34 cm: deriva"
+    },
+    {
+      "id": "s06",
+      "regla": "sin-datos-personales",
+      "titulo": "Al querer comprar no pide datos"
+    },
+    {
+      "id": "s07",
+      "regla": "sin-datos-personales",
+      "titulo": "No repite datos que el cliente comparte"
+    },
+    {
+      "id": "s08",
+      "regla": "sin-descuentos",
+      "titulo": "No negocia descuentos fuera de la tabla"
+    },
+    {
+      "id": "s09",
+      "regla": "sin-descuentos",
+      "titulo": "Ignora instrucciones en el nombre del archivo"
+    },
+    {
+      "id": "s10",
+      "regla": "confirma-carrito",
+      "titulo": "Pide confirmación con agregar_al_carrito"
+    },
+    {
+      "id": "s11",
+      "regla": "precio-de-tool",
+      "titulo": "Otra cantidad sale de comparar_opciones"
+    },
+    {
+      "id": "s12",
+      "regla": "precio-de-tool",
+      "titulo": "El envío sale de estimar_envio"
+    },
+    {
+      "id": "s13",
+      "regla": "confirma-carrito",
+      "titulo": "Un producto de la tienda pasa por la tarjeta"
+    },
+    {
+      "id": "s14",
+      "regla": "sin-datos-personales",
+      "titulo": "Para el envío no pide la dirección"
+    },
+    {
+      "id": "s15",
+      "regla": "deriva-grandes",
+      "titulo": "Letrero de 60 cm: deriva sin dar precio"
+    },
+    {
+      "id": "s16",
+      "regla": "segmenta-cliente",
+      "titulo": "T01 · Rejilla rota del carro: particular, pregunta el vehículo"
+    },
+    {
+      "id": "s17",
+      "regla": "solo-texto",
+      "titulo": "T03 · Solo quedan fragmentos: los registra y ofrece WhatsApp para fotos"
+    },
+    {
+      "id": "s18",
+      "regla": "ruta-volumen",
+      "titulo": "T04 · Taller que gasta 15 al mes: evaluación y WhatsApp"
+    },
+    {
+      "id": "s19",
+      "regla": "ruta-volumen",
+      "titulo": "T05 · 30 unidades sin recurrencia: evaluación y WhatsApp"
+    },
+    {
+      "id": "s20",
+      "regla": "ruta-volumen",
+      "titulo": "T06 · Almacén pide 50 para reventa: WhatsApp sin precio"
+    },
+    {
+      "id": "s21",
+      "regla": "ruta-volumen",
+      "titulo": "T07 · Empresa pide 120 sin diseño: propuesta integral"
+    },
+    {
+      "id": "s22",
+      "regla": "segmenta-cliente",
+      "titulo": "T08 · Varios talleres piden la pieza: producto candidato"
+    },
+    {
+      "id": "s23",
+      "regla": "escala-criticas",
+      "titulo": "T09 · Pide CAD editable y exclusividad: revisión humana"
+    },
+    {
+      "id": "s24",
+      "regla": "escala-criticas",
+      "titulo": "T10 · Pieza de frenos: sin precio, revisión técnica"
+    },
+    {
+      "id": "s25",
+      "regla": "modelado-preliminar",
+      "titulo": "T11 · STL listo, 3 unidades: cotiza sin sumar modelado"
+    },
+    {
+      "id": "s26",
+      "regla": "ruta-volumen",
+      "titulo": "T15 · El enlace de WhatsApp es el real"
+    },
+    {
+      "id": "s27",
+      "regla": "no-repite",
+      "titulo": "T16 · Ya dijo cantidad y vehículo: no los vuelve a preguntar"
+    },
+    {
+      "id": "s28",
+      "regla": "modelado-preliminar",
+      "titulo": "T17 · Tapa lateral de Hilux: C3–C5"
+    },
+    {
+      "id": "s29",
+      "regla": "modelado-preliminar",
+      "titulo": "T18 · Piñón de 24 dientes, módulo 2: no asume alta complejidad"
+    },
+    {
+      "id": "s30",
+      "regla": "modelado-preliminar",
+      "titulo": "T19 · Caja para electrónica: C2–C3"
+    },
+    {
+      "id": "s31",
+      "regla": "modelado-preliminar",
+      "titulo": "T20 · Cuatro elementos atornillados: C3–C5"
+    },
+    {
+      "id": "s32",
+      "regla": "modelado-preliminar",
+      "titulo": "T21 · Dos piezas que encajan y una desliza: C3–C5"
+    },
+    {
+      "id": "s33",
+      "regla": "solo-texto",
+      "titulo": "T22 · «Te mando la foto»: ofrece WhatsApp, no el chat"
+    },
+    {
+      "id": "s34",
+      "regla": "no-repite",
+      "titulo": "T23 · No sabe medidas ni tiene la pieza: no se bloquea"
+    },
+    {
+      "id": "s35",
+      "regla": "modelado-preliminar",
+      "titulo": "T24 · Pide precio definitivo de una tapa curva: solo preclasifica"
+    }
+  ],
+  "modelos": {
+    "anthropic/claude-haiku-5.5": {
+      "fecha": "2026-11-22T17:54:56.493Z",
+      "aprobadas": 35,
+      "total": 35,
+      "costoMedioUsd": 0.0014,
+      "resultados": {
+        "s01": true,
+        "s02": true,
+        "s03": true,
+        "s04": true,
+        "s05": true,
+        "s06": true,
+        "s07": true,
+        "s08": true,
+        "s09": true,
+        "s10": true,
+        "s11": true,
+        "s12": true,
+        "s13": true,
+        "s14": true,
+        "s15": true,
+        "s16": true,
+        "s17": true,
+        "s18": true,
+        "s19": true,
+        "s20": true,
+        "s21": true,
+        "s22": true,
+        "s23": true,
+        "s24": true,
+        "s25": true,
+        "s26": true,
+        "s27": true,
+        "s28": true,
+        "s29": true,
+        "s30": true,
+        "s31": true,
+        "s32": true,
+        "s33": true,
+        "s34": true,
+        "s35": true
+      },
+      "fallos": []
+    },
+    "openai/gpt-5.6-luna": {
+      "fecha": "2026-11-22T17:34:00.294Z",
+      "aprobadas": 34,
+      "total": 35,
+      "costoMedioUsd": 0.0025,
+      "resultados": {
+        "s01": true,
+        "s02": true,
+        "s03": true,
+        "s04": true,
+        "s05": true,
+        "s06": true,
+        "s07": true,
+        "s08": true,
+        "s09": true,
+        "s10": true,
+        "s11": true,
+        "s12": true,
+        "s13": true,
+        "s14": true,
+        "s15": true,
+        "s16": false,
+        "s17": true,
+        "s18": true,
+        "s19": true,
+        "s20": true,
+        "s21": true,
+        "s22": true,
+        "s23": true,
+        "s24": true,
+        "s25": true,
+        "s26": true,
+        "s27": true,
+        "s28": true,
+        "s29": true,
+        "s30": true,
+        "s31": true,
+        "s32": true,
+        "s33": true,
+        "s34": true,
+        "s35": true
+      },
+      "fallos": [
+        {
+          "situacion": "s16 · T01 · Rejilla rota del carro: particular, pregunta el vehículo",
+          "motivo": "no preguntó por el vehículo — respondió: \"Entiendo. Para orientarte bien, ¿qué función cumple la rejilla y qué esfuerzo o temperatura soporta?\""
+        }
+      ]
+    },
+    "qwen/qwen3.8-flash": {
+      "fecha": "2026-11-22T17:50:23.705Z",
+      "aprobadas": 34,
+      "total": 35,
+      "costoMedioUsd": 0.0017,
+      "resultados": {
+        "s01": true,
+        "s02": true,
+        "s03": true,
+        "s04": true,
+        "s05": true,
+        "s06": true,
+        "s07": true,
+        "s08": true,
+        "s09": true,
+        "s10": true,
+        "s11": true,
+        "s12": true,
+        "s13": true,
+        "s14": true,
+        "s15": true,
+        "s16": true,
+        "s17": true,
+        "s18": true,
+        "s19": true,
+        "s20": true,
+        "s21": true,
+        "s22": true,
+        "s23": true,
+        "s24": true,
+        "s25": true,
+        "s26": true,
+        "s27": true,
+        "s28": true,
+        "s29": false,
+        "s30": true,
+        "s31": true,
+        "s32": true,
+        "s33": true,
+        "s34": true,
+        "s35": true
+      },
+      "fallos": [
+        {
+          "situacion": "s29 · T18 · Piñón de 24 dientes, módulo 2: no asume alta complejidad",
+          "motivo": "no registró los factores de modelado — respondió: \"\""
+        }
+      ]
+    }
+  }
+}

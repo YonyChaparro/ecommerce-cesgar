@@ -6,7 +6,11 @@ import dynamic from 'next/dynamic';
 import { Zap, CloudUpload, X, Loader2, Plus, Layers, Scale, Clock, ShoppingCart, Maximize2 } from 'lucide-react';
 import { useCart } from '@/app/components/CartContext';
 import { type QuoterPricing, DEFAULT_QUOTER_PRICING } from '@/lib/quoter-types';
-import { calcCost } from '@/lib/quoter-calc';
+import { calcCost, effectiveVolumeCm3 } from '@/lib/quoter-calc';
+import { parseSTL, type STLData } from '@/lib/stl-parse';
+import { detectGeometry, effectiveInfill, checkOversize, MAX_SINGLE_PIECE_MM, type GeomType } from '@/lib/quoter-rules';
+import { getAvailableColors, getAvailableQualities } from '@/lib/quoter-catalog';
+import { buildQuoterCartItem } from '@/lib/quoter-cart-item';
 // DEFAULT_QUOTER_PRICING is used as the default prop value below
 
 const STLViewer = dynamic(() => import('@/components/STLViewer'), { ssr: false, loading: () => (
@@ -17,47 +21,7 @@ const STLViewer = dynamic(() => import('@/components/STLViewer'), { ssr: false, 
 
 const STLViewerFull = dynamic(() => import('@/components/STLViewerFull'), { ssr: false });
 
-// ─── Constants ────────────────────────────────────────────────────────────────
-
-const COLORES: Record<string, Record<string, any[]>> = {
-  fdm: {
-    pla: [
-      { id: 'white', nombre: 'Blanco' }, { id: 'black', nombre: 'Negro' }, { id: 'grey', nombre: 'Gris' },
-      { id: 'silver', nombre: 'Plata' }, { id: 'gold', nombre: 'Dorado' }, { id: 'red', nombre: 'Rojo' },
-      { id: 'blue', nombre: 'Azul' }, { id: 'green', nombre: 'Verde' }, { id: 'yellow', nombre: 'Amarillo' },
-      { id: 'orange', nombre: 'Naranja' }, { id: 'multicolor_red', nombre: 'Multicolor Tono Rojo' },
-      { id: 'multicolor_pink', nombre: 'Multicolor Rosado' }, { id: 'brown', nombre: 'Café' }
-    ],
-    abs: [{ id: 'white', nombre: 'Blanco' }, { id: 'black', nombre: 'Negro' }, { id: 'grey', nombre: 'Gris' }, { id: 'silver', nombre: 'Plata' }],
-    petg: [{ id: 'white', nombre: 'Blanco' }, { id: 'black', nombre: 'Negro' }, { id: 'translucent', nombre: 'Translúcido' }, { id: 'silver', nombre: 'Plata' }],
-    nylon: [{ id: 'black', nombre: 'Negro' }, { id: 'white', nombre: 'Blanco' }, { id: 'silver', nombre: 'Plata' }],
-    tpu: [{ id: 'black', nombre: 'Negro' }, { id: 'yellow', nombre: 'Amarillo' }, { id: 'orange', nombre: 'Naranja' }, { id: 'white', nombre: 'Blanco' }],
-    pp: [{ id: 'black', nombre: 'Negro' }, { id: 'white', nombre: 'Blanco' }, { id: 'grey', nombre: 'Gris' }]
-  },
-  resina: {
-    standard: [{ id: 'white', nombre: 'Blanco' }, { id: 'black', nombre: 'Negro' }, { id: 'translucent', nombre: 'Translúcido' }, { id: 'grey', nombre: 'Gris' }, { id: 'blue', nombre: 'Azul' }],
-    abs_like: [{ id: 'white', nombre: 'Blanco' }, { id: 'black', nombre: 'Negro' }, { id: 'beige', nombre: 'Beige' }, { id: 'grey', nombre: 'Gris' }, { id: 'blue', nombre: 'Azul' }],
-    ultra_transparente: [{ id: 'ultra_transparent', nombre: 'Ultra Transparente' }],
-    tough: [{ id: 'black', nombre: 'Negro' }, { id: 'grey', nombre: 'Gris' }],
-    nylon: [{ id: 'white', nombre: 'Blanco' }],
-    f80: [{ id: 'black', nombre: 'Negro' }]
-  }
-};
-
-
-// Áreas máximas de impresión en mm — deben coincidir con las opciones del select de tecnología
-const BUILD_VOLUMES: Record<string, { dims: [number, number, number]; label: string }> = {
-  fdm:    { dims: [300, 300, 450], label: '30×30×45 cm' },
-  resina: { dims: [250, 120, 210], label: '25×12×21 cm' },
-};
-
-// ─── Types and Parser ────────────────────────────────────────────────────────
-
-interface STLData {
-  volumeMm3: number;
-  dimensions: { x: number; y: number; z: number };
-  boundingBoxVolumeCm3: number;
-}
+// ─── Types ───────────────────────────────────────────────────────────────────
 
 interface QuoterModel {
   id: string;
@@ -75,76 +39,7 @@ interface QuoterModel {
   };
 }
 
-function parseSTL(buffer: ArrayBuffer): STLData {
-  const view = new DataView(buffer);
-  
-  if (buffer.byteLength < 84) {
-    return { volumeMm3: 1000, dimensions: { x: 20, y: 20, z: 20 }, boundingBoxVolumeCm3: 8 };
-  }
-
-  const triangleCount = view.getUint32(80, true);
-  const expectedSize = 84 + triangleCount * 50;
-  const isBinary = expectedSize === buffer.byteLength && triangleCount > 0;
-
-  if (!isBinary) {
-    const approxTriangles = Math.max(10, (buffer.byteLength - 80) / 150);
-    const approxVol = approxTriangles * 5;
-    return { volumeMm3: approxVol, dimensions: { x: 30, y: 30, z: 30 }, boundingBoxVolumeCm3: 27 };
-  }
-
-  let minX = Infinity, minY = Infinity, minZ = Infinity;
-  let maxX = -Infinity, maxY = -Infinity, maxZ = -Infinity;
-  let signedVolume = 0;
-
-  for (let i = 0; i < triangleCount; i++) {
-    const off = 84 + i * 50;
-    const p = [
-      [view.getFloat32(off + 12, true), view.getFloat32(off + 16, true), view.getFloat32(off + 20, true)],
-      [view.getFloat32(off + 24, true), view.getFloat32(off + 28, true), view.getFloat32(off + 32, true)],
-      [view.getFloat32(off + 36, true), view.getFloat32(off + 40, true), view.getFloat32(off + 44, true)]
-    ];
-
-    for (let j = 0; j < 3; j++) {
-      minX = Math.min(minX, p[j][0]); maxX = Math.max(maxX, p[j][0]);
-      minY = Math.min(minY, p[j][1]); maxY = Math.max(maxY, p[j][1]);
-      minZ = Math.min(minZ, p[j][2]); maxZ = Math.max(maxZ, p[j][2]);
-    }
-
-    signedVolume +=
-      (p[0][0] * (p[1][1] * p[2][2] - p[2][1] * p[1][2]) -
-       p[0][1] * (p[1][0] * p[2][2] - p[2][0] * p[1][2]) +
-       p[0][2] * (p[1][0] * p[2][1] - p[2][0] * p[1][1])) / 6;
-  }
-
-  const dimX = Math.max(0.1, maxX - minX);
-  const dimY = Math.max(0.1, maxY - minY);
-  const dimZ = Math.max(0.1, maxZ - minZ);
-  const volumeMm3 = Math.max(0.1, Math.abs(signedVolume));
-
-  return {
-    volumeMm3,
-    dimensions: {
-      x: Math.round(dimX * 10) / 10,
-      y: Math.round(dimY * 10) / 10,
-      z: Math.round(dimZ * 10) / 10,
-    },
-    boundingBoxVolumeCm3: (dimX * dimY * dimZ) / 1000,
-  };
-}
-
 // ─── Price Calculation based on cotizador.html ────────────────────────────────
-
-type GeomType = 'solid' | 'hollow' | 'thin';
-
-function detectGeometry(stl: STLData | null): GeomType {
-  if (!stl) return 'solid';
-  const volumeCm3 = stl.volumeMm3 / 1000;
-  const ratio = volumeCm3 / Math.max(stl.boundingBoxVolumeCm3, 0.1);
-  if (ratio < 0.2) return 'hollow';
-  const dims = [stl.dimensions.x, stl.dimensions.y, stl.dimensions.z].sort((a, b) => a - b);
-  if (dims[2] > 0 && dims[0] / dims[2] < 0.08) return 'thin';
-  return 'solid';
-}
 
 const GEOM_LABEL: Record<GeomType, string> = {
   hollow: '🫧 Pieza Hueca / Carcasa',
@@ -153,53 +48,29 @@ const GEOM_LABEL: Record<GeomType, string> = {
 };
 
 function calculateItemCosts(model: QuoterModel, pricing: QuoterPricing) {
-  if (!model.stl) return { cost: 0, weightG: 0, timeH: 0, unitPrice: 0 };
+  if (!model.stl) return { cost: 0, weightG: 0, timeH: 0, unitPrice: 0, billableUnit: 0 };
   const result = calcCost({
     tech: model.config.printingTech as 'fdm' | 'resina',
     materialId: model.config.materialType,
     layerHeight: model.config.layerHeight,
-    infillDensity: model.config.infillDensity,
+    infillDensity: effectiveInfill(model.stl, model.config.infillDensity),
     factorEscalado: model.config.factorEscalado ?? 1,
     postProcessing: model.config.postProcessing,
     meshVolCm3: model.stl.volumeMm3 / 1000,
     bboxVolCm3: model.stl.boundingBoxVolumeCm3,
     quantity: model.config.quantity,
   }, pricing);
-  return { cost: result.total, weightG: result.weightG, timeH: result.timeH, unitPrice: result.unitPrice };
+  return { cost: result.total, weightG: result.weightG, timeH: result.timeH, unitPrice: result.unitPrice, billableUnit: result.billableUnit };
 }
 
-// La pieza puede rotarse sobre la cama, así que se comparan los ejes ordenados
-// de menor a mayor en lugar de X/Y/Z literales
-function checkBuildFit(stl: STLData | null, tech: string, factorEscalado: number) {
-  if (!stl) return null;
-  const build = BUILD_VOLUMES[tech] ?? BUILD_VOLUMES.fdm;
-  const modelDims = [stl.dimensions.x, stl.dimensions.y, stl.dimensions.z].sort((a, b) => a - b);
-  const buildDims = [...build.dims].sort((a, b) => a - b);
-  const fits = modelDims.every((d, i) => d * factorEscalado <= buildDims[i]);
-  // Mayor factor de escalado con el que la pieza cabe (floor para que aplicarlo siempre quepa)
-  const rawMax = Math.min(...buildDims.map((b, i) => b / modelDims[i]));
-  const maxFactor = Math.max(0.01, Math.floor(rawMax * 100) / 100);
-  return { fits, maxFactor, buildLabel: build.label };
-}
-
-function getAvailableColors(tech: string, material: string) {
-  return (COLORES[tech] && COLORES[tech][material]) || [{ id: 'default', nombre: 'Por defecto' }];
-}
-
-function getAvailableQualities(tech: string) {
-  if (tech === 'fdm') {
-    return [
-      { val: '0.3', text: '0.3mm (Borrador - Rápido)' },
-      { val: '0.2', text: '0.2mm (Estándar - Equilibrado)' },
-      { val: '0.15', text: '0.15mm (Detallado)' },
-      { val: '0.1', text: '0.1mm (Alta Calidad)' }
-    ];
-  }
-  return [
-    { val: '0.1', text: '100 micras (Rápido)' },
-    { val: '0.05', text: '50 micras (Estándar)' },
-    { val: '0.02', text: '20 micras (Ultra Detalle)' }
-  ];
+// Modelos que el cotizador automático no debe tarifar. Una malla sin medir se
+// acotaría contra su caja envolvente (o sea, se cobraría maciza); una pieza de
+// más de 30 cm hay que fraccionarla, y ese reparto trae setups y ensamblaje que
+// la fórmula no contempla. Ambas van a cotización personalizada.
+function needsManualQuote(m: QuoterModel): boolean {
+  if (!m.stl) return false;
+  if (m.stl.volumeUnreliable) return true;
+  return checkOversize(m.stl, m.config.factorEscalado ?? 1)?.oversize ?? false;
 }
 
 // ─── Modal Component ─────────────────────────────────────────────────────────
@@ -222,6 +93,14 @@ function ConfigurationModal({
   const qualities = getAvailableQualities(c.printingTech);
 
   const { cost, timeH, weightG } = calculateItemCosts(model, pricing);
+
+  // El mismo volumen con el que se tarifa, para que el resumen no enseñe una cifra
+  // distinta de la que entra al precio.
+  const volCm3 = model.stl
+    ? effectiveVolumeCm3(model.stl.volumeMm3 / 1000, model.stl.boundingBoxVolumeCm3, c.factorEscalado)
+    : 0;
+  const bboxCm3 = model.stl ? model.stl.boundingBoxVolumeCm3 * Math.pow(c.factorEscalado, 3) : 0;
+  const ocupacion = bboxCm3 > 0 ? (volCm3 / bboxCm3) * 100 : 0;
 
   const hc = (key: string, val: any) => {
     const newConf = { ...c, [key]: val };
@@ -294,11 +173,32 @@ function ConfigurationModal({
                   })}
                 </div>
                 {c.factorEscalado !== 1 && (
-                  <p className="text-[10px] text-slate-500 mt-1">Original × {c.factorEscalado}</p>
+                  <p className="text-[10px] text-slate-500 mt-1">
+                    Original × {c.factorEscalado} · Volumen × {Math.pow(c.factorEscalado, 3).toFixed(2)}
+                  </p>
                 )}
+                <p className="mt-3">Volumen:</p>
+                <div className="flex gap-2 justify-center font-mono text-[10px] sm:text-xs flex-wrap">
+                  <span className="bg-slate-800 px-2 py-1 rounded whitespace-nowrap flex flex-col items-center gap-0.5">
+                    <span className="text-white font-bold">MATERIAL</span>
+                    <span>{volCm3.toFixed(2)} cm³</span>
+                    <span className="text-slate-500">{Math.round(volCm3 * 1000).toLocaleString('es-CO')} mm³</span>
+                  </span>
+                  <span className="bg-slate-800 px-2 py-1 rounded whitespace-nowrap flex flex-col items-center gap-0.5">
+                    <span className="text-white font-bold">CAJA</span>
+                    <span>{bboxCm3.toFixed(2)} cm³</span>
+                    <span className="text-slate-500">{ocupacion.toFixed(0)}% ocupado</span>
+                  </span>
+                </div>
                 <p className="mt-4 text-cyan-400 font-bold bg-cyan-950/30 px-3 py-1 rounded-full border border-cyan-900/50 inline-block text-xs sm:text-sm">
                   {GEOM_LABEL[detectGeometry(model.stl)]}
                 </p>
+                {model.stl.volumeUnreliable && (
+                  <p className="mt-3 text-[11px] text-amber-300 bg-amber-950/30 border border-amber-700/40 rounded-xl px-3 py-2 leading-relaxed text-left">
+                    ⚠️ No pudimos medir el volumen de esta malla con fiabilidad — puede estar abierta o tener caras invertidas.
+                    Para no cobrarte de más, este archivo no se cotiza en automático: envíalo por la cotización personalizada de abajo.
+                  </p>
+                )}
               </div>
             ) : (
               <div className="flex flex-col items-center gap-2 mb-6">
@@ -382,11 +282,14 @@ function ConfigurationModal({
             {/* Infill */}
             {(() => {
               const infillLocked = detectGeometry(model.stl) !== 'solid';
+              // El selector enseña el relleno con el que se cotiza, no el que quedó
+              // guardado: si no, el precio saldría de un valor que no está a la vista.
+              const infill = effectiveInfill(model.stl, c.infillDensity);
               return (
                 <div className={infillLocked ? 'opacity-50 pointer-events-none' : ''}>
                   <label className="block text-[11px] font-bold text-cyan-400 uppercase mb-2 tracking-wider">🏗️ Relleno</label>
                   <select
-                    value={c.infillDensity}
+                    value={infill}
                     onChange={e => hc('infillDensity', e.target.value)}
                     disabled={infillLocked}
                     className="w-full bg-slate-900/50 text-white text-sm rounded-xl px-4 py-3 border border-slate-600 focus:border-cyan-400 focus:ring-1 focus:ring-cyan-400 outline-none transition-colors"
@@ -400,7 +303,8 @@ function ConfigurationModal({
                   </select>
                   {infillLocked && (
                     <p className="text-[10px] text-amber-400 mt-1.5">
-                      Geometría hueca o laminar — relleno fijo, no modifica la estructura real.
+                      Geometría hueca o laminar — el volumen medido ya son solo las paredes,
+                      y esas se imprimen macizas: relleno fijo al 100%.
                     </p>
                   )}
                 </div>
@@ -466,23 +370,17 @@ function ConfigurationModal({
                 )}
               </p>
               {(() => {
-                const fit = checkBuildFit(model.stl, c.printingTech, c.factorEscalado);
-                if (!fit || fit.fits) return null;
+                const size = checkOversize(model.stl, c.factorEscalado);
+                if (!size?.oversize) return null;
                 return (
-                  <div className="mt-3 bg-amber-950/30 border border-amber-700/40 rounded-xl px-4 py-3 flex flex-col sm:flex-row sm:items-center gap-3">
-                    <p className="flex-1 text-xs text-amber-300 leading-relaxed">
-                      ⚠️ Con escala ×{c.factorEscalado} la pieza mide{' '}
-                      {(model.stl!.dimensions.x * c.factorEscalado).toFixed(0)}×{(model.stl!.dimensions.y * c.factorEscalado).toFixed(0)}×{(model.stl!.dimensions.z * c.factorEscalado).toFixed(0)} mm
-                      {' '}y excede el área de impresión {c.printingTech === 'fdm' ? 'FDM' : 'de resina'} ({fit.buildLabel}).
-                      Reduce la escala a ×{fit.maxFactor} o menos.
+                  <div className="mt-3 bg-amber-950/30 border border-amber-700/40 rounded-xl px-4 py-3">
+                    <p className="text-xs text-amber-300 leading-relaxed">
+                      📐 La pieza mide {size.dims.map((d) => d.toFixed(0)).join('×')} mm
+                      {c.factorEscalado !== 1 && ` con escala ×${c.factorEscalado}`} y supera los {MAX_SINGLE_PIECE_MM / 10}×{MAX_SINGLE_PIECE_MM / 10}×{MAX_SINGLE_PIECE_MM / 10} cm
+                      que salen de una sola impresión ({size.over.length > 1 ? 'ejes' : 'eje'} {size.over.join(' y ')}).
+                      Se imprime igual, fraccionada y ensamblada, pero el corte hay que definirlo contigo:
+                      por eso no entra al carrito — envíalo por la cotización personalizada de abajo.
                     </p>
-                    <button
-                      type="button"
-                      onClick={() => hc('factorEscalado', fit.maxFactor)}
-                      className="shrink-0 bg-amber-500/20 hover:bg-amber-500/30 text-amber-300 border border-amber-600/50 px-4 py-2 rounded-lg text-xs font-bold transition-colors cursor-pointer whitespace-nowrap"
-                    >
-                      Ajustar a ×{fit.maxFactor}
-                    </button>
                   </div>
                 );
               })()}
@@ -518,38 +416,19 @@ export default function Quoter({ pricing = DEFAULT_QUOTER_PRICING }: { pricing?:
   const [configuringModelId, setConfiguringModelId] = useState<string | null>(null);
   const { addItem, openCart, items: cartItems } = useCart();
   const [uploadLoading, setUploadLoading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
 
   const primaryInputRef = useRef<HTMLInputElement>(null);
   const addMoreInputRef = useRef<HTMLInputElement>(null);
 
   const addToCart = useCallback(async () => {
+    if (models.some(needsManualQuote)) return;
+    setUploadError(null);
     setUploadLoading(true);
     try {
       const existingIds = new Set(cartItems.map((i) => i.id));
       for (const m of models) {
-        const cartId = `cotizador-${m.id}`;
-        if (existingIds.has(cartId)) continue;
-        const { cost, weightG, timeH } = calculateItemCosts(m, pricing) as { cost: number; unitPrice?: number; weightG: number; timeH: number };
-        const techMats = pricing.materiales[m.config.printingTech as 'fdm' | 'resina'] ?? [];
-        const matObj = techMats.find(mat => mat.id === m.config.materialType) || techMats[0];
-        const colorObj = getAvailableColors(m.config.printingTech, m.config.materialType).find(c => c.id === m.config.printColor);
-        const sf = m.config.factorEscalado ?? 1;
-        const dims = m.stl
-          ? `${(m.stl.dimensions.x * sf).toFixed(1)}×${(m.stl.dimensions.y * sf).toFixed(1)}×${(m.stl.dimensions.z * sf).toFixed(1)}mm`
-          : null;
-        const note = [
-          m.config.printingTech.toUpperCase(),
-          matObj.nombre,
-          colorObj?.nombre,
-          `${m.config.layerHeight}mm`,
-          `${m.config.infillDensity}% relleno`,
-          sf !== 1 ? `Escala ×${sf}` : null,
-          dims,
-          `~${(weightG / m.config.quantity).toFixed(1)}g/u`,
-          `~${(timeH / m.config.quantity).toFixed(1)}h/u`,
-          m.config.postProcessing ? 'Post-proc.' : 'Sin post-proc.',
-        ].filter(Boolean).join(' · ');
-        const effectiveUnitPrice = Math.max(1, Math.round(cost / m.config.quantity));
+        if (existingIds.has(`cotizador-${m.id}`)) continue;
 
         let modelUrl: string | undefined;
         try {
@@ -558,31 +437,25 @@ export default function Quoter({ pricing = DEFAULT_QUOTER_PRICING }: { pricing?:
           const res = await fetch('/api/stl-upload', { method: 'POST', body: fd });
           if (res.ok) modelUrl = (await res.json()).url;
         } catch {
-          // Upload failure is non-blocking — order proceeds without download link
+          // se resuelve justo abajo
+        }
+        // El checkout vuelve a medir el STL desde el servidor para confirmar el
+        // precio. Sin archivo subido no hay nada que medir y el pedido se
+        // rechazaría allí, así que se para aquí con un mensaje claro.
+        if (!modelUrl) {
+          setUploadError(`No pudimos subir "${m.file.name}". Sin el archivo no podemos confirmar el precio — inténtalo de nuevo.`);
+          return;
         }
 
-        addItem({
-          id: cartId,
-          slug: 'cotizador',
-          name: m.file.name.replace(/\.stl$/i, ''),
-          price: effectiveUnitPrice,
-          img: '/3d-print.svg',
-          alt: note,
-          category: 'Impresión 3D',
-          note,
+        const { item, quantity } = buildQuoterCartItem({
+          idCotizacion: m.id,
+          nombreArchivo: m.file.name,
+          stl: m.stl,
+          config: m.config,
           modelUrl,
-          printConfig: m.stl ? {
-            tech: m.config.printingTech as 'fdm' | 'resina',
-            materialId: m.config.materialType,
-            layerHeight: m.config.layerHeight,
-            infillDensity: m.config.infillDensity,
-            factorEscalado: m.config.factorEscalado ?? 1,
-            postProcessing: m.config.postProcessing,
-            meshVolCm3: m.stl.volumeMm3 / 1000,
-            bboxVolCm3: m.stl.boundingBoxVolumeCm3,
-            quantity: m.config.quantity,
-          } : undefined,
-        }, m.config.quantity);
+          pricing,
+        });
+        addItem(item, quantity);
       }
       openCart();
     } finally {
@@ -753,7 +626,7 @@ export default function Quoter({ pricing = DEFAULT_QUOTER_PRICING }: { pricing?:
                         📏 {qualityObj?.text.split(' ')[0]} {qualityObj?.text.includes('Borrador') ? '(Borrador)' : qualityObj?.text.includes('Rápido') ? '(Rápido)' : ''}
                       </span>
                       <span className="text-[10px] bg-slate-800 text-slate-300 px-2 py-1 rounded border border-slate-600 font-medium flex items-center gap-1 uppercase tracking-wider whitespace-nowrap">
-                        🏗️ REL {model.config.infillDensity}%
+                        🏗️ REL {effectiveInfill(model.stl, model.config.infillDensity)}%
                       </span>
                       <span className="text-[10px] bg-slate-800 text-slate-300 px-2 py-1 rounded border border-slate-600 font-medium flex items-center gap-1 uppercase tracking-wider whitespace-nowrap truncate max-w-30">
                         🎨 {printColorObj?.nombre}
@@ -764,11 +637,11 @@ export default function Quoter({ pricing = DEFAULT_QUOTER_PRICING }: { pricing?:
                         </span>
                       )}
                       {(() => {
-                        const fit = checkBuildFit(model.stl, model.config.printingTech, model.config.factorEscalado ?? 1);
-                        if (!fit || fit.fits) return null;
+                        const size = checkOversize(model.stl, model.config.factorEscalado ?? 1);
+                        if (!size?.oversize) return null;
                         return (
                           <span className="text-[10px] bg-amber-950/40 text-amber-300 px-2 py-1 rounded border border-amber-700/60 font-bold flex items-center gap-1 uppercase tracking-wider whitespace-nowrap">
-                            ⚠️ Excede área de impresión
+                            📐 Requiere impresión fraccionada
                           </span>
                         );
                       })()}
@@ -854,6 +727,30 @@ export default function Quoter({ pricing = DEFAULT_QUOTER_PRICING }: { pricing?:
             </button>
           </div>
 
+          {(() => {
+            const blocked = models.filter(needsManualQuote);
+            if (blocked.length === 0) return null;
+            const one = blocked.length === 1;
+            return (
+              <div className="mt-3 bg-amber-950/30 border border-amber-700/40 rounded-xl px-4 py-3">
+                <p className="text-xs text-amber-300 leading-relaxed">
+                  {one ? '1 modelo necesita' : `${blocked.length} modelos necesitan`} revisión manual, así que
+                  {one ? ' no entra' : ' no entran'} al carrito.{' '}
+                  <a href="#cotizacion-personalizada" className="underline font-bold hover:text-amber-200">
+                    Envíalo{one ? '' : 's'} por cotización personalizada
+                  </a>{' '}
+                  y lo evaluamos contigo.
+                </p>
+              </div>
+            );
+          })()}
+
+          {uploadError && (
+            <div className="mt-3 bg-red-950/30 border border-red-700/40 rounded-xl px-4 py-3">
+              <p className="text-xs text-red-300 leading-relaxed">⚠️ {uploadError}</p>
+            </div>
+          )}
+
           {/* Price + action */}
           <div className="flex items-center justify-between gap-3 pt-3 border-t border-slate-700/50">
             <div>
@@ -865,7 +762,7 @@ export default function Quoter({ pricing = DEFAULT_QUOTER_PRICING }: { pricing?:
             </div>
             <button
               onClick={addToCart}
-              disabled={uploadLoading}
+              disabled={uploadLoading || models.some(needsManualQuote)}
               className="bg-primary-container hover:bg-cyan-400 disabled:opacity-60 disabled:cursor-not-allowed text-slate-900 px-4 py-3 rounded-xl font-bold text-sm transition-all shadow-[0_0_20px_rgba(77,189,204,0.15)] flex items-center gap-2 whitespace-nowrap shrink-0 cursor-pointer"
             >
               {uploadLoading ? (

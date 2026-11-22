@@ -9,6 +9,62 @@ function escape(text: string): string {
     .replace(/"/g, '&quot;');
 }
 
+const YOUTUBE_HOSTS = new Set([
+  'youtube.com', 'www.youtube.com', 'm.youtube.com', 'music.youtube.com',
+  'youtu.be', 'youtube-nocookie.com', 'www.youtube-nocookie.com',
+]);
+
+// "42", "42s", "1m30s", "1h2m3s" → segundos. Cualquier otra cosa → 0.
+function parseStartSeconds(raw: string | null): number {
+  if (!raw) return 0;
+  if (/^\d+$/.test(raw)) return Number(raw);
+  const m = raw.match(/^(?:(\d+)h)?(?:(\d+)m)?(?:(\d+)s)?$/);
+  if (!m) return 0;
+  return Number(m[1] ?? 0) * 3600 + Number(m[2] ?? 0) * 60 + Number(m[3] ?? 0);
+}
+
+// El editor guarda la URL tal cual la pegó el admin (watch?v=, youtu.be, shorts,
+// live, embed o playlist, con o sin &t=, &list=, &ab_channel=, ?si=...). Aquí se
+// extrae el ID del video y se arma la URL de embed que YouTube sí acepta dentro
+// de un iframe. Se usa youtube-nocookie.com igual que el editor (nocookie: true).
+// Devuelve null si la URL no es de YouTube.
+export function youtubeEmbedUrl(input: string): string | null {
+  const raw = input.trim();
+  if (!raw) return null;
+
+  let url: URL;
+  try {
+    url = new URL(/^https?:\/\//i.test(raw) ? raw : `https://${raw.replace(/^\/\//, '')}`);
+  } catch {
+    return null;
+  }
+  const host = url.hostname.toLowerCase();
+  if (!YOUTUBE_HOSTS.has(host)) return null;
+
+  let id: string | null;
+  if (host === 'youtu.be') {
+    id = url.pathname.split('/')[1] || null;
+  } else {
+    const m = url.pathname.match(/^\/(?:embed|v|shorts|live)\/([\w-]+)/);
+    id = m?.[1] ?? url.searchParams.get('v');
+  }
+  if (id && !/^[\w-]+$/.test(id)) return null;
+
+  const list = url.searchParams.get('list');
+  const start = parseStartSeconds(url.searchParams.get('t') ?? url.searchParams.get('start'));
+  const base = 'https://www.youtube-nocookie.com/embed/';
+
+  if (id && id !== 'videoseries') {
+    const params = new URLSearchParams();
+    if (start > 0) params.set('start', String(start));
+    if (list) params.set('list', list);
+    const query = params.toString();
+    return `${base}${id}${query ? `?${query}` : ''}`;
+  }
+  if (list) return `${base}videoseries?list=${encodeURIComponent(list)}`;
+  return null;
+}
+
 function applyMarks(text: string, marks: Mark[]): string {
   let out = escape(text);
   for (const mark of marks) {
@@ -88,11 +144,18 @@ function renderNode(node: Node): string {
 
     case 'youtube': {
       const src = String(node.attrs?.src ?? '');
-      // Convert youtube watch URL to embed URL
-      const embedSrc = src
-        .replace('watch?v=', 'embed/')
-        .replace('youtu.be/', 'www.youtube.com/embed/');
-      return `<div data-youtube-video><iframe src="${escape(embedSrc)}" allowfullscreen loading="lazy"></iframe></div>`;
+      if (!src) return '';
+      const embedSrc = youtubeEmbedUrl(src);
+      if (!embedSrc) {
+        // No se pudo interpretar como YouTube: se deja el enlace para no perder el contenido.
+        const href = escape(src);
+        return `<p><a href="${href}" target="_blank" rel="noopener noreferrer">${href}</a></p>`;
+      }
+      return (
+        `<div data-youtube-video><iframe src="${escape(embedSrc)}" title="Video de YouTube"` +
+        ' allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"' +
+        ' referrerpolicy="strict-origin-when-cross-origin" allowfullscreen loading="lazy"></iframe></div>'
+      );
     }
 
     default:
